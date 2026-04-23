@@ -52,8 +52,6 @@ import {
 import AuthScreen from "./AuthScreen";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
-import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system/legacy";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "./firebase";
 import Purchases, { LOG_LEVEL } from "react-native-purchases";
@@ -256,606 +254,6 @@ const RECIPES = [
 			"Mash or blend mango to a purée.",
 			"Swirl through yoghurt.",
 			"Serve in a bowl or on a preloaded spoon.",
-		],
-	},
-	{
-		id: "avocado-basil-puree",
-		title: "Avocado & Basil Puree",
-		category: "Smooth Purees for First Tasters",
-		ageGroup: "6m+",
-		time: "10 mins",
-		tags: ["puree", "easy", "vegetarian", "green", "beginner"],
-		locked: true,
-		description:
-			"Creamy avocado-pea-basil puree perfect for 4-6 month beginners.",
-		ingredients: [
-			"200g frozen peas",
-			"½ avocado (flesh only)",
-			"10 fresh basil leaves",
-			"50ml cooking water (reserved)/Baby's chosen milk",
-		],
-		steps: [
-			"Boil peas for 5 minutes, drain (reserving 50ml cooking water).",
-			"Rinse peas with cold water in sieve to cool quickly.",
-			"Place cooled peas, avocado, basil leaves, and reserved water (or milk) in blender.",
-			"Blend until smooth and creamy (add splash more water if needed).",
-			"Serve immediately or store in airtight container in fridge (up to 48hrs).",
-			"Frozen peas make this recipe super quick and baby-safe!",
-		],
-	},
-	{
-		id: "aubergine-pepper-sweet-potato",
-		title: "Aubergine, Pepper & Sweet Potato Puree",
-		category: "Smooth Purees for First Tasters",
-		ageGroup: "6m+",
-		time: "25 mins",
-		tags: ["puree", "easy", "vegetable", "roasted", "beginner"],
-		locked: true,
-		description:
-			"Colourful roasted vegetable puree introducing aubergine and pepper flavours for 4-6 month olds.",
-		ingredients: [
-			"Aubergine, cut into cubes",
-			"½ small red pepper, chopped",
-			"Spray oil",
-			"1 sweet potato (~250g), peeled & cubed",
-			"Baby's usual milk",
-		],
-		steps: [
-			"Put aubergine and pepper in roasting tin or airfryer, add a spray of oil.",
-			"Cover with foil, roast at 200°C (180°C fan) for 15-20 mins or 180°C for 10 minutes in the airfryer.",
-			"Meanwhile boil sweet potato for about 15 minutes or until tender.",
-			"Combine all vegetables in a blender and blend to puree or fine mash texture.",
-			"Add baby's usual milk and blend until smooth.",
-		],
-	},
-	{
-		id: "butternut-squash-mint-broccoli-courgette-puree",
-		title: "Butternut Squash, Mint, Broccoli + Courgette Puree",
-		category: "Smooth Purees for First Tasters",
-		ageGroup: "6m+",
-		time: "20 mins",
-		tags: ["puree", "easy", "vegetable", "green", "beginner"],
-		locked: true,
-		description:
-			"Smooth vegetable puree suitable for early weaning from 4–6 months.",
-		ingredients: [
-			"1/2 butternut squash, peeled, deseeded and chopped",
-			"5 fresh mint leaves",
-			"1 courgette, diced",
-			"1/2 small head broccoli",
-		],
-		steps: [
-			"Place the squash in a saucepan, cover with water and bring to the boil, then reduce heat and simmer for 10 minutes.",
-			"Add the broccoli and courgette and cook until soft, then drain.",
-			"Puree the vegetables in a food processor or with a hand blender until smooth.",
-			"For an extra smooth texture, pass through a sieve if needed.",
-		],
-	},
-	{
-		id: "butternut-squash-sweetcorn-carrot-puree",
-		title: "Butternut Squash, Sweetcorn + Carrot Puree",
-		category: "Smooth Purees for First Tasters",
-		ageGroup: "6m+",
-		time: "25 mins",
-		tags: ["puree", "easy", "vegetable", "sweet", "beginner"],
-		locked: true,
-		description: "Butternut squash, sweetcorn and carrot puree for 6m+.",
-		ingredients: [
-			"½ butternut squash (about 400 g), peeled and cubed",
-			"2 carrots",
-			"½ can no salt/sugar sweetcorn, drained",
-		],
-		steps: [
-			"Steam or boil the butternut squash and carrots for 10 minutes until almost cooked.",
-			"Add the sweetcorn and cook for 5 minutes until tender.",
-			"Puree with 5 tablespoons boiled water or baby's milk until smooth.",
-		],
-	},
-	{
-		id: "brussels-sprouts-puree",
-		title: "Brussels Sprouts Puree",
-		category: "Smooth Purees for First Tasters",
-		ageGroup: "6m+",
-		time: "20 mins",
-		tags: ["puree", "easy", "vegetable", "green", "beginner"],
-		locked: true,
-		description: "Brussels sprouts puree for 6m+.",
-		ingredients: ["150g Brussels sprouts", "Extra water or baby's milk"],
-		steps: [
-			"Trim the sprouts and remove outer leaves.",
-			"Cut into halves or quarters and steam for 10-12 minutes until tender.",
-			"Blend with water or baby's milk until smooth.",
-		],
-	},
-	{
-		id: "carrot-puree",
-		title: "Carrot Puree",
-		category: "Smooth Purees for First Tasters",
-		ageGroup: "6m+",
-		time: "15 mins",
-		tags: ["puree", "easy", "vegetable", "sweet", "beginner"],
-		locked: true,
-		description: "Carrot puree for 6m+.",
-		ingredients: [
-			"3 carrots (about 250 g), peeled and halved lengthways",
-			"Water or baby's milk",
-		],
-		steps: [
-			"Slice carrots into even pieces and steam or boil for 10-12 minutes until tender.",
-			"Blend with water or baby's milk until completely smooth.",
-		],
-	},
-	{
-		id: "broccoli-puree",
-		title: "Broccoli Puree Recipe",
-		category: "Smooth Purees for First Tasters",
-		ageGroup: "6m+",
-		time: "15 mins",
-		tags: ["puree", "easy", "vegetable", "green", "beginner"],
-		locked: true,
-		description: "Broccoli puree for 6m+.",
-		ingredients: [
-			"½ small head broccoli (about 130 g), cut into small florets",
-		],
-		steps: [
-			"Steam or boil the broccoli for 8 minutes until tender.",
-			"Add water and blend until smooth.",
-		],
-	},
-	{
-		id: "bright-start-breakfast-bowl",
-		title: "Bright Start Breakfast Bowl",
-		category: "Soft finger foods",
-		ageGroup: "6m+",
-		time: "15 mins",
-		tags: ["breakfast", "easy", "vegetarian", "soft", "baby-led weaning"],
-		locked: true,
-		description: "Mashed texture breakfast bowl for babies learning to chew.",
-		ingredients: [
-			"1 banana, peeled, cut into thirds and frozen",
-			"2 broccoli florets (about 40g)",
-			"1 tablespoon rolled oats",
-			"1½-2 tablespoons whole milk or milk of choice",
-			"1 ripe baby avocado",
-			"1/4 teaspoon ground cinnamon",
-			"Lightly toasted bread fingers to serve",
-		],
-		steps: [
-			"Remove banana from freezer to soften.",
-			"Steam broccoli for 8 minutes until tender, then cool.",
-			"Blend oats into a powder, then add milk.",
-			"Add banana, avocado, cinnamon and broccoli.",
-			"Blend until smooth and creamy, adding more milk if needed.",
-			"Serve with toasted bread fingers.",
-		],
-	},
-	{
-		id: "herby-scrambled-egg",
-		title: "Herby Scrambled Egg",
-		category: "Soft finger foods",
-		ageGroup: "6m+",
-		time: "10 mins",
-		tags: ["egg", "easy", "protein", "soft", "baby-led weaning"],
-		locked: true,
-		description: "Soft scrambled egg with herbs for babies learning to chew.",
-		ingredients: [
-			"1 egg",
-			"1 tablespoon milk",
-			"1/4 teaspoon dried oregano",
-			"5g unsalted butter",
-			"10g frozen spinach, defrosted",
-			"Toasted bread fingers to serve",
-		],
-		steps: [
-			"Beat egg with milk and oregano.",
-			"Melt butter and cook egg mixture gently while stirring.",
-			"Add spinach and warm through.",
-			"Serve with toasted bread fingers.",
-		],
-	},
-	{
-		id: "my-first-chicken-curry",
-		title: "My First Chicken Curry",
-		category: "Soft finger foods",
-		ageGroup: "6m+",
-		time: "30 mins",
-		tags: ["chicken", "curry", "mild", "protein", "baby-led weaning"],
-		locked: true,
-		description:
-			"Mild chicken curry with mashed texture for babies learning to chew.",
-		ingredients: [
-			"2 teaspoons olive oil",
-			"1 chicken breast",
-			"30g white rice",
-			"30g peas",
-			"30g cauliflower",
-			"1/4 teaspoon curry powder",
-			"1/4 teaspoon turmeric",
-			"200ml milk or coconut milk",
-		],
-		steps: [
-			"Cook chicken in oil until lightly golden, then remove.",
-			"Add rice, vegetables and spices to pan.",
-			"Return chicken, add milk and simmer until cooked.",
-			"Blend chicken separately until finely chopped.",
-			"Mash rice mixture and combine with chicken.",
-		],
-	},
-	{
-		id: "pea-and-ham-bake",
-		title: "Pea and Ham Bake",
-		category: "Soft finger foods",
-		ageGroup: "7-9 months",
-		time: "30 mins",
-		tags: ["pasta", "family meal", "bake", "protein", "baby-led weaning"],
-		locked: true,
-		description: "Family pasta bake suitable from 7-9 months.",
-		ingredients: [
-			"100g pasta",
-			"2 mushrooms",
-			"1/2 onion",
-			"1 garlic clove",
-			"Fresh basil",
-			"40g ham",
-			"1 tsp oil",
-			"100g chopped tomatoes",
-			"1 tsp tomato puree",
-			"40g peas",
-			"50ml water",
-		],
-		steps: [
-			"Cook pasta until soft and place in dish.",
-			"Chop vegetables and ham.",
-			"Cook onion, garlic and mushrooms until soft.",
-			"Add tomatoes, puree, water and peas and simmer.",
-			"Add basil and ham.",
-			"Mix with pasta and bake for 10 minutes.",
-			"Cool and mash or blend before serving.",
-		],
-	},
-	{
-		id: "creamy-hotpot",
-		title: "Creamy Hotpot",
-		category: "Soft finger foods",
-		ageGroup: "6m+",
-		time: "40 mins",
-		tags: [
-			"chicken",
-			"family meal",
-			"soft",
-			"comfort food",
-			"baby-led weaning",
-		],
-		locked: true,
-		description: "Family favourite hotpot suitable for all ages.",
-		ingredients: [
-			"1/2 leek",
-			"1/2 carrot",
-			"1 potato",
-			"Green beans",
-			"Chicken breast",
-			"Vegetable oil",
-			"150ml water",
-			"Broccoli",
-			"Cream cheese",
-		],
-		steps: [
-			"Chop vegetables and chicken.",
-			"Cook chicken in oil.",
-			"Add vegetables and water, simmer until cooked.",
-			"Cook broccoli separately.",
-			"Stir in cream cheese.",
-			"Mash or blend and serve with broccoli.",
-		],
-	},
-	{
-		id: "cheese-and-mushroom-cakes",
-		title: "Cheese and Mushroom Cakes",
-		category: "Soft finger foods",
-		ageGroup: "6m+",
-		time: "40 mins",
-		tags: ["finger food", "vegetarian", "baked", "baby-led weaning"],
-		locked: true,
-		description:
-			"Tasty cheese and vegetable cakes introducing a combination of flavours.",
-		ingredients: [
-			"1 potato",
-			"Leek",
-			"3 mushrooms",
-			"Chives",
-			"75g cheese",
-			"1 egg",
-			"1 tsp oil",
-			"Flour",
-			"Breadcrumbs",
-		],
-		steps: [
-			"Boil and mash potato.",
-			"Prepare vegetables and grate cheese.",
-			"Cook leek and mushrooms.",
-			"Mix everything with potato.",
-			"Shape into patties.",
-			"Coat in flour, egg and breadcrumbs.",
-			"Bake until golden.",
-			"Cool before serving.",
-		],
-	},
-	{
-		id: "smashed-avocado-and-banana",
-		title: "Smashed Avocado and Banana",
-		category: "Soft finger foods",
-		ageGroup: "6m+",
-		time: "10 mins",
-		tags: ["no-cook", "easy", "fruit", "vegetarian", "baby-led weaning"],
-		locked: true,
-		description: "A quick and easy no-cook recipe.",
-		ingredients: ["1 banana", "1 avocado"],
-		steps: [
-			"Place banana and avocado in a bowl.",
-			"Mash or blend until smooth.",
-			"Store leftovers in fridge and use same day.",
-		],
-	},
-	{
-		id: "simple-baked-fish",
-		title: "Simple Baked Fish",
-		category: "Soft finger foods",
-		ageGroup: "6m+",
-		time: "25 mins",
-		tags: ["fish", "protein", "baked", "baby-led weaning"],
-		locked: true,
-		description: "A simple way to introduce fish from 6 months.",
-		ingredients: ["1 fish fillet (e.g. salmon)"],
-		steps: [
-			"Preheat oven.",
-			"Bake fish for about 20 minutes.",
-			"Cool and check for bones.",
-			"Flake and serve.",
-		],
-	},
-	{
-		id: "crustless-mini-quiche",
-		title: "Crustless Mini Quiche",
-		category: "Soft finger foods",
-		ageGroup: "6m+",
-		time: "25 mins",
-		tags: ["egg", "baked", "finger food", "baby-led weaning"],
-		locked: true,
-		description: "Soft mini quiches perfect for baby-led weaning.",
-		ingredients: [
-			"Vegetable oil",
-			"Spring onions",
-			"Pepper",
-			"Tomato",
-			"5 eggs",
-			"Milk",
-			"Mixed herbs",
-		],
-		steps: [
-			"Preheat oven and grease tray.",
-			"Chop vegetables.",
-			"Distribute into muffin tray.",
-			"Mix eggs, milk and herbs.",
-			"Pour mixture over vegetables.",
-			"Bake until set.",
-			"Cool before serving.",
-		],
-	},
-	{
-		id: "steamed-apple-and-pear",
-		title: "Steamed Apple and Pear",
-		category: "Soft finger foods",
-		ageGroup: "6m+",
-		time: "15 mins",
-		tags: ["fruit", "finger food", "soft", "baby-led weaning"],
-		locked: true,
-		description: "Soft fruit fingers perfect for little hands.",
-		ingredients: ["1/2 apple", "1/2 pear"],
-		steps: [
-			"Cut into finger-sized pieces.",
-			"Steam pear for 8 minutes.",
-			"Add apple and cook 2 more minutes.",
-			"Cool before serving.",
-		],
-	},
-	{
-		id: "yummy-fish-pie",
-		title: "Yummy Fish Pie",
-		category: "Soft finger foods",
-		ageGroup: "6m+",
-		time: "30 mins",
-		tags: ["fish", "comfort food", "family meal", "baby-led weaning"],
-		locked: true,
-		description:
-			"Comforting fish pie suitable from 6 months when blended smooth.",
-		ingredients: [
-			"2 potatoes",
-			"150g sweetcorn",
-			"120ml water",
-			"Fish portion",
-			"Parsley",
-			"Cream cheese",
-		],
-		steps: [
-			"Boil potatoes until soft.",
-			"Cook fish and flake.",
-			"Cook and blend sweetcorn with water.",
-			"Mix with potatoes.",
-			"Add fish and cream cheese.",
-			"Blend until smooth if needed.",
-		],
-	},
-	{
-		id: "cheesy-tomato-pitta-pizzas",
-		title: "Cheesy Tomato Pitta Pizzas",
-		category: "Chunkier textures and family foods",
-		ageGroup: "9m+",
-		time: "10 mins",
-		tags: ["finger food", "easy", "vegetarian", "quick", "family"],
-		locked: true,
-		description: "Simple cheesy pitta pizzas suitable from 10 months.",
-		ingredients: [
-			"1 wholemeal pitta bread",
-			"2 tbsp tomato puree",
-			"15g cheese",
-		],
-		steps: [
-			"Spread tomato puree on the pitta.",
-			"Sprinkle with cheese.",
-			"Grill or air fry until cheese melts.",
-			"Cut into finger-sized pieces.",
-			"Cool before serving.",
-		],
-	},
-	{
-		id: "baked-bean-breakfast-pancakes",
-		title: "Baked Bean Breakfast Pancakes",
-		category: "Chunkier textures and family foods",
-		ageGroup: "9m+",
-		time: "4 mins",
-		tags: ["breakfast", "quick", "easy", "protein", "finger food"],
-		locked: true,
-		description: "Quick and easy breakfast pancakes.",
-		ingredients: [
-			"1 egg",
-			"50g reduced sugar baked beans",
-			"20g self-raising flour",
-			"1/2 tsp smoked paprika",
-			"Fresh chives",
-			"Spray oil",
-		],
-		steps: [
-			"Whisk flour, egg and paprika.",
-			"Add beans and chives.",
-			"Heat pan with oil.",
-			"Spoon mixture into pan.",
-			"Cook for about 2 minutes.",
-			"Serve warm.",
-		],
-	},
-	{
-		id: "smoky-bean-one-pot-hotpot",
-		title: "Smoky Bean One-Pot Hotpot",
-		category: "Chunkier textures and family foods",
-		ageGroup: "9m+",
-		time: "20 mins",
-		tags: ["vegetarian", "one-pot", "easy", "family", "budget"],
-		locked: true,
-		description: "Great way of using up leftovers from your cupboards.",
-		ingredients: [
-			"1/2 tin baked beans",
-			"1 small onion",
-			"1 cooked potato",
-			"Sweetcorn",
-			"1 tsp smoked paprika",
-			"Spray oil",
-		],
-		steps: [
-			"Cook diced onion until soft.",
-			"Add beans and paprika.",
-			"Add diced potato.",
-			"Add sweetcorn and heat through.",
-			"Cool before serving.",
-		],
-	},
-	{
-		id: "green-bean-basil-pasta",
-		title: "Green Bean & Basil Pasta",
-		category: "Chunkier textures and family foods",
-		ageGroup: "9m+",
-		time: "20 mins",
-		tags: ["pasta", "vegetarian", "family", "texture", "easy"],
-		locked: true,
-		description:
-			"Simple green bean and basil pasta for little ones exploring texture.",
-		ingredients: [
-			"125g green beans",
-			"16g basil",
-			"1 garlic clove",
-			"1/2 onion",
-			"100g pasta shells",
-			"5ml olive oil",
-		],
-		steps: [
-			"Blend green beans.",
-			"Cook onion and garlic in oil.",
-			"Add basil and green bean puree.",
-			"Cook pasta until soft.",
-			"Mix pasta with sauce.",
-		],
-	},
-	{
-		id: "cheesy-broccoli-potato-gratin",
-		title: "Cheesy Broccoli + Potato Gratin",
-		category: "Chunkier textures and family foods",
-		ageGroup: "9m+",
-		time: "45 mins",
-		tags: ["bake", "vegetarian", "family", "comfort food", "texture"],
-		locked: true,
-		description: "Perfect for exploring new textures.",
-		ingredients: [
-			"120g broccoli",
-			"450g potato",
-			"100ml milk",
-			"70ml cream",
-			"50g cheese",
-		],
-		steps: [
-			"Slice potatoes thinly.",
-			"Heat milk, cream and cheese until melted.",
-			"Layer potatoes and broccoli.",
-			"Pour over sauce.",
-			"Bake for 35 minutes.",
-			"Adjust texture before serving.",
-		],
-	},
-	{
-		id: "on-the-go-porridge-bars",
-		title: "On the Go Porridge Bars",
-		category: "Chunkier textures and family foods",
-		ageGroup: "9m+",
-		time: "30 mins",
-		tags: ["snack", "breakfast", "finger food", "batch cooking", "sweet"],
-		locked: true,
-		description: "Breakfast top up or an on the go snack.",
-		ingredients: [
-			"40g porridge oats",
-			"175ml milk",
-			"15g raisins",
-			"1/2 tsp cinnamon",
-			"10g butter",
-		],
-		steps: [
-			"Cook oats with milk until thick.",
-			"Stir in raisins and cinnamon.",
-			"Spread onto tray and chill.",
-			"Cut into pieces.",
-			"Fry in butter until golden.",
-			"Cool before serving.",
-		],
-	},
-	{
-		id: "fruity-delicious-porridge",
-		title: "Fruity Delicious Porridge",
-		category: "Chunkier textures and family foods",
-		ageGroup: "9m+",
-		time: "10 mins",
-		tags: ["breakfast", "fruit", "vegetarian", "warm", "easy"],
-		locked: true,
-		description: "Perfect for a warm breakfast.",
-		ingredients: [
-			"20g porridge oats",
-			"120ml milk",
-			"1/4 banana",
-			"10g berries",
-			"1 tsp yogurt",
-		],
-		steps: [
-			"Cook oats with milk until thick.",
-			"Mash banana and add berries.",
-			"Heat until soft.",
-			"Adjust consistency with milk.",
-			"Serve with yogurt.",
 		],
 	},
 ];
@@ -3581,13 +2979,12 @@ function RecipesScreen({ isPro, onUpgradePro }) {
 function MoreScreen({
 	user,
 	isPro,
+	ownedChildren,
 	onLogout,
 	onDeleteAccount,
 	onUpgradePro,
 	onRestorePurchases,
-	onImportJson,
-	onExportJson,
-	onMigrateIds,
+	onManageSharing,
 }) {
 	const [showChangePassword, setShowChangePassword] = useState(false);
 	const [currentPw, setCurrentPw] = useState("");
@@ -3595,6 +2992,10 @@ function MoreScreen({
 	const [confirmPw, setConfirmPw] = useState("");
 	const [pwLoading, setPwLoading] = useState(false);
 	const [upgradeLoading, setUpgradeLoading] = useState(false);
+	const [showSharing, setShowSharing] = useState(false);
+	const [shareEmail, setShareEmail] = useState("");
+	const [shareLoading, setShareLoading] = useState(false);
+	const [selectedChildId, setSelectedChildId] = useState(null);
 
 	const handleChangePassword = async () => {
 		if (!currentPw || !newPw || !confirmPw) {
@@ -3886,6 +3287,331 @@ function MoreScreen({
 				right={<View />}
 			/>
 
+			{/* ── Family Sharing ── */}
+			<Text
+				style={[
+					s.smallLabel,
+					{ paddingLeft: 4, marginBottom: 10, marginTop: 10 },
+				]}>
+				Family Sharing
+			</Text>
+			{isPro ? (
+				<TouchableOpacity
+					onPress={() => setShowSharing(true)}
+					style={{
+						flexDirection: "row",
+						alignItems: "center",
+						gap: 14,
+						padding: 16,
+						backgroundColor: C.white,
+						borderRadius: 16,
+						marginBottom: 10,
+						shadowColor: "#000",
+						shadowOpacity: 0.04,
+						shadowRadius: 6,
+						elevation: 1,
+					}}
+					activeOpacity={0.8}>
+					<View
+						style={{
+							width: 42,
+							height: 42,
+							borderRadius: 13,
+							backgroundColor: "#e8f5ff",
+							alignItems: "center",
+							justifyContent: "center",
+						}}>
+						<Icon name="users" size={20} color="#2a5f8f" />
+					</View>
+					<View style={{ flex: 1 }}>
+						<Text
+							style={{
+								fontWeight: "700",
+								fontSize: 15,
+								color: C.textCharcoal,
+							}}>
+							Share with Family
+						</Text>
+						<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>
+							Invite a partner or caregiver by email
+						</Text>
+					</View>
+					<Icon name="chevRight" size={16} color={C.mutedText} />
+				</TouchableOpacity>
+			) : (
+				<TouchableOpacity
+					onPress={onUpgradePro}
+					style={{
+						flexDirection: "row",
+						alignItems: "center",
+						gap: 14,
+						padding: 16,
+						backgroundColor: C.white,
+						borderRadius: 16,
+						marginBottom: 10,
+						opacity: 0.7,
+						shadowColor: "#000",
+						shadowOpacity: 0.04,
+						shadowRadius: 6,
+						elevation: 1,
+					}}
+					activeOpacity={0.8}>
+					<View
+						style={{
+							width: 42,
+							height: 42,
+							borderRadius: 13,
+							backgroundColor: C.bgPurple,
+							alignItems: "center",
+							justifyContent: "center",
+						}}>
+						<Icon name="lock" size={20} color={C.mutedText} />
+					</View>
+					<View style={{ flex: 1 }}>
+						<Text
+							style={{ fontWeight: "700", fontSize: 15, color: C.mutedText }}>
+							Share with Family
+						</Text>
+						<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>
+							Pro feature — upgrade to unlock
+						</Text>
+					</View>
+					<View
+						style={{
+							backgroundColor: C.warningStroke,
+							borderRadius: 999,
+							paddingHorizontal: 8,
+							paddingVertical: 3,
+						}}>
+						<Text style={{ fontSize: 10, fontWeight: "700", color: C.white }}>
+							PRO
+						</Text>
+					</View>
+				</TouchableOpacity>
+			)}
+
+			{/* ── Family Sharing Modal ── */}
+			<Modal
+				visible={showSharing}
+				transparent
+				animationType="slide"
+				onRequestClose={() => setShowSharing(false)}>
+				<KeyboardAvoidingView
+					behavior={Platform.OS === "ios" ? "padding" : "height"}
+					style={s.modalOverlay}>
+					<View style={s.modalSheet}>
+						<View
+							style={{
+								flexDirection: "row",
+								justifyContent: "space-between",
+								alignItems: "center",
+								marginBottom: 20,
+							}}>
+							<Text style={s.modalTitle}>Share with Family</Text>
+							<TouchableOpacity
+								onPress={() => {
+									setShowSharing(false);
+									setShareEmail("");
+									setSelectedChildId(null);
+								}}
+								style={{
+									backgroundColor: C.bgPurple,
+									borderRadius: 10,
+									padding: 8,
+								}}>
+								<Icon name="close" size={16} color={C.mutedText} />
+							</TouchableOpacity>
+						</View>
+
+						{/* Step 1 — Pick a child if more than one */}
+						{ownedChildren.filter((c) => c.isOwner !== false).length > 1 && (
+							<View style={{ marginBottom: 16 }}>
+								<Text style={s.label}>Select Child to Share</Text>
+								{ownedChildren
+									.filter((c) => c.isOwner !== false)
+									.map((c) => (
+										<TouchableOpacity
+											key={c.id}
+											onPress={() => setSelectedChildId(c.id)}
+											style={{
+												flexDirection: "row",
+												alignItems: "center",
+												gap: 10,
+												padding: 12,
+												backgroundColor:
+													selectedChildId === c.id ? C.bgPurple : C.white,
+												borderRadius: 12,
+												borderWidth: 2,
+												borderColor:
+													selectedChildId === c.id
+														? C.primaryPurple
+														: C.borderLight,
+												marginBottom: 8,
+											}}>
+											<Icon
+												name="baby"
+												size={16}
+												color={
+													selectedChildId === c.id
+														? C.primaryPurple
+														: C.mutedText
+												}
+											/>
+											<Text
+												style={{
+													fontWeight: "700",
+													fontSize: 14,
+													color:
+														selectedChildId === c.id
+															? C.primaryPurple
+															: C.textCharcoal,
+												}}>
+												{c.name}
+											</Text>
+											{selectedChildId === c.id && (
+												<Icon name="check" size={14} color={C.primaryPurple} />
+											)}
+										</TouchableOpacity>
+									))}
+							</View>
+						)}
+
+						{/* Info box */}
+						<View
+							style={{
+								backgroundColor: C.bgPurple,
+								borderRadius: 12,
+								padding: 14,
+								marginBottom: 16,
+							}}>
+							<Text
+								style={{
+									fontSize: 13,
+									color: C.primaryPinkDark,
+									lineHeight: 20,
+								}}>
+								Enter the email address of the person you want to share with.
+								They must already have a Munch Sprouts account. They will be
+								able to view and add food log entries for the selected child.
+							</Text>
+						</View>
+
+						{/* Email input */}
+						<View style={{ marginBottom: 16 }}>
+							<Text style={s.label}>Their Email Address</Text>
+							<TextInput
+								value={shareEmail}
+								onChangeText={setShareEmail}
+								placeholder="partner@example.com"
+								keyboardType="email-address"
+								autoCapitalize="none"
+								autoCorrect={false}
+								style={[s.input, { backgroundColor: C.white }]}
+								placeholderTextColor={C.mutedText}
+							/>
+						</View>
+
+						{/* Share button */}
+						<TouchableOpacity
+							onPress={() =>
+								onManageSharing(
+									shareEmail.trim(),
+									selectedChildId ||
+										ownedChildren.filter((c) => c.isOwner !== false)[0]?.id,
+									() => {
+										setShowSharing(false);
+										setShareEmail("");
+										setSelectedChildId(null);
+									},
+								)
+							}
+							disabled={shareLoading || !shareEmail.trim()}
+							style={[
+								s.btnPrimary,
+								(shareLoading || !shareEmail.trim()) && { opacity: 0.5 },
+							]}
+							activeOpacity={0.8}>
+							{shareLoading ? (
+								<ActivityIndicator color={C.white} />
+							) : (
+								<Text style={s.btnPrimaryText}>Send Invite</Text>
+							)}
+						</TouchableOpacity>
+
+						{/* Currently shared with */}
+						{(() => {
+							const targetChild = ownedChildren.find(
+								(c) =>
+									c.id ===
+									(selectedChildId ||
+										ownedChildren.filter((c2) => c2.isOwner !== false)[0]?.id),
+							);
+							const sharedWith = targetChild?.sharedWith || [];
+							if (sharedWith.length === 0) return null;
+							return (
+								<View style={{ marginTop: 20 }}>
+									<Text style={[s.smallLabel, { marginBottom: 10 }]}>
+										Currently shared with
+									</Text>
+									{sharedWith.map((uid, i) => (
+										<View
+											key={uid}
+											style={{
+												flexDirection: "row",
+												alignItems: "center",
+												justifyContent: "space-between",
+												padding: 12,
+												backgroundColor: C.bgGreen,
+												borderRadius: 12,
+												marginBottom: 6,
+											}}>
+											<View
+												style={{
+													flexDirection: "row",
+													alignItems: "center",
+													gap: 10,
+												}}>
+												<Icon name="user" size={16} color={C.primaryGreen} />
+												<Text
+													style={{
+														fontSize: 13,
+														color: C.statGreenText,
+														fontWeight: "600",
+													}}
+													numberOfLines={1}>
+													{uid}
+												</Text>
+											</View>
+											<TouchableOpacity
+												onPress={() =>
+													onManageSharing(
+														uid,
+														selectedChildId ||
+															ownedChildren.filter(
+																(c) => c.isOwner !== false,
+															)[0]?.id,
+														null,
+														true,
+													)
+												}>
+												<Text
+													style={{
+														fontSize: 12,
+														color: "#c0392b",
+														fontWeight: "700",
+													}}>
+													Remove
+												</Text>
+											</TouchableOpacity>
+										</View>
+									))}
+								</View>
+							);
+						})()}
+					</View>
+				</KeyboardAvoidingView>
+			</Modal>
+
 			<Text
 				style={[
 					s.smallLabel,
@@ -3927,36 +3653,6 @@ function MoreScreen({
 				}}
 				right={<View />}
 			/>
-
-			{/* ── Dev Tools ── */}
-			{/* <Text
-				style={[
-					s.smallLabel,
-					{ paddingLeft: 4, marginBottom: 10, marginTop: 10 },
-				]}>
-				Dev Tools
-			</Text>
-			<MoreRow
-				icon="download"
-				iconBg="#e8f0ff"
-				label="Import JSON Backup"
-				sublabel="Restore a previously exported backup file"
-				onPress={onImportJson}
-			/>
-			<MoreRow
-				icon="pdf"
-				iconBg="#e8f5ff"
-				label="Export JSON Backup"
-				sublabel="Save all data for the active child as a JSON file"
-				onPress={onExportJson}
-			/>
-			<MoreRow
-				icon="info"
-				iconBg="#fff8e0"
-				label="Fix Food Log IDs"
-				sublabel="Run once if food entries show under the wrong child"
-				onPress={onMigrateIds}
-			/> */}
 
 			{/* Change Password Modal */}
 			<Modal
@@ -4235,174 +3931,112 @@ function MainApp({ user, isPro }) {
 			toast("Child removed");
 		}
 	};
+	// ── Family Sharing ──
+	const handleManageSharing = async (
+		emailOrUid,
+		childId,
+		onSuccess,
+		isRemove = false,
+	) => {
+		if (!childId) {
+			Alert.alert("No child selected", "Please select a child to share.");
+			return;
+		}
 
-	// ── Dev Tools: Import JSON ──
-	const importDataFromJson = async () => {
 		try {
-			const result = await DocumentPicker.getDocumentAsync({
-				type: "application/json",
-				copyToCacheDirectory: true,
-			});
-			if (result.canceled) return;
-			const fileUri = result.assets[0].uri;
-			const raw = await FileSystem.readAsStringAsync(fileUri);
-			let parsed;
-			try {
-				parsed = JSON.parse(raw);
-			} catch {
-				Alert.alert("Invalid file", "The file is not valid JSON.");
+			const {
+				doc,
+				updateDoc,
+				arrayUnion,
+				arrayRemove,
+				collection,
+				query,
+				where,
+				getDocs: fsGetDocs,
+			} = await import("firebase/firestore");
+			const { db: firedb } = await import("./firebase");
+
+			if (isRemove) {
+				// Remove user from sharedWith
+				await updateDoc(doc(firedb, "children", childId), {
+					sharedWith: arrayRemove(emailOrUid),
+				});
+				// Update local state
+				setChildren((prev) =>
+					prev.map((c) =>
+						c.id === childId
+							? {
+									...c,
+									sharedWith: (c.sharedWith || []).filter(
+										(u) => u !== emailOrUid,
+									),
+								}
+							: c,
+					),
+				);
+				Alert.alert("Removed", "Access has been removed.");
 				return;
 			}
-			const importedChild = parsed.child;
-			const importedLog = parsed.foodLog;
-			if (
-				!importedChild?.name ||
-				!importedChild?.dob ||
-				!Array.isArray(importedLog)
-			) {
+
+			// Look up user by email in Firestore users collection
+			const usersQuery = query(
+				collection(firedb, "users"),
+				where("email", "==", emailOrUid.toLowerCase().trim()),
+			);
+			const snap = await fsGetDocs(usersQuery);
+
+			if (snap.empty) {
 				Alert.alert(
-					"Invalid format",
-					"The backup file is missing required fields (child.name, child.dob, foodLog array).",
+					"Account not found",
+					`No Munch Sprouts account found for ${emailOrUid}. They need to create an account first.`,
 				);
 				return;
 			}
-			const validEntries = importedLog.filter((e) => e.name && e.date);
-			Alert.alert(
-				"Import backup",
-				`Import ${validEntries.length} food log entr${validEntries.length === 1 ? "y" : "ies"} for ${importedChild.name}?`,
-				[
-					{ text: "Cancel", style: "cancel" },
-					{
-						text: "Import",
-						onPress: async () => {
-							try {
-								const newChildId = await fbAddChild(user.uid, {
-									name: importedChild.name,
-									dob: importedChild.dob,
-									weaningStart: importedChild.weaningStart || "",
-								});
-								for (const entry of validEntries) {
-									await addFoodEntry(user.uid, {
-										childId: newChildId,
-										date: entry.date,
-										name: entry.name,
-										category: entry.category || "Other",
-										form: entry.form || "",
-										reaction: entry.reaction || "",
-										notes: entry.notes || "",
-										favourite: !!entry.favourite,
-									});
-								}
-								const [updatedLog, updatedChildren] = await Promise.all([
-									fetchFoodLog(user.uid),
-									fetchChildren(user.uid),
-								]);
-								setFoodLog(updatedLog);
-								setChildren(updatedChildren);
-								setActiveChildId(newChildId);
-								Alert.alert(
-									"Import complete",
-									`${importedChild.name} and ${validEntries.length} food log entr${validEntries.length === 1 ? "y has" : "ies have"} been imported.`,
-								);
-							} catch (e) {
-								Alert.alert("Import failed", "Could not import this backup.");
-							}
-						},
-					},
-				],
+
+			const theirUid = snap.docs[0].id;
+
+			if (theirUid === user.uid) {
+				Alert.alert("That's you", "You can't share a child with yourself.");
+				return;
+			}
+
+			// Check not already shared
+			const child = children.find((c) => c.id === childId);
+			if (child?.sharedWith?.includes(theirUid)) {
+				Alert.alert(
+					"Already shared",
+					`${emailOrUid} already has access to ${child.name}.`,
+				);
+				return;
+			}
+
+			// Add their UID to sharedWith array
+			await updateDoc(doc(firedb, "children", childId), {
+				sharedWith: arrayUnion(theirUid),
+			});
+
+			// Update local children state
+			setChildren((prev) =>
+				prev.map((c) =>
+					c.id === childId
+						? { ...c, sharedWith: [...(c.sharedWith || []), theirUid] }
+						: c,
+				),
 			);
-		} catch (e) {
+
+			const childName = child?.name || "your child";
 			Alert.alert(
-				"Import failed",
-				"Something went wrong while selecting the file.",
+				"Shared! ✓",
+				`${emailOrUid} now has access to ${childName}. They will see the data next time they open the app.`,
+			);
+			if (onSuccess) onSuccess();
+		} catch (e) {
+			console.error("Sharing error:", e);
+			Alert.alert(
+				"Error",
+				e.message || "Could not update sharing. Please try again.",
 			);
 		}
-	};
-
-	// ── Dev Tools: Export JSON ──
-	const exportDataAsJson = async () => {
-		if (!activeChild) {
-			Alert.alert("No child selected", "Select an active child first.");
-			return;
-		}
-		try {
-			const exportData = {
-				exportedAt: new Date().toISOString(),
-				child: {
-					name: activeChild.name,
-					dob: activeChild.dob,
-					weaningStart: activeChild.weaningStart || "",
-				},
-				foodLog: childLog.map((e) => ({
-					date: e.date,
-					name: e.name,
-					category: e.category,
-					form: e.form,
-					reaction: e.reaction,
-					notes: e.notes,
-					favourite: e.favourite,
-				})),
-			};
-			const json = JSON.stringify(exportData, null, 2);
-			const filename = `${activeChild.name.replace(/\s+/g, "_")}_backup_${new Date().toISOString().split("T")[0]}.json`;
-			const fileUri = FileSystem.cacheDirectory + filename;
-			await FileSystem.writeAsStringAsync(fileUri, json, {
-				encoding: FileSystem.EncodingType.UTF8,
-			});
-			await Sharing.shareAsync(fileUri, {
-				mimeType: "application/json",
-				dialogTitle: `${activeChild.name} Backup`,
-			});
-		} catch (e) {
-			Alert.alert("Export failed", "Could not export data. Please try again.");
-		}
-	};
-
-	// ── Dev Tools: Fix food log IDs ──
-	const migrateChildIds = async () => {
-		if (!activeChild) {
-			Alert.alert("No child selected", "Select an active child first.");
-			return;
-		}
-		Alert.alert(
-			"Fix Food Log IDs",
-			`This reassigns food log entries with old numeric IDs to ${activeChild.name}. Run once only if entries are missing.`,
-			[
-				{ text: "Cancel", style: "cancel" },
-				{
-					text: "Fix Now",
-					onPress: async () => {
-						try {
-							const q = query(
-								collection(db, "foodLog"),
-								where("userId", "==", user.uid),
-							);
-							const snap = await getDocs(q);
-							let fixed = 0;
-							await Promise.all(
-								snap.docs.map(async (d) => {
-									const data = d.data();
-									if (typeof data.childId === "number") {
-										await updateFoodEntry(d.id, { childId: activeChild.id });
-										fixed++;
-									}
-								}),
-							);
-							const updatedLog = await fetchFoodLog(user.uid);
-							setFoodLog(updatedLog);
-							Alert.alert(
-								"Done",
-								fixed > 0
-									? `Fixed ${fixed} entries — now assigned to ${activeChild.name}.`
-									: "No entries needed fixing.",
-							);
-						} catch (e) {
-							Alert.alert("Failed", e.message || String(e));
-						}
-					},
-				},
-			],
-		);
 	};
 
 	const handleLogout = () =>
@@ -4695,13 +4329,12 @@ function MainApp({ user, isPro }) {
 					<MoreScreen
 						user={user}
 						isPro={isPro}
+						ownedChildren={children}
 						onLogout={handleLogout}
 						onDeleteAccount={handleDeleteAccount}
 						onUpgradePro={handleUpgradePro}
 						onRestorePurchases={handleRestorePurchases}
-						onImportJson={importDataFromJson}
-						onExportJson={exportDataAsJson}
-						onMigrateIds={migrateChildIds}
+						onManageSharing={handleManageSharing}
 					/>
 				)}
 				{page === "children" && (
