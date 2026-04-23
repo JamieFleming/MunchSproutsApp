@@ -14,7 +14,8 @@ import {
 import { signIn, signUp, sendPasswordReset } from "./firebaseHooks";
 
 const C = {
-	bgMain: "#fdf5e2",
+	// bgMain: "#fdf5e2",
+	bgMain: "#fff",
 	bgPurple: "#ede8f7",
 	bgGreen: "#e8f7ee",
 	bgWarning: "#fff4e5",
