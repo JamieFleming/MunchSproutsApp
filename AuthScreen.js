@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
 	View,
 	Text,
+	Image,
 	TextInput,
 	TouchableOpacity,
 	StyleSheet,
@@ -124,7 +125,12 @@ export default function AuthScreen() {
 					keyboardShouldPersistTaps="handled"
 					showsVerticalScrollIndicator={false}>
 					<View style={styles.logoArea}>
-						<Text style={styles.logoText}>🌱</Text>
+						{/* <Text style={styles.logoText}>🌱</Text> */}
+						<Image
+							source={require("./assets/logo.png")}
+							style={{ width: 100, height: 100, borderRadius: 10 }}
+							resizeMode="contain"
+						/>
 						<Text style={styles.appName}>Munch Sprouts</Text>
 						<Text style={styles.tagline}>Reset Your Password</Text>
 					</View>
@@ -181,7 +187,12 @@ export default function AuthScreen() {
 				keyboardShouldPersistTaps="handled"
 				showsVerticalScrollIndicator={false}>
 				<View style={styles.logoArea}>
-					<Text style={styles.logoText}>🌱</Text>
+					{/* <Text style={styles.logoText}>🌱</Text> */}
+					<Image
+						source={require("./assets/logo.png")}
+						style={{ width: 100, height: 100, borderRadius: 10 }}
+						resizeMode="contain"
+					/>
 					<Text style={styles.appName}>Munch Sprouts</Text>
 					<Text style={styles.tagline}>Baby Led Weaning Tracker</Text>
 				</View>
