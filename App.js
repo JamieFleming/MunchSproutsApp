@@ -4115,15 +4115,15 @@ function MainApp({ user, isPro }) {
 	}, [user]);
 
 	// RevenueCat init
-	// useEffect(() => {
-	// 	if (!user) return;
-	// 	Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-	// 	const apiKey =
-	// 		Platform.OS === "ios"
-	// 			? "appl_xNGjmEgufsXuWySnKebRetuKCGj"
-	// 			: "goog_rcHUTFIPkKdXdEAQHcexulBdpOj";
-	// 	Purchases.configure({ apiKey, appUserID: user.uid });
-	// }, [user]);
+	useEffect(() => {
+		if (!user) return;
+		Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+		const apiKey =
+			Platform.OS === "ios"
+				? "appl_xNGjmEgufsXuWySnKebRetuKCGj"
+				: "goog_rcHUTFIPkKdXdEAQHcexulBdpOj";
+		Purchases.configure({ apiKey, appUserID: user.uid });
+	}, [user]);
 
 	// Derived state — must be defined before any handlers or JSX that reference them
 	const activeChild =
