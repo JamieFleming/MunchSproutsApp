@@ -183,7 +183,6 @@ export async function deleteChild(childId, userId) {
 export async function fetchFoodLog(userId) {
 	// Get all children this user has access to (owned + shared)
 	const children = await fetchChildren(userId);
-	const childIds = children.map((c) => c.id);
 
 	// Fetch food log entries owned by this user
 	const ownedQuery = query(
@@ -192,31 +191,28 @@ export async function fetchFoodLog(userId) {
 	);
 	const ownedSnap = await getDocs(ownedQuery);
 
-	// Fetch food log entries for shared children
-	// Firestore doesn't support array queries with more than 30 items
-	// so we batch the childId queries if needed
-	const sharedChildIds = children.filter((c) => !c.isOwner).map((c) => c.id);
-
-	let sharedEntries = [];
-	if (sharedChildIds.length > 0) {
-		// Batch into groups of 30 (Firestore "in" query limit)
-		for (let i = 0; i < sharedChildIds.length; i += 30) {
-			const batch = sharedChildIds.slice(i, i + 30);
-			const sharedQuery = query(
+	// Fetch ALL food log entries for ALL children this user has access to
+	// This catches entries added by OTHER users (e.g. family sharing partner)
+	const allChildIds = children.map((c) => c.id);
+	let childEntries = [];
+	if (allChildIds.length > 0) {
+		for (let i = 0; i < allChildIds.length; i += 30) {
+			const batch = allChildIds.slice(i, i + 30);
+			const childQuery = query(
 				collection(db, "foodLog"),
 				where("childId", "in", batch),
 			);
-			const snap = await getDocs(sharedQuery);
-			snap.docs.forEach((d) => sharedEntries.push({ ...d.data(), id: d.id }));
+			const snap = await getDocs(childQuery);
+			snap.docs.forEach((d) => childEntries.push({ ...d.data(), id: d.id }));
 		}
 	}
 
-	// Merge owned and shared, avoiding duplicates
+	// Merge both — childEntries covers partner entries, ownedSnap covers your own
 	const allEntries = new Map();
 	ownedSnap.docs.forEach((d) =>
 		allEntries.set(d.id, { ...d.data(), id: d.id }),
 	);
-	sharedEntries.forEach((e) => allEntries.set(e.id, e));
+	childEntries.forEach((e) => allEntries.set(e.id, e));
 
 	return Array.from(allEntries.values());
 }

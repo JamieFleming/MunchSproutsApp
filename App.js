@@ -1500,7 +1500,7 @@ function LoadingScreen() {
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function DashboardScreen({ child, foodLog, onNavigate }) {
+function DashboardScreen({ child, foodLog, onNavigate, onNavigateFiltered }) {
 	const groups = groupByFood(foodLog);
 	const keys = Object.keys(groups);
 	const unique = keys.length,
@@ -1638,29 +1638,40 @@ function DashboardScreen({ child, foodLog, onNavigate }) {
 				</View>
 			)}
 
-			{/* Stat cards — Row 1: 4 cards */}
+			{/* Stat cards — Row 1: 4 cards — tappable to filter log */}
 			<View style={{ flexDirection: "row", gap: 10 }}>
-				<View style={[s.statCard, { backgroundColor: C.bgPurple, flex: 1 }]}>
+				<TouchableOpacity
+					onPress={() => onNavigateFiltered("log", "")}
+					style={[s.statCard, { backgroundColor: C.bgPurple, flex: 1 }]}
+					activeOpacity={0.8}>
 					<Icon name="grid" size={20} color={C.primaryPurple} />
 					<Text style={[s.statValue, { color: C.primaryPurple }]}>
 						{unique}
 					</Text>
 					<Text style={[s.statLabel, { color: C.primaryPurple }]}>Tried</Text>
-				</View>
-				<View style={[s.statCard, { backgroundColor: C.statGreenBg, flex: 1 }]}>
+				</TouchableOpacity>
+				<TouchableOpacity
+					onPress={() => onNavigateFiltered("log", "Loved")}
+					style={[s.statCard, { backgroundColor: C.statGreenBg, flex: 1 }]}
+					activeOpacity={0.8}>
 					<ReactionFace reaction="Loved" size={24} />
 					<Text style={[s.statValue, { color: C.statGreenText }]}>{liked}</Text>
 					<Text style={[s.statLabel, { color: C.statGreenText }]}>Likes</Text>
-				</View>
-				<View style={[s.statCard, { backgroundColor: C.statRedBg, flex: 1 }]}>
+				</TouchableOpacity>
+				<TouchableOpacity
+					onPress={() => onNavigateFiltered("log", "Rejected")}
+					style={[s.statCard, { backgroundColor: C.statRedBg, flex: 1 }]}
+					activeOpacity={0.8}>
 					<ReactionFace reaction="Rejected" size={24} />
 					<Text style={[s.statValue, { color: C.statRedText }]}>
 						{disliked}
 					</Text>
 					<Text style={[s.statLabel, { color: C.statRedText }]}>Dislikes</Text>
-				</View>
-				<View
-					style={[s.statCard, { backgroundColor: C.statNeutralBg, flex: 1 }]}>
+				</TouchableOpacity>
+				<TouchableOpacity
+					onPress={() => onNavigateFiltered("log", "Neutral")}
+					style={[s.statCard, { backgroundColor: C.statNeutralBg, flex: 1 }]}
+					activeOpacity={0.8}>
 					<ReactionFace reaction="Neutral" size={24} />
 					<Text style={[s.statValue, { color: C.statNeutralText }]}>
 						{neutral}
@@ -1668,28 +1679,37 @@ function DashboardScreen({ child, foodLog, onNavigate }) {
 					<Text style={[s.statLabel, { color: C.statNeutralText }]}>
 						Neutral
 					</Text>
-				</View>
+				</TouchableOpacity>
 			</View>
 
 			{/* Stat cards — Row 2: 3 cards */}
 			<View style={{ flexDirection: "row", gap: 10 }}>
-				<View style={[s.statCard, { backgroundColor: "#fde8e8", flex: 1 }]}>
+				<TouchableOpacity
+					onPress={() => onNavigateFiltered("log", "Allergic")}
+					style={[s.statCard, { backgroundColor: "#fde8e8", flex: 1 }]}
+					activeOpacity={0.8}>
 					<ReactionFace reaction="Allergic" size={24} />
 					<Text style={[s.statValue, { color: "#c0392b" }]}>{allergic}</Text>
 					<Text style={[s.statLabel, { color: "#c0392b" }]}>Allergic</Text>
-				</View>
-				<View style={[s.statCard, { backgroundColor: C.statBlueBg, flex: 1 }]}>
+				</TouchableOpacity>
+				<TouchableOpacity
+					onPress={() => onNavigateFiltered("log", "Liquids")}
+					style={[s.statCard, { backgroundColor: C.statBlueBg, flex: 1 }]}
+					activeOpacity={0.8}>
 					<CategoryIcon category="Liquids" size={30} />
 					<Text style={[s.statValue, { color: C.statBlueText }]}>
 						{liquids}
 					</Text>
 					<Text style={[s.statLabel, { color: C.statBlueText }]}>Liquids</Text>
-				</View>
-				<View style={[s.statCard, { backgroundColor: "#fef6d4", flex: 1 }]}>
+				</TouchableOpacity>
+				<TouchableOpacity
+					onPress={() => onNavigateFiltered("log", "Favourites")}
+					style={[s.statCard, { backgroundColor: "#fef6d4", flex: 1 }]}
+					activeOpacity={0.8}>
 					<Icon name="starFill" size={20} color="#c49a10" />
 					<Text style={[s.statValue, { color: "#c49a10" }]}>{favourites}</Text>
 					<Text style={[s.statLabel, { color: "#c49a10" }]}>Faves</Text>
-				</View>
+				</TouchableOpacity>
 			</View>
 
 			{/* Allergy alert banner — only shown if there are any */}
@@ -1790,6 +1810,80 @@ function DashboardScreen({ child, foodLog, onNavigate }) {
 				</View>
 			)}
 
+			{/* Favourites section */}
+			{(() => {
+				const favItems = Object.values(groupByFood(foodLog))
+					.filter((g) => g.attempts.some((a) => a.favourite))
+					.sort((a, b) => a.name.localeCompare(b.name));
+				if (favItems.length === 0) return null;
+				return (
+					<View style={s.card}>
+						<View
+							style={{
+								flexDirection: "row",
+								justifyContent: "space-between",
+								alignItems: "center",
+								marginBottom: 16,
+							}}>
+							<Text style={s.sectionTitle}>⭐ Favourites</Text>
+							<TouchableOpacity
+								onPress={() => onNavigateFiltered("log", "Favourites")}>
+								<Text
+									style={{
+										fontSize: 13,
+										color: C.primaryPurple,
+										fontWeight: "700",
+									}}>
+									View all
+								</Text>
+							</TouchableOpacity>
+						</View>
+						<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+							{favItems.slice(0, 8).map((g) => {
+								const latestFav = g.attempts.filter((a) => a.favourite).at(-1);
+								return (
+									<TouchableOpacity
+										key={g.key}
+										onPress={() => onNavigateFiltered("log", "Favourites")}
+										style={{
+											flexDirection: "row",
+											alignItems: "center",
+											gap: 8,
+											backgroundColor: "#fef6d4",
+											borderRadius: 12,
+											paddingHorizontal: 12,
+											paddingVertical: 8,
+										}}
+										activeOpacity={0.8}>
+										<CategoryIcon category={g.category} size={28} />
+										<View>
+											<Text
+												style={{
+													fontWeight: "700",
+													fontSize: 13,
+													color: "#7a5a00",
+												}}>
+												{g.name}
+											</Text>
+											{latestFav?.reaction ? (
+												<Text
+													style={{
+														fontSize: 10,
+														color: "#c49a10",
+														fontWeight: "600",
+													}}>
+													{latestFav.reaction}
+												</Text>
+											) : null}
+										</View>
+									</TouchableOpacity>
+								);
+							})}
+						</View>
+					</View>
+				);
+			})()}
+
 			{foodLog.length === 0 && (
 				<View style={[s.card, { alignItems: "center", paddingVertical: 40 }]}>
 					<Icon name="utensils" size={48} color={C.secondaryPurple} />
@@ -1867,12 +1961,14 @@ async function exportFoodLogAsPDF(foodLog, childName) {
 function LogScreen({
 	foodLog,
 	childName,
+	initialFilter,
 	onEdit,
 	onDelete,
 	onToggleFavourite,
 }) {
 	const [search, setSearch] = useState("");
 	const [sortBy, setSortBy] = useState("date-desc");
+	const [reactionFilter, setReactionFilter] = useState(initialFilter || "");
 	const [expanded, setExpanded] = useState(new Set());
 	const groups = groupByFood(foodLog);
 	let keys = Object.keys(groups);
@@ -1880,6 +1976,16 @@ function LogScreen({
 		keys = keys.filter((k) =>
 			normalize(groups[k].name).includes(normalize(search)),
 		);
+	// Apply reaction filter if set
+	if (reactionFilter === "Liquids") {
+		keys = keys.filter((k) => groups[k].category === "Liquids");
+	} else if (reactionFilter === "Favourites") {
+		keys = keys.filter((k) => groups[k].attempts.some((a) => a.favourite));
+	} else if (reactionFilter) {
+		keys = keys.filter((k) =>
+			groups[k].attempts.some((a) => a.reaction === reactionFilter),
+		);
+	}
 	if (sortBy === "date-desc")
 		keys.sort(
 			(a, b) =>
@@ -1889,6 +1995,13 @@ function LogScreen({
 	else if (sortBy === "alpha") keys.sort((a, b) => a.localeCompare(b));
 	else if (sortBy === "attempts")
 		keys.sort((a, b) => groups[b].attempts.length - groups[a].attempts.length);
+	else if (sortBy === "reaction")
+		keys.sort((a, b) => {
+			const order = ["Loved", "Good", "Neutral", "Rejected", "Allergic", ""];
+			const ra = groups[a].attempts.at(-1).reaction || "";
+			const rb = groups[b].attempts.at(-1).reaction || "";
+			return order.indexOf(ra) - order.indexOf(rb);
+		});
 	const toggle = (k) =>
 		setExpanded((p) => {
 			const n = new Set(p);
@@ -1924,36 +2037,144 @@ function LogScreen({
 				/>
 			</View>
 			{/* Sort pills */}
-			<View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
-				{["date-desc", "alpha", "attempts"].map((opt) => (
+			<ScrollView
+				horizontal
+				showsHorizontalScrollIndicator={false}
+				style={{ flexGrow: 0, flexShrink: 0 }}
+				contentContainerStyle={{
+					gap: 8,
+					paddingBottom: 10,
+					paddingHorizontal: 2,
+				}}>
+				{[
+					{ id: "date-desc", label: "Newest" },
+					{ id: "alpha", label: "A–Z" },
+					{ id: "attempts", label: "Attempts" },
+					{ id: "reaction", label: "Reaction" },
+				].map((opt) => (
 					<TouchableOpacity
-						key={opt}
-						onPress={() => setSortBy(opt)}
+						key={opt.id}
+						onPress={() => setSortBy(opt.id)}
 						style={{
-							backgroundColor: sortBy === opt ? C.primaryPurple : C.white,
+							backgroundColor: sortBy === opt.id ? C.primaryPurple : C.white,
 							borderRadius: 999,
 							paddingHorizontal: 14,
 							paddingVertical: 7,
-							shadowColor: "#000",
-							shadowOpacity: 0.05,
-							shadowRadius: 4,
-							elevation: 1,
+							borderWidth: 1.5,
+							borderColor: sortBy === opt.id ? C.primaryPurple : C.borderLight,
+							height: 34,
+							justifyContent: "center",
+							alignItems: "center",
 						}}>
 						<Text
 							style={{
 								fontSize: 12,
 								fontWeight: "700",
-								color: sortBy === opt ? C.white : C.mutedText,
+								color: sortBy === opt.id ? C.white : C.mutedText,
 							}}>
-							{opt === "date-desc"
-								? "Newest"
-								: opt === "alpha"
-									? "A–Z"
-									: "Attempts"}
+							{opt.label}
 						</Text>
 					</TouchableOpacity>
 				))}
-			</View>
+			</ScrollView>
+
+			{/* Reaction filter pills */}
+			<ScrollView
+				horizontal
+				showsHorizontalScrollIndicator={false}
+				style={{ flexGrow: 0, flexShrink: 0 }}
+				contentContainerStyle={{
+					gap: 8,
+					paddingBottom: 10,
+					paddingHorizontal: 2,
+				}}>
+				{[
+					{ id: "", label: "All", color: C.primaryPurple, bg: C.bgPurple },
+					{
+						id: "Loved",
+						label: "Loved",
+						color: C.statGreenText,
+						bg: C.statGreenBg,
+					},
+					{ id: "Good", label: "Good", color: "#3a7a3a", bg: "#ddf0dd" },
+					{
+						id: "Neutral",
+						label: "Neutral",
+						color: C.statNeutralText,
+						bg: C.statNeutralBg,
+					},
+					{
+						id: "Rejected",
+						label: "Rejected",
+						color: C.statRedText,
+						bg: C.statRedBg,
+					},
+					{
+						id: "Allergic",
+						label: "Allergic",
+						color: "#c0392b",
+						bg: "#fde8e8",
+					},
+					{
+						id: "Liquids",
+						label: "Liquids",
+						color: C.statBlueText,
+						bg: C.statBlueBg,
+					},
+					{
+						id: "Favourites",
+						label: "Favourites",
+						color: "#c49a10",
+						bg: "#fef6d4",
+					},
+				].map((f) => {
+					const active = reactionFilter === f.id;
+					return (
+						<TouchableOpacity
+							key={f.id || "all"}
+							onPress={() => setReactionFilter(f.id)}
+							style={{
+								backgroundColor: active ? f.bg : C.white,
+								borderRadius: 999,
+								paddingHorizontal: 14,
+								paddingVertical: 7,
+								borderWidth: 1.5,
+								borderColor: active ? f.color : C.borderLight,
+								height: 34,
+								justifyContent: "center",
+								alignItems: "center",
+							}}>
+							<Text
+								style={{
+									fontSize: 12,
+									fontWeight: "700",
+									color: active ? f.color : C.mutedText,
+								}}>
+								{f.label}
+							</Text>
+						</TouchableOpacity>
+					);
+				})}
+			</ScrollView>
+
+			{/* Active filter banner */}
+			{reactionFilter !== "" && (
+				<TouchableOpacity
+					onPress={() => setReactionFilter("")}
+					style={{
+						flexDirection: "row",
+						alignItems: "center",
+						gap: 8,
+						marginBottom: 10,
+					}}>
+					<Text
+						style={{ fontSize: 12, color: C.primaryPurple, fontWeight: "700" }}>
+						Filtered: {reactionFilter} · Tap to clear
+					</Text>
+					<Icon name="close" size={13} color={C.primaryPurple} />
+				</TouchableOpacity>
+			)}
+
 			<Text style={[s.smallLabel, { marginBottom: 10 }]}>
 				{keys.length} food{keys.length !== 1 ? "s" : ""}
 			</Text>
@@ -3666,28 +3887,61 @@ function MoreScreen({
 							)}
 						</TouchableOpacity>
 
-						{/* Currently shared with */}
+						{/* Family Group — owner sees shared users, shared user sees owner */}
 						{(() => {
 							const targetChild = ownedChildren.find(
 								(c) => c.id === (selectedChildId || defaultChildId),
 							);
+							if (!targetChild) return null;
+							const isOwner = targetChild.isOwner !== false;
 							const sharedWith = targetChild?.sharedWith || [];
-							const sharedWithEmails = targetChild?.sharedWithEmails || [];
-							if (sharedWith.length === 0) return null;
+							const sharedWithEmails = (
+								targetChild?.sharedWithEmails || []
+							).slice(0, sharedWith.length);
+
+							// Owner sees the people they've shared with + Remove button
+							// Shared user sees the owner (purple) + any other shared users
+							const familyRows = isOwner
+								? sharedWith.map((uid, i) => ({
+										uid,
+										email: sharedWithEmails[i] || uid,
+										role: "Shared with",
+										canRemove: true,
+									}))
+								: [
+										{
+											uid: targetChild.userId,
+											email: targetChild.ownerEmail || "Account owner",
+											role: "Owner",
+											canRemove: false,
+										},
+										...sharedWith
+											.filter((uid) => uid !== user.uid)
+											.map((uid) => ({
+												uid,
+												email: sharedWithEmails[sharedWith.indexOf(uid)] || uid,
+												role: "Also shared with",
+												canRemove: false,
+											})),
+									];
+
+							if (familyRows.length === 0) return null;
+
 							return (
 								<View style={{ marginTop: 20 }}>
 									<Text style={[s.smallLabel, { marginBottom: 10 }]}>
-										Currently shared with
+										Family Group
 									</Text>
-									{sharedWith.map((uid, i) => (
+									{familyRows.map((row) => (
 										<View
-											key={uid}
+											key={row.uid}
 											style={{
 												flexDirection: "row",
 												alignItems: "center",
 												justifyContent: "space-between",
 												padding: 12,
-												backgroundColor: C.bgGreen,
+												backgroundColor:
+													row.role === "Owner" ? C.bgPurple : C.bgGreen,
 												borderRadius: 12,
 												marginBottom: 6,
 											}}>
@@ -3696,36 +3950,62 @@ function MoreScreen({
 													flexDirection: "row",
 													alignItems: "center",
 													gap: 10,
+													flex: 1,
 												}}>
-												<Icon name="user" size={16} color={C.primaryGreen} />
-												<Text
-													style={{
-														fontSize: 13,
-														color: C.statGreenText,
-														fontWeight: "600",
-													}}
-													numberOfLines={1}>
-													{sharedWithEmails[i] || uid}
-												</Text>
+												<Icon
+													name={row.role === "Owner" ? "crown" : "user"}
+													size={16}
+													color={
+														row.role === "Owner"
+															? C.primaryPurple
+															: C.primaryGreen
+													}
+												/>
+												<View style={{ flex: 1 }}>
+													<Text
+														style={{
+															fontSize: 10,
+															fontWeight: "700",
+															color: C.mutedText,
+															textTransform: "uppercase",
+															letterSpacing: 0.5,
+														}}>
+														{row.role}
+													</Text>
+													<Text
+														style={{
+															fontSize: 13,
+															fontWeight: "700",
+															color:
+																row.role === "Owner"
+																	? C.primaryPurple
+																	: C.statGreenText,
+														}}
+														numberOfLines={1}>
+														{row.email}
+													</Text>
+												</View>
 											</View>
-											<TouchableOpacity
-												onPress={() =>
-													onManageSharing(
-														uid,
-														selectedChildId || defaultChildId,
-														null,
-														true,
-													)
-												}>
-												<Text
-													style={{
-														fontSize: 12,
-														color: "#c0392b",
-														fontWeight: "700",
-													}}>
-													Remove
-												</Text>
-											</TouchableOpacity>
+											{row.canRemove && (
+												<TouchableOpacity
+													onPress={() =>
+														onManageSharing(
+															row.uid,
+															selectedChildId || defaultChildId,
+															null,
+															true,
+														)
+													}>
+													<Text
+														style={{
+															fontSize: 12,
+															color: "#c0392b",
+															fontWeight: "700",
+														}}>
+														Remove
+													</Text>
+												</TouchableOpacity>
+											)}
 										</View>
 									))}
 								</View>
@@ -4363,6 +4643,7 @@ function MainApp({ user, isPro }) {
 	const [showChildPicker, setShowChildPicker] = useState(false);
 	const [showLogRecipeModal, setShowLogRecipeModal] = useState(false);
 	const [logRecipeTarget, setLogRecipeTarget] = useState(null);
+	const [logFilter, setLogFilter] = useState("");
 	const insets = useSafeAreaInsets();
 	const [recipes, setRecipes] = useState([]);
 	const [favouriteRecipeIds, setFavouriteRecipeIds] = useState([]);
@@ -4459,15 +4740,15 @@ function MainApp({ user, isPro }) {
 	};
 
 	// RevenueCat init
-	// useEffect(() => {
-	// 	if (!user) return;
-	// 	Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-	// 	const apiKey =
-	// 		Platform.OS === "ios"
-	// 			? "appl_xNGjmEgufsXuWySnKebRetuKCGj"
-	// 			: "goog_rcHUTFIPkKdXdEAQHcexulBdpOj";
-	// 	Purchases.configure({ apiKey, appUserID: user.uid });
-	// }, [user]);
+	useEffect(() => {
+		if (!user) return;
+		Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+		const apiKey =
+			Platform.OS === "ios"
+				? "appl_xNGjmEgufsXuWySnKebRetuKCGj"
+				: "goog_rcHUTFIPkKdXdEAQHcexulBdpOj";
+		Purchases.configure({ apiKey, appUserID: user.uid });
+	}, [user]);
 
 	// Derived state — must be defined before any handlers or JSX that reference them
 	const activeChild =
@@ -4968,12 +5249,17 @@ function MainApp({ user, isPro }) {
 						child={activeChild}
 						foodLog={childLog}
 						onNavigate={setPage}
+						onNavigateFiltered={(pg, filter) => {
+							setLogFilter(filter);
+							setPage(pg);
+						}}
 					/>
 				)}
 				{page === "log" && (
 					<LogScreen
 						foodLog={childLog}
 						childName={activeChild?.name || null}
+						initialFilter={logFilter}
 						onEdit={setEditEntry}
 						onDelete={deleteFood}
 						onToggleFavourite={toggleFav}
