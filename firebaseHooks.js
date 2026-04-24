@@ -21,6 +21,7 @@ import {
 	query,
 	where,
 	serverTimestamp,
+	orderBy,
 } from "firebase/firestore";
 import { auth, db } from "./firebase";
 
@@ -133,9 +134,19 @@ export async function fetchChildren(userId) {
 	ownedSnap.docs.forEach((d) =>
 		allDocs.set(d.id, { ...d.data(), id: d.id, isOwner: true }),
 	);
-	sharedSnap.docs.forEach((d) =>
-		allDocs.set(d.id, { ...d.data(), id: d.id, isOwner: false }),
-	);
+
+	// For shared children, also fetch the owner's email so we can display it
+	for (const d of sharedSnap.docs) {
+		const data = d.data();
+		let ownerEmail = null;
+		try {
+			const ownerSnap = await getDoc(doc(db, "users", data.userId));
+			if (ownerSnap.exists()) ownerEmail = ownerSnap.data().email || null;
+		} catch (e) {
+			// Non-critical — just won't show owner email
+		}
+		allDocs.set(d.id, { ...data, id: d.id, isOwner: false, ownerEmail });
+	}
 
 	return Array.from(allDocs.values());
 }
@@ -224,4 +235,26 @@ export async function updateFoodEntry(entryId, data) {
 
 export async function deleteFoodEntry(entryId) {
 	await deleteDoc(doc(db, "foodLog", entryId));
+}
+
+export async function fetchRecipes() {
+	const q = query(collection(db, "recipes"), orderBy("order", "asc"));
+	const snap = await getDocs(q);
+	return snap.docs.map((d) => ({ ...d.data(), id: d.id }));
+}
+
+export async function toggleRecipeFavourite(userId, recipeId, isFav) {
+	const ref = doc(db, "users", userId, "favouriteRecipes", recipeId);
+	if (isFav) {
+		await deleteDoc(ref);
+	} else {
+		await setDoc(ref, { recipeId, savedAt: serverTimestamp() });
+	}
+}
+
+export async function fetchFavouriteRecipes(userId) {
+	const snap = await getDocs(
+		collection(db, "users", userId, "favouriteRecipes"),
+	);
+	return snap.docs.map((d) => d.id); // just the recipe IDs
 }

@@ -40,6 +40,9 @@ import {
 	logOut,
 	fetchChildren,
 	fetchFoodLog,
+	fetchRecipes,
+	fetchFavouriteRecipes,
+	toggleRecipeFavourite,
 	addFoodEntry,
 	updateFoodEntry,
 	deleteFoodEntry,
@@ -117,146 +120,146 @@ const REACTIONS = [
 ];
 
 // ─── RECIPES ──────────────────────────────────────────────────────────────────
-const RECIPES = [
-	{
-		id: 1,
-		title: "Banana Oat Pancakes",
-		category: "Breakfast",
-		ageGroup: "6m+",
-		time: "15 min",
-		tags: ["dairy-free", "egg-free"],
-		locked: false,
-		description: "Soft, naturally sweet pancakes perfect for little hands.",
-		ingredients: [
-			"1 ripe banana",
-			"4 tbsp rolled oats",
-			"1 egg",
-			"Pinch of cinnamon",
-			"Coconut oil for frying",
-		],
-		steps: [
-			"Mash the banana well until smooth.",
-			"Blend oats to a rough flour and mix in.",
-			"Beat in the egg and cinnamon.",
-			"Heat coconut oil in a non-stick pan on medium-low.",
-			"Drop tablespoons of batter and cook 2–3 min each side.",
-			"Cool completely. Cut into strips for easy gripping.",
-		],
-	},
-	{
-		id: 2,
-		title: "Sweet Potato Fingers",
-		category: "Finger Foods",
-		ageGroup: "6m+",
-		time: "30 min",
-		tags: ["vegan", "iron-rich"],
-		locked: false,
-		description:
-			"Soft-baked wedges that are easy to pick up and naturally sweet.",
-		ingredients: [
-			"1 medium sweet potato",
-			"1 tsp olive oil",
-			"Pinch of cumin (optional)",
-		],
-		steps: [
-			"Preheat oven to 200°C / 180°C fan.",
-			"Peel sweet potato and cut into finger-sized wedges.",
-			"Toss in olive oil and cumin.",
-			"Spread on lined baking tray.",
-			"Bake 25–30 minutes until soft and slightly golden.",
-			"Cool until just warm before serving.",
-		],
-	},
-	{
-		id: 3,
-		title: "Salmon & Broccoli Bites",
-		category: "Mains",
-		ageGroup: "7m+",
-		time: "25 min",
-		tags: ["omega-3", "iron-rich"],
-		locked: true,
-		description: "Omega-3 packed bites with hidden veg.",
-		ingredients: [
-			"150g cooked salmon",
-			"80g cooked broccoli",
-			"2 tbsp breadcrumbs",
-			"1 egg yolk",
-		],
-		steps: [
-			"Flake salmon and finely chop broccoli.",
-			"Mix with breadcrumbs and egg yolk.",
-			"Shape into small patties.",
-			"Bake at 180°C for 15–18 minutes.",
-			"Cool before serving.",
-		],
-	},
-	{
-		id: 4,
-		title: "Avocado Toast Soldiers",
-		category: "Breakfast",
-		ageGroup: "6m+",
-		time: "10 min",
-		tags: ["healthy-fats"],
-		locked: true,
-		description: "Creamy avocado on toast cut into soldiers.",
-		ingredients: [
-			"½ ripe avocado",
-			"1 slice wholemeal toast",
-			"Squeeze of lemon juice",
-		],
-		steps: [
-			"Mash avocado with lemon juice.",
-			"Toast bread until golden.",
-			"Spread avocado on toast.",
-			"Cut into soldiers and serve.",
-		],
-	},
-	{
-		id: 5,
-		title: "Lentil & Veggie Fritters",
-		category: "Mains",
-		ageGroup: "7m+",
-		time: "35 min",
-		tags: ["high-protein", "iron-rich"],
-		locked: true,
-		description: "Iron-rich fritters packed with hidden veg.",
-		ingredients: [
-			"100g cooked red lentils",
-			"1 grated carrot",
-			"1 grated courgette",
-			"2 tbsp plain flour",
-			"1 egg",
-		],
-		steps: [
-			"Squeeze moisture from grated veg.",
-			"Mix lentils, veg, flour, egg.",
-			"Shape into patties.",
-			"Fry on medium heat 3–4 min each side.",
-			"Drain and cool before serving.",
-		],
-	},
-	{
-		id: 6,
-		title: "Mango Yoghurt Pots",
-		category: "Snacks",
-		ageGroup: "6m+",
-		time: "5 min",
-		tags: ["probiotic"],
-		locked: true,
-		description: "A quick creamy snack full of probiotics.",
-		ingredients: [
-			"3 tbsp full-fat plain yoghurt",
-			"2 tbsp fresh or frozen mango",
-			"Optional: pinch of cardamom",
-		],
-		steps: [
-			"Defrost mango if frozen.",
-			"Mash or blend mango to a purée.",
-			"Swirl through yoghurt.",
-			"Serve in a bowl or on a preloaded spoon.",
-		],
-	},
-];
+// const RECIPES = [
+// 	{
+// 		id: 1,
+// 		title: "Banana Oat Pancakes",
+// 		category: "Breakfast",
+// 		ageGroup: "6m+",
+// 		time: "15 min",
+// 		tags: ["dairy-free", "egg-free"],
+// 		locked: false,
+// 		description: "Soft, naturally sweet pancakes perfect for little hands.",
+// 		ingredients: [
+// 			"1 ripe banana",
+// 			"4 tbsp rolled oats",
+// 			"1 egg",
+// 			"Pinch of cinnamon",
+// 			"Coconut oil for frying",
+// 		],
+// 		steps: [
+// 			"Mash the banana well until smooth.",
+// 			"Blend oats to a rough flour and mix in.",
+// 			"Beat in the egg and cinnamon.",
+// 			"Heat coconut oil in a non-stick pan on medium-low.",
+// 			"Drop tablespoons of batter and cook 2–3 min each side.",
+// 			"Cool completely. Cut into strips for easy gripping.",
+// 		],
+// 	},
+// 	{
+// 		id: 2,
+// 		title: "Sweet Potato Fingers",
+// 		category: "Finger Foods",
+// 		ageGroup: "6m+",
+// 		time: "30 min",
+// 		tags: ["vegan", "iron-rich"],
+// 		locked: false,
+// 		description:
+// 			"Soft-baked wedges that are easy to pick up and naturally sweet.",
+// 		ingredients: [
+// 			"1 medium sweet potato",
+// 			"1 tsp olive oil",
+// 			"Pinch of cumin (optional)",
+// 		],
+// 		steps: [
+// 			"Preheat oven to 200°C / 180°C fan.",
+// 			"Peel sweet potato and cut into finger-sized wedges.",
+// 			"Toss in olive oil and cumin.",
+// 			"Spread on lined baking tray.",
+// 			"Bake 25–30 minutes until soft and slightly golden.",
+// 			"Cool until just warm before serving.",
+// 		],
+// 	},
+// 	{
+// 		id: 3,
+// 		title: "Salmon & Broccoli Bites",
+// 		category: "Mains",
+// 		ageGroup: "7m+",
+// 		time: "25 min",
+// 		tags: ["omega-3", "iron-rich"],
+// 		locked: true,
+// 		description: "Omega-3 packed bites with hidden veg.",
+// 		ingredients: [
+// 			"150g cooked salmon",
+// 			"80g cooked broccoli",
+// 			"2 tbsp breadcrumbs",
+// 			"1 egg yolk",
+// 		],
+// 		steps: [
+// 			"Flake salmon and finely chop broccoli.",
+// 			"Mix with breadcrumbs and egg yolk.",
+// 			"Shape into small patties.",
+// 			"Bake at 180°C for 15–18 minutes.",
+// 			"Cool before serving.",
+// 		],
+// 	},
+// 	{
+// 		id: 4,
+// 		title: "Avocado Toast Soldiers",
+// 		category: "Breakfast",
+// 		ageGroup: "6m+",
+// 		time: "10 min",
+// 		tags: ["healthy-fats"],
+// 		locked: true,
+// 		description: "Creamy avocado on toast cut into soldiers.",
+// 		ingredients: [
+// 			"½ ripe avocado",
+// 			"1 slice wholemeal toast",
+// 			"Squeeze of lemon juice",
+// 		],
+// 		steps: [
+// 			"Mash avocado with lemon juice.",
+// 			"Toast bread until golden.",
+// 			"Spread avocado on toast.",
+// 			"Cut into soldiers and serve.",
+// 		],
+// 	},
+// 	{
+// 		id: 5,
+// 		title: "Lentil & Veggie Fritters",
+// 		category: "Mains",
+// 		ageGroup: "7m+",
+// 		time: "35 min",
+// 		tags: ["high-protein", "iron-rich"],
+// 		locked: true,
+// 		description: "Iron-rich fritters packed with hidden veg.",
+// 		ingredients: [
+// 			"100g cooked red lentils",
+// 			"1 grated carrot",
+// 			"1 grated courgette",
+// 			"2 tbsp plain flour",
+// 			"1 egg",
+// 		],
+// 		steps: [
+// 			"Squeeze moisture from grated veg.",
+// 			"Mix lentils, veg, flour, egg.",
+// 			"Shape into patties.",
+// 			"Fry on medium heat 3–4 min each side.",
+// 			"Drain and cool before serving.",
+// 		],
+// 	},
+// 	{
+// 		id: 6,
+// 		title: "Mango Yoghurt Pots",
+// 		category: "Snacks",
+// 		ageGroup: "6m+",
+// 		time: "5 min",
+// 		tags: ["probiotic"],
+// 		locked: true,
+// 		description: "A quick creamy snack full of probiotics.",
+// 		ingredients: [
+// 			"3 tbsp full-fat plain yoghurt",
+// 			"2 tbsp fresh or frozen mango",
+// 			"Optional: pinch of cardamom",
+// 		],
+// 		steps: [
+// 			"Defrost mango if frozen.",
+// 			"Mash or blend mango to a purée.",
+// 			"Swirl through yoghurt.",
+// 			"Serve in a bowl or on a preloaded spoon.",
+// 		],
+// 	},
+// ];
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 function calcAgeWeeks(dob) {
@@ -2542,15 +2545,24 @@ function ChildrenScreen({
 }
 
 // ─── RECIPES SCREEN ───────────────────────────────────────────────────────────
-function RecipesScreen({ isPro, onUpgradePro }) {
+function RecipesScreen({
+	isPro,
+	recipes,
+	favouriteRecipeIds,
+	onUpgradePro,
+	onToggleFav,
+	onLogRecipe,
+}) {
 	const [expandedId, setExpandedId] = useState(null);
 	const [filterAge, setFilterAge] = useState("all");
 	const [upgradeLoading, setUpgradeLoading] = useState(false);
-	const ageGroups = ["all", "6m+", "7m+", "9m+", "12m+"];
-	const filtered =
+	const ageGroups = ["all", "4-6m+", "6m+", "7-9m+", "10m+"];
+	let filtered =
 		filterAge === "all"
-			? RECIPES
-			: RECIPES.filter((r) => r.ageGroup === filterAge);
+			? recipes
+			: filterAge === "saved"
+				? recipes.filter((r) => favouriteRecipeIds.includes(r.id))
+				: recipes.filter((r) => r.ageGroup === filterAge);
 	const toggle = (id, locked) => {
 		if (locked && !isPro) return;
 		setExpandedId((prev) => (prev === id ? null : id));
@@ -2751,6 +2763,37 @@ function RecipesScreen({ isPro, onUpgradePro }) {
 						</Text>
 					</TouchableOpacity>
 				))}
+
+				{/* Saved pill */}
+				<TouchableOpacity
+					onPress={() => setFilterAge("saved")}
+					style={{
+						backgroundColor: filterAge === "saved" ? "#c49a10" : C.white,
+						borderRadius: 999,
+						paddingHorizontal: 14,
+						paddingVertical: 8,
+						flexDirection: "row",
+						alignItems: "center",
+						gap: 6,
+						shadowColor: "#000",
+						shadowOpacity: 0.05,
+						shadowRadius: 4,
+						elevation: 1,
+					}}>
+					<Icon
+						name="starFill"
+						size={12}
+						color={filterAge === "saved" ? C.white : "#c49a10"}
+					/>
+					<Text
+						style={{
+							fontSize: 13,
+							fontWeight: "700",
+							color: filterAge === "saved" ? C.white : "#c49a10",
+						}}>
+						Saved
+					</Text>
+				</TouchableOpacity>
 			</ScrollView>
 
 			{filtered.map((r) => {
@@ -2944,6 +2987,74 @@ function RecipesScreen({ isPro, onUpgradePro }) {
 										</Text>
 									</View>
 								))}
+								{/* Action buttons */}
+								<View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
+									<TouchableOpacity
+										onPress={() => onToggleFav(r.id)}
+										style={{
+											flex: 1,
+											flexDirection: "row",
+											alignItems: "center",
+											justifyContent: "center",
+											gap: 8,
+											backgroundColor: favouriteRecipeIds.includes(r.id)
+												? "#fef6d4"
+												: C.bgPurple,
+											borderRadius: 12,
+											paddingVertical: 12,
+										}}
+										activeOpacity={0.8}>
+										<Icon
+											name={
+												favouriteRecipeIds.includes(r.id) ? "starFill" : "star"
+											}
+											size={16}
+											color={
+												favouriteRecipeIds.includes(r.id)
+													? "#c49a10"
+													: C.mutedText
+											}
+										/>
+										<Text
+											style={{
+												fontWeight: "700",
+												fontSize: 13,
+												color: favouriteRecipeIds.includes(r.id)
+													? "#c49a10"
+													: C.mutedText,
+											}}>
+											{favouriteRecipeIds.includes(r.id) ? "Saved" : "Save"}
+										</Text>
+									</TouchableOpacity>
+
+									<TouchableOpacity
+										onPress={() => onLogRecipe(r)}
+										style={{
+											flex: 1,
+											flexDirection: "row",
+											alignItems: "center",
+											justifyContent: "center",
+											gap: 8,
+											backgroundColor: C.primaryPurple,
+											borderRadius: 12,
+											paddingVertical: 12,
+											shadowColor: C.primaryPurple,
+											shadowOpacity: 0.3,
+											shadowRadius: 6,
+											elevation: 3,
+										}}
+										activeOpacity={0.8}>
+										<Icon name="plus" size={16} color={C.white} />
+										<Text
+											style={{
+												fontWeight: "700",
+												fontSize: 13,
+												color: C.white,
+											}}>
+											Log This
+										</Text>
+									</TouchableOpacity>
+								</View>
 							</View>
 						)}
 						{effectiveLocked && (
@@ -2980,6 +3091,7 @@ function MoreScreen({
 	user,
 	isPro,
 	ownedChildren,
+	defaultChildId,
 	onLogout,
 	onDeleteAccount,
 	onUpgradePro,
@@ -3424,11 +3536,13 @@ function MoreScreen({
 						</View>
 
 						{/* Step 1 — Pick a child if more than one */}
-						{ownedChildren.filter((c) => c.isOwner !== false).length > 1 && (
+						{ownedChildren.filter(
+							(c) => c.isOwner !== false && c.isOwner !== undefined,
+						).length > 1 && (
 							<View style={{ marginBottom: 16 }}>
 								<Text style={s.label}>Select Child to Share</Text>
 								{ownedChildren
-									.filter((c) => c.isOwner !== false)
+									.filter((c) => c.isOwner !== false && c.isOwner !== undefined)
 									.map((c) => (
 										<TouchableOpacity
 											key={c.id}
@@ -3516,8 +3630,7 @@ function MoreScreen({
 							onPress={() =>
 								onManageSharing(
 									shareEmail.trim(),
-									selectedChildId ||
-										ownedChildren.filter((c) => c.isOwner !== false)[0]?.id,
+									selectedChildId || defaultChildId,
 									() => {
 										setShowSharing(false);
 										setShareEmail("");
@@ -3538,30 +3651,61 @@ function MoreScreen({
 							)}
 						</TouchableOpacity>
 
-						{/* Currently shared with */}
+						{/* Family Group */}
 						{(() => {
 							const targetChild = ownedChildren.find(
-								(c) =>
-									c.id ===
-									(selectedChildId ||
-										ownedChildren.filter((c2) => c2.isOwner !== false)[0]?.id),
+								(c) => c.id === (selectedChildId || defaultChildId),
 							);
+							if (!targetChild) return null;
+							const isOwner = targetChild.isOwner !== false;
 							const sharedWith = targetChild?.sharedWith || [];
-							if (sharedWith.length === 0) return null;
+							const sharedWithEmails = (
+								targetChild?.sharedWithEmails || []
+							).slice(0, sharedWith.length);
+
+							// Owner sees: people shared with, with Remove button
+							// Shared user sees: owner + other shared users (read only)
+							const familyRows = isOwner
+								? sharedWith.map((uid, i) => ({
+										uid,
+										email: sharedWithEmails[i] || uid,
+										role: "Shared with",
+										canRemove: true,
+									}))
+								: [
+										{
+											uid: targetChild.userId,
+											email: targetChild.ownerEmail || "Account owner",
+											role: "Owner",
+											canRemove: false,
+										},
+										...sharedWith
+											.filter((uid) => uid !== user.uid)
+											.map((uid, i) => ({
+												uid,
+												email: sharedWithEmails[sharedWith.indexOf(uid)] || uid,
+												role: "Also shared with",
+												canRemove: false,
+											})),
+									];
+
+							if (familyRows.length === 0) return null;
+
 							return (
 								<View style={{ marginTop: 20 }}>
 									<Text style={[s.smallLabel, { marginBottom: 10 }]}>
-										Currently shared with
+										Family Group
 									</Text>
-									{sharedWith.map((uid, i) => (
+									{familyRows.map((row) => (
 										<View
-											key={uid}
+											key={row.uid}
 											style={{
 												flexDirection: "row",
 												alignItems: "center",
 												justifyContent: "space-between",
 												padding: 12,
-												backgroundColor: C.bgGreen,
+												backgroundColor:
+													row.role === "Owner" ? C.bgPurple : C.bgGreen,
 												borderRadius: 12,
 												marginBottom: 6,
 											}}>
@@ -3570,39 +3714,62 @@ function MoreScreen({
 													flexDirection: "row",
 													alignItems: "center",
 													gap: 10,
+													flex: 1,
 												}}>
-												<Icon name="user" size={16} color={C.primaryGreen} />
-												<Text
-													style={{
-														fontSize: 13,
-														color: C.statGreenText,
-														fontWeight: "600",
-													}}
-													numberOfLines={1}>
-													{uid}
-												</Text>
+												<Icon
+													name={row.role === "Owner" ? "crown" : "user"}
+													size={16}
+													color={
+														row.role === "Owner"
+															? C.primaryPurple
+															: C.primaryGreen
+													}
+												/>
+												<View style={{ flex: 1 }}>
+													<Text
+														style={{
+															fontSize: 10,
+															fontWeight: "700",
+															color: C.mutedText,
+															textTransform: "uppercase",
+															letterSpacing: 0.5,
+														}}>
+														{row.role}
+													</Text>
+													<Text
+														style={{
+															fontSize: 13,
+															fontWeight: "700",
+															color:
+																row.role === "Owner"
+																	? C.primaryPurple
+																	: C.statGreenText,
+														}}
+														numberOfLines={1}>
+														{row.email}
+													</Text>
+												</View>
 											</View>
-											<TouchableOpacity
-												onPress={() =>
-													onManageSharing(
-														uid,
-														selectedChildId ||
-															ownedChildren.filter(
-																(c) => c.isOwner !== false,
-															)[0]?.id,
-														null,
-														true,
-													)
-												}>
-												<Text
-													style={{
-														fontSize: 12,
-														color: "#c0392b",
-														fontWeight: "700",
-													}}>
-													Remove
-												</Text>
-											</TouchableOpacity>
+											{row.canRemove && (
+												<TouchableOpacity
+													onPress={() =>
+														onManageSharing(
+															row.uid,
+															selectedChildId || defaultChildId,
+															null,
+															true,
+														)
+													}>
+													<Text
+														style={{
+															fontSize: 12,
+															color: "#c0392b",
+															fontWeight: "700",
+														}}>
+														Remove
+													</Text>
+												</TouchableOpacity>
+											)}
 										</View>
 									))}
 								</View>
@@ -3738,6 +3905,182 @@ function MoreScreen({
 	);
 }
 
+// ─── LOG RECIPE MODAL ─────────────────────────────────────────────────────────
+function LogRecipeModal({ visible, recipe, childName, onConfirm, onClose }) {
+	const [selectedReaction, setSelectedReaction] = useState("");
+	const [notes, setNotes] = useState("");
+
+	const reset = () => {
+		setSelectedReaction("");
+		setNotes("");
+	};
+
+	if (!visible || !recipe) return null;
+
+	return (
+		<Modal
+			visible={visible}
+			transparent
+			animationType="slide"
+			onRequestClose={onClose}>
+			<KeyboardAvoidingView
+				behavior={Platform.OS === "ios" ? "padding" : "height"}
+				style={s.modalOverlay}>
+				<View style={s.modalSheet}>
+					{/* Header */}
+					<View
+						style={{
+							flexDirection: "row",
+							justifyContent: "space-between",
+							alignItems: "center",
+							marginBottom: 20,
+						}}>
+						<View style={{ flex: 1, marginRight: 12 }}>
+							<Text style={s.modalTitle}>Log Recipe</Text>
+							<Text
+								style={{ fontSize: 13, color: C.mutedText, marginTop: 3 }}
+								numberOfLines={1}>
+								{recipe.title}
+								{childName ? ` for ${childName}` : ""}
+							</Text>
+						</View>
+						<TouchableOpacity
+							onPress={() => {
+								reset();
+								onClose();
+							}}
+							style={{
+								backgroundColor: C.bgPurple,
+								borderRadius: 10,
+								padding: 8,
+							}}>
+							<Icon name="close" size={16} color={C.mutedText} />
+						</TouchableOpacity>
+					</View>
+
+					{/* Recipe info chip */}
+					<View
+						style={{
+							flexDirection: "row",
+							alignItems: "center",
+							gap: 10,
+							backgroundColor: C.bgPurple,
+							borderRadius: 14,
+							padding: 14,
+							marginBottom: 20,
+						}}>
+						<CategoryIcon category={recipe.category} size={44} />
+						<View style={{ flex: 1 }}>
+							<Text
+								style={{
+									fontWeight: "700",
+									fontSize: 14,
+									color: C.primaryPinkDark,
+								}}>
+								{recipe.title}
+							</Text>
+							<View style={{ flexDirection: "row", gap: 6, marginTop: 4 }}>
+								<View style={s.tagPurple}>
+									<Text style={s.tagPurpleText}>{recipe.category}</Text>
+								</View>
+								<View style={s.tagGreen}>
+									<Text style={s.tagGreenText}>{recipe.ageGroup}</Text>
+								</View>
+							</View>
+						</View>
+					</View>
+
+					{/* Reaction picker */}
+					<Text style={[s.label, { marginBottom: 10 }]}>
+						How did they react?
+					</Text>
+					<View
+						style={{
+							flexDirection: "row",
+							flexWrap: "wrap",
+							gap: 8,
+							marginBottom: 18,
+						}}>
+						{REACTIONS.map((r) => {
+							const sel = selectedReaction === r.value;
+							return (
+								<TouchableOpacity
+									key={r.value}
+									onPress={() => setSelectedReaction(r.value)}
+									style={{
+										backgroundColor: sel ? r.bg : C.white,
+										borderColor: sel ? r.border : C.borderLight,
+										borderWidth: 2,
+										borderRadius: 14,
+										paddingVertical: 10,
+										paddingHorizontal: 6,
+										flex: 1,
+										alignItems: "center",
+										gap: 6,
+										minWidth: "18%",
+									}}
+									activeOpacity={0.8}>
+									<ReactionFace reaction={r.value} size={32} />
+									<Text
+										style={{
+											fontWeight: "700",
+											fontSize: 10,
+											color: sel ? r.color : C.mutedText,
+											textAlign: "center",
+										}}>
+										{r.value}
+									</Text>
+								</TouchableOpacity>
+							);
+						})}
+					</View>
+
+					{/* Notes */}
+					<Text style={[s.label, { marginBottom: 6 }]}>Notes (optional)</Text>
+					<TextInput
+						value={notes}
+						onChangeText={setNotes}
+						placeholder="How did it go? Any observations..."
+						multiline
+						numberOfLines={3}
+						style={[
+							s.input,
+							{
+								height: 80,
+								textAlignVertical: "top",
+								backgroundColor: C.white,
+								marginBottom: 18,
+							},
+						]}
+						placeholderTextColor={C.mutedText}
+						autoComplete="off"
+					/>
+
+					{/* Add button */}
+					<TouchableOpacity
+						onPress={() => {
+							onConfirm(selectedReaction, notes);
+							reset();
+						}}
+						style={s.btnPrimary}
+						activeOpacity={0.8}>
+						<View
+							style={{
+								flexDirection: "row",
+								alignItems: "center",
+								gap: 8,
+								justifyContent: "center",
+							}}>
+							<Icon name="plus" size={16} color={C.white} />
+							<Text style={s.btnPrimaryText}>Add to Food Log</Text>
+						</View>
+					</TouchableOpacity>
+				</View>
+			</KeyboardAvoidingView>
+		</Modal>
+	);
+}
+
 // ─── EDIT MODAL ───────────────────────────────────────────────────────────────
 function EditModal({ visible, entry, onSubmit, onClose }) {
 	return (
@@ -3793,14 +4136,25 @@ function MainApp({ user, isPro }) {
 	const [editEntry, setEditEntry] = useState(null);
 	const [toasts, setToasts] = useState([]);
 	const [showChildPicker, setShowChildPicker] = useState(false);
+	const [showLogRecipeModal, setShowLogRecipeModal] = useState(false);
+	const [logRecipeTarget, setLogRecipeTarget] = useState(null);
 	const insets = useSafeAreaInsets();
+	const [recipes, setRecipes] = useState([]);
+	const [favouriteRecipeIds, setFavouriteRecipeIds] = useState([]);
 
 	useEffect(() => {
 		if (!user) return;
-		Promise.all([fetchFoodLog(user.uid), fetchChildren(user.uid)])
-			.then(([log, kids]) => {
+		Promise.all([
+			fetchFoodLog(user.uid),
+			fetchChildren(user.uid),
+			fetchRecipes(),
+			fetchFavouriteRecipes(user.uid),
+		])
+			.then(([log, kids, recs, favIds]) => {
 				setFoodLog(log);
 				setChildren(kids);
+				setRecipes(recs);
+				setFavouriteRecipeIds(favIds);
 				if (kids.length > 0) setActiveChildId(kids[0].id);
 				setDataLoaded(true);
 			})
@@ -3809,6 +4163,75 @@ function MainApp({ user, isPro }) {
 				setDataLoaded(true);
 			});
 	}, [user]);
+
+	const handleToggleRecipeFav = async (recipeId) => {
+		const isFav = favouriteRecipeIds.includes(recipeId);
+		// Optimistically update UI immediately
+		setFavouriteRecipeIds((prev) =>
+			isFav ? prev.filter((id) => id !== recipeId) : [...prev, recipeId],
+		);
+		try {
+			await toggleRecipeFavourite(user.uid, recipeId, isFav);
+		} catch (e) {
+			// Revert on failure
+			setFavouriteRecipeIds((prev) =>
+				isFav ? [...prev, recipeId] : prev.filter((id) => id !== recipeId),
+			);
+			console.error("toggleRecipeFavourite error:", e.code, e.message);
+			Alert.alert("Error", e.message || "Could not update favourite.");
+		}
+	};
+
+	const handleLogRecipe = (recipe) => {
+		if (!activeChild) {
+			Alert.alert("No child selected", "Please select a child first.");
+			return;
+		}
+		setLogRecipeTarget(recipe);
+		setShowLogRecipeModal(true);
+	};
+
+	const handleLogRecipeConfirm = async (reaction, notes) => {
+		if (!logRecipeTarget || !activeChild) return;
+		// Map recipe category to food log category
+		const categoryMap = {
+			Breakfast: "Grains",
+			"Finger Foods": "Other",
+			Mains: "Proteins",
+			Snacks: "Fruits",
+			Lunch: "Vegetables",
+			Dinner: "Proteins",
+			Desserts: "Fruits",
+		};
+		const existing = childLog.filter(
+			(f) => normalize(f.name) === normalize(logRecipeTarget.title),
+		);
+		const today = new Date().toISOString().split("T")[0];
+		const entry = {
+			childId: activeChild.id,
+			date: today,
+			name: logRecipeTarget.title,
+			category:
+				categoryMap[logRecipeTarget.category] ||
+				logRecipeTarget.category ||
+				"Other",
+			form: "Mixed Texture",
+			reaction: reaction || "",
+			notes: notes || "",
+			favourite: false,
+			attemptNum: existing.length + 1,
+		};
+		try {
+			const newId = await addFoodEntry(user.uid, entry);
+			setFoodLog((p) => [...p, { id: newId, ...entry }]);
+			setShowLogRecipeModal(false);
+			setLogRecipeTarget(null);
+			toast(`"${logRecipeTarget.title}" added to food log`);
+			setPage("log");
+		} catch (e) {
+			Alert.alert("Error", "Could not add to food log.");
+		}
+	};
 
 	// RevenueCat init
 	useEffect(() => {
@@ -3958,10 +4381,23 @@ function MainApp({ user, isPro }) {
 
 			if (isRemove) {
 				// Remove user from sharedWith
+				// emailOrUid is the UID when removing
 				await updateDoc(doc(firedb, "children", childId), {
 					sharedWith: arrayRemove(emailOrUid),
 				});
-				// Update local state
+
+				// Also find and remove the matching email
+				const child = children.find((c) => c.id === childId);
+				const uidIndex = (child?.sharedWith || []).indexOf(emailOrUid);
+				const matchingEmail =
+					uidIndex !== -1 ? (child?.sharedWithEmails || [])[uidIndex] : null;
+
+				if (matchingEmail) {
+					await updateDoc(doc(firedb, "children", childId), {
+						sharedWithEmails: arrayRemove(matchingEmail),
+					});
+				}
+
 				setChildren((prev) =>
 					prev.map((c) =>
 						c.id === childId
@@ -3970,6 +4406,11 @@ function MainApp({ user, isPro }) {
 									sharedWith: (c.sharedWith || []).filter(
 										(u) => u !== emailOrUid,
 									),
+									sharedWithEmails: matchingEmail
+										? (c.sharedWithEmails || []).filter(
+												(e) => e !== matchingEmail,
+											)
+										: c.sharedWithEmails || [],
 								}
 							: c,
 					),
@@ -4011,15 +4452,22 @@ function MainApp({ user, isPro }) {
 			}
 
 			// Add their UID to sharedWith array
+			const theirEmail = emailOrUid.toLowerCase().trim();
+
 			await updateDoc(doc(firedb, "children", childId), {
 				sharedWith: arrayUnion(theirUid),
+				sharedWithEmails: arrayUnion(theirEmail),
 			});
 
 			// Update local children state
 			setChildren((prev) =>
 				prev.map((c) =>
 					c.id === childId
-						? { ...c, sharedWith: [...(c.sharedWith || []), theirUid] }
+						? {
+								...c,
+								sharedWith: [...(c.sharedWith || []), theirUid],
+								sharedWithEmails: [...(c.sharedWithEmails || []), theirEmail],
+							}
 						: c,
 				),
 			);
@@ -4323,13 +4771,21 @@ function MainApp({ user, isPro }) {
 					</KeyboardAvoidingView>
 				)}
 				{page === "recipes" && (
-					<RecipesScreen isPro={isPro} onUpgradePro={handleUpgradePro} />
+					<RecipesScreen
+						isPro={isPro}
+						recipes={recipes}
+						favouriteRecipeIds={favouriteRecipeIds}
+						onUpgradePro={handleUpgradePro}
+						onToggleFav={handleToggleRecipeFav}
+						onLogRecipe={handleLogRecipe}
+					/>
 				)}
 				{page === "more" && (
 					<MoreScreen
 						user={user}
 						isPro={isPro}
 						ownedChildren={children}
+						defaultChildId={activeChild?.id || null}
 						onLogout={handleLogout}
 						onDeleteAccount={handleDeleteAccount}
 						onUpgradePro={handleUpgradePro}
@@ -4409,6 +4865,18 @@ function MainApp({ user, isPro }) {
 				entry={editEntry}
 				onSubmit={editFood}
 				onClose={() => setEditEntry(null)}
+			/>
+
+			{/* Log Recipe Modal */}
+			<LogRecipeModal
+				visible={showLogRecipeModal}
+				recipe={logRecipeTarget}
+				childName={activeChild?.name}
+				onConfirm={handleLogRecipeConfirm}
+				onClose={() => {
+					setShowLogRecipeModal(false);
+					setLogRecipeTarget(null);
+				}}
 			/>
 
 			{/* Toasts */}
