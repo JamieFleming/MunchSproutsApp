@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, {
+	useState,
+	useEffect,
+	useCallback,
+	useContext,
+	createContext,
+} from "react";
 import {
 	View,
 	Image,
@@ -60,35 +66,115 @@ import { db } from "./firebase";
 import Purchases, { LOG_LEVEL } from "react-native-purchases";
 
 // ─── COLOURS ──────────────────────────────────────────────────────────────────
-const C = {
-	bgMain: "#ffffff", // white base throughout
-	bgPurple: "#f0ecfc", // lighter purple tint for cards/chips
-	bgGreen: "#eaf7f0",
-	bgWarning: "#fff5eb",
-	primaryPurple: "#9b7fe8",
-	secondaryPurple: "#c4b0f0",
-	primaryPurpleDark: "#7a5fcb",
-	primaryGreen: "#3db87a",
-	primaryGreenLight: "#5dd39e",
-	primaryPinkDark: "#5a2d7a",
-	textCharcoal: "#2d2d2d",
-	warningStroke: "#e07b39",
-	white: "#ffffff",
-	border: "#e0d8f8", // soft purple border
-	borderLight: "#ede8fb",
-	mutedText: "#8a7aaa",
-	// Pastel stat colours
-	statGreenBg: "#d4f0e0",
-	statGreenText: "#2d7a55",
-	statRedBg: "#fad4d4",
-	statRedText: "#a83232",
-	statBlueBg: "#d4e8f5",
-	statBlueText: "#2a5f8f",
-	statOrangeBg: "#fde8cc",
-	statOrangeText: "#a85a1a",
-	statNeutralBg: "#fde8cc",
-	statNeutralText: "#7a5a1a",
+// ─── THEME DEFINITIONS ───────────────────────────────────────────────────────
+const THEMES = {
+	default: {
+		bgMain: "#ffffff",
+		bgPurple: "#f0ecfc",
+		bgGreen: "#eaf7f0",
+		bgWarning: "#fff5eb",
+		primaryPurple: "#9b7fe8",
+		secondaryPurple: "#c4b0f0",
+		primaryPurpleDark: "#7a5fcb",
+		primaryGreen: "#3db87a",
+		primaryGreenLight: "#5dd39e",
+		primaryPinkDark: "#5a2d7a",
+		textCharcoal: "#2d2d2d",
+		warningStroke: "#e07b39",
+		white: "#ffffff",
+		border: "#e0d8f8",
+		borderLight: "#ede8fb",
+		mutedText: "#8a7aaa",
+		statGreenBg: "#d4f0e0",
+		statGreenText: "#2d7a55",
+		statRedBg: "#fad4d4",
+		statRedText: "#a83232",
+		statBlueBg: "#d4e8f5",
+		statBlueText: "#2a5f8f",
+		statOrangeBg: "#fde8cc",
+		statOrangeText: "#a85a1a",
+		statNeutralBg: "#fde8cc",
+		statNeutralText: "#7a5a1a",
+		card: "#ffffff",
+		screen: "#f6f3fe",
+		navBg: "#ffffff",
+	},
+	dark: {
+		bgMain: "#121212",
+		bgPurple: "#2a2040",
+		bgGreen: "#0d2b1e",
+		bgWarning: "#2b1e0d",
+		primaryPurple: "#b39dfa",
+		secondaryPurple: "#7c6bbf",
+		primaryPurpleDark: "#d4c4ff",
+		primaryGreen: "#4dd494",
+		primaryGreenLight: "#2ea868",
+		primaryPinkDark: "#d4b0ff",
+		textCharcoal: "#f0ecff",
+		warningStroke: "#f0a060",
+		white: "#1e1e2e",
+		border: "#3a3060",
+		borderLight: "#2e2448",
+		mutedText: "#9988cc",
+		statGreenBg: "#0d2b1e",
+		statGreenText: "#4dd494",
+		statRedBg: "#2b0d0d",
+		statRedText: "#f07070",
+		statBlueBg: "#0d1e2b",
+		statBlueText: "#70b8f0",
+		statOrangeBg: "#2b1a0d",
+		statOrangeText: "#f0a060",
+		statNeutralBg: "#2b1a0d",
+		statNeutralText: "#d4a060",
+		card: "#1e1e2e",
+		screen: "#121212",
+		navBg: "#1a1a2e",
+	},
+	accessible: {
+		// High contrast — black/white with bold colour only for action elements
+		bgMain: "#ffffff",
+		bgPurple: "#e8e0ff",
+		bgGreen: "#d0f0e0",
+		bgWarning: "#fff0d0",
+		primaryPurple: "#5000cc",
+		secondaryPurple: "#7730dd",
+		primaryPurpleDark: "#3800aa",
+		primaryGreen: "#007740",
+		primaryGreenLight: "#009950",
+		primaryPinkDark: "#000000",
+		textCharcoal: "#000000",
+		warningStroke: "#c84800",
+		white: "#ffffff",
+		border: "#000000",
+		borderLight: "#333333",
+		mutedText: "#444444",
+		statGreenBg: "#d0f0e0",
+		statGreenText: "#004d28",
+		statRedBg: "#ffe0e0",
+		statRedText: "#8b0000",
+		statBlueBg: "#d0e8ff",
+		statBlueText: "#003380",
+		statOrangeBg: "#fff0d0",
+		statOrangeText: "#7a3000",
+		statNeutralBg: "#f0f0d0",
+		statNeutralText: "#4a4000",
+		card: "#ffffff",
+		screen: "#f8f8f8",
+		navBg: "#ffffff",
+	},
 };
+
+// ─── THEME CONTEXT ────────────────────────────────────────────────────────────
+const ThemeContext = createContext({
+	theme: "default",
+	C: THEMES.default,
+	setTheme: () => {},
+});
+const useTheme = () => useContext(ThemeContext);
+
+// Initial C — will be overridden by context in components
+// This is only used for the StyleSheet which needs static values
+let C = THEMES.default;
 
 const CATEGORIES = [
 	{ value: "Vegetables", color: "#4caf7d", bg: "#d4f0e0" },
@@ -328,7 +414,9 @@ function buildDays(m, y) {
 }
 
 // ─── SVG ICON LIBRARY ─────────────────────────────────────────────────────────
-function Icon({ name, size = 18, color = C.mutedText }) {
+function Icon({ name, size = 18, color }) {
+	const { C } = useTheme();
+	if (color === undefined) color = C.mutedText;
 	const p = {
 		stroke: color,
 		strokeWidth: 2,
@@ -906,6 +994,7 @@ function ReactionFace({ reaction, size = 40 }) {
 
 // ─── SHARED COMPONENTS ────────────────────────────────────────────────────────
 function Card({ children, style, danger = false }) {
+	const { C } = useTheme();
 	return (
 		<View
 			style={[
@@ -918,6 +1007,7 @@ function Card({ children, style, danger = false }) {
 	);
 }
 function SectionTitle({ children, icon }) {
+	const { C } = useTheme();
 	return (
 		<View
 			style={{
@@ -932,6 +1022,7 @@ function SectionTitle({ children, icon }) {
 	);
 }
 function ReactionBadge({ reaction }) {
+	const { C } = useTheme();
 	const r = reactionCfg(reaction);
 	return (
 		<View
@@ -952,6 +1043,7 @@ function ReactionBadge({ reaction }) {
 	);
 }
 function StatCard({ icon, label, value, color, bg }) {
+	const { C } = useTheme();
 	return (
 		<View style={[s.statCard, { backgroundColor: bg }]}>
 			<Icon name={icon} size={18} color={color} />
@@ -961,6 +1053,7 @@ function StatCard({ icon, label, value, color, bg }) {
 	);
 }
 function PrimaryBtn({ label, onPress, color, icon }) {
+	const { C } = useTheme();
 	return (
 		<TouchableOpacity
 			onPress={onPress}
@@ -980,6 +1073,7 @@ function PrimaryBtn({ label, onPress, color, icon }) {
 	);
 }
 function SecondaryBtn({ onPress, children, style: extra }) {
+	const { C } = useTheme();
 	return (
 		<TouchableOpacity
 			onPress={onPress}
@@ -990,6 +1084,7 @@ function SecondaryBtn({ onPress, children, style: extra }) {
 	);
 }
 function DangerBtn({ onPress, children, style: extra }) {
+	const { C } = useTheme();
 	return (
 		<TouchableOpacity
 			onPress={onPress}
@@ -1002,6 +1097,7 @@ function DangerBtn({ onPress, children, style: extra }) {
 
 // ─── PICKER MODAL ─────────────────────────────────────────────────────────────
 function PickerModal({ visible, title, options, value, onSelect, onClose }) {
+	const { C } = useTheme();
 	return (
 		<Modal
 			visible={visible}
@@ -1063,6 +1159,7 @@ function DatePickerModal({
 	minYear = 2000,
 	maxYear = new Date().getFullYear(),
 }) {
+	const { C } = useTheme();
 	const parseDate = (v) => {
 		if (v) {
 			const d = new Date(v);
@@ -1221,6 +1318,7 @@ function DatePickerModal({
 }
 
 function DateField({ label, value, onChange, minYear, maxYear }) {
+	const { C } = useTheme();
 	const [open, setOpen] = useState(false);
 	return (
 		<View>
@@ -1259,6 +1357,7 @@ function DateField({ label, value, onChange, minYear, maxYear }) {
 
 // ─── FOOD FORM ────────────────────────────────────────────────────────────────
 function FoodForm({ onSubmit, initial = {}, buttonLabel = "Add to Log" }) {
+	const { C } = useTheme();
 	const today = new Date().toISOString().split("T")[0];
 	const [form, setForm] = useState({
 		date: today,
@@ -1477,6 +1576,7 @@ function FoodForm({ onSubmit, initial = {}, buttonLabel = "Add to Log" }) {
 
 // ─── LOADING ──────────────────────────────────────────────────────────────────
 function LoadingScreen() {
+	const { C } = useTheme();
 	return (
 		<View
 			style={{
@@ -1501,6 +1601,7 @@ function LoadingScreen() {
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 function DashboardScreen({ child, foodLog, onNavigate, onNavigateFiltered }) {
+	const { C } = useTheme();
 	const groups = groupByFood(foodLog);
 	const keys = Object.keys(groups);
 	const unique = keys.length,
@@ -1966,6 +2067,7 @@ function LogScreen({
 	onDelete,
 	onToggleFavourite,
 }) {
+	const { C } = useTheme();
 	const [search, setSearch] = useState("");
 	const [sortBy, setSortBy] = useState("date-desc");
 	const [reactionFilter, setReactionFilter] = useState(initialFilter || "");
@@ -2462,6 +2564,7 @@ function ChildrenScreen({
 	onEdit,
 	onDelete,
 }) {
+	const { C } = useTheme();
 	const [modalVisible, setModalVisible] = useState(false);
 	const [editTarget, setEditTarget] = useState(null);
 	const [form, setForm] = useState({ name: "", dob: "", weaningStart: "" });
@@ -2774,6 +2877,7 @@ function RecipesScreen({
 	onToggleFav,
 	onLogRecipe,
 }) {
+	const { C } = useTheme();
 	const [expandedId, setExpandedId] = useState(null);
 	const [filterAge, setFilterAge] = useState("all");
 	const [upgradeLoading, setUpgradeLoading] = useState(false);
@@ -3328,7 +3432,11 @@ function MoreScreen({
 	onUpgradePro,
 	onRestorePurchases,
 	onManageSharing,
+	onImportJson,
+	onExportJson,
+	onMigrateIds,
 }) {
+	const { C, theme, setTheme } = useTheme();
 	const [showChangePassword, setShowChangePassword] = useState(false);
 	const [currentPw, setCurrentPw] = useState("");
 	const [newPw, setNewPw] = useState("");
@@ -3614,6 +3722,118 @@ function MoreScreen({
 					)}
 				</View>
 			)}
+
+			{/* ── Appearance ── */}
+			<Text
+				style={[
+					s.smallLabel,
+					{ paddingLeft: 4, marginBottom: 10, marginTop: 6 },
+				]}>
+				Appearance
+			</Text>
+			<View
+				style={{
+					backgroundColor: C.white,
+					borderRadius: 16,
+					padding: 16,
+					marginBottom: 10,
+					shadowColor: "#000",
+					shadowOpacity: 0.04,
+					shadowRadius: 6,
+					elevation: 1,
+				}}>
+				<Text
+					style={{
+						fontWeight: "700",
+						fontSize: 14,
+						color: C.textCharcoal,
+						marginBottom: 12,
+					}}>
+					Colour Theme
+				</Text>
+				{[
+					{
+						id: "default",
+						label: "Default",
+						sublabel: "Purple & white",
+						dot: "#9b7fe8",
+					},
+					{
+						id: "dark",
+						label: "Dark Mode",
+						sublabel: "Easy on the eyes",
+						dot: "#b39dfa",
+					},
+					{
+						id: "accessible",
+						label: "Accessibility",
+						sublabel: "High contrast colours",
+						dot: "#5000cc",
+					},
+				].map((t) => (
+					<TouchableOpacity
+						key={t.id}
+						onPress={() => setTheme(t.id)}
+						style={{
+							flexDirection: "row",
+							alignItems: "center",
+							gap: 14,
+							padding: 12,
+							backgroundColor: theme === t.id ? C.bgPurple : "transparent",
+							borderRadius: 12,
+							marginBottom: 4,
+							borderWidth: 1.5,
+							borderColor: theme === t.id ? C.primaryPurple : "transparent",
+						}}
+						activeOpacity={0.8}>
+						{/* Colour swatch */}
+						<View
+							style={{
+								width: 36,
+								height: 36,
+								borderRadius: 18,
+								backgroundColor: t.dot,
+								alignItems: "center",
+								justifyContent: "center",
+								shadowColor: t.dot,
+								shadowOpacity: 0.4,
+								shadowRadius: 4,
+								elevation: 2,
+							}}>
+							{theme === t.id && (
+								<Icon name="check" size={16} color="#ffffff" />
+							)}
+						</View>
+						<View style={{ flex: 1 }}>
+							<Text
+								style={{
+									fontWeight: "700",
+									fontSize: 14,
+									color: theme === t.id ? C.primaryPurple : C.textCharcoal,
+								}}>
+								{t.label}
+							</Text>
+							<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>
+								{t.sublabel}
+							</Text>
+						</View>
+						{theme === t.id && (
+							<View
+								style={{
+									backgroundColor: C.primaryPurple,
+									borderRadius: 999,
+									paddingHorizontal: 8,
+									paddingVertical: 3,
+								}}>
+								<Text
+									style={{ fontSize: 10, fontWeight: "700", color: "#ffffff" }}>
+									Active
+								</Text>
+							</View>
+						)}
+					</TouchableOpacity>
+				))}
+			</View>
 
 			<Text style={[s.smallLabel, { paddingLeft: 4, marginBottom: 10 }]}>
 				Account
@@ -4412,6 +4632,7 @@ function MoreScreen({
 
 // ─── LOG RECIPE MODAL ─────────────────────────────────────────────────────────
 function LogRecipeModal({ visible, recipe, childName, onConfirm, onClose }) {
+	const { C } = useTheme();
 	const [selectedReaction, setSelectedReaction] = useState("");
 	const [notes, setNotes] = useState("");
 
@@ -4588,6 +4809,7 @@ function LogRecipeModal({ visible, recipe, childName, onConfirm, onClose }) {
 
 // ─── EDIT MODAL ───────────────────────────────────────────────────────────────
 function EditModal({ visible, entry, onSubmit, onClose }) {
+	const { C } = useTheme();
 	return (
 		<Modal
 			visible={visible}
@@ -4633,6 +4855,7 @@ function EditModal({ visible, entry, onSubmit, onClose }) {
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 function MainApp({ user, isPro }) {
+	const { C, theme } = useTheme();
 	const [page, setPage] = useState("dashboard");
 	const [foodLog, setFoodLog] = useState([]);
 	const [children, setChildren] = useState([]);
@@ -4740,15 +4963,15 @@ function MainApp({ user, isPro }) {
 	};
 
 	// RevenueCat init
-	useEffect(() => {
-		if (!user) return;
-		Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-		const apiKey =
-			Platform.OS === "ios"
-				? "appl_xNGjmEgufsXuWySnKebRetuKCGj"
-				: "goog_rcHUTFIPkKdXdEAQHcexulBdpOj";
-		Purchases.configure({ apiKey, appUserID: user.uid });
-	}, [user]);
+	// useEffect(() => {
+	// 	if (!user) return;
+	// 	Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+	// 	const apiKey =
+	// 		Platform.OS === "ios"
+	// 			? "appl_xNGjmEgufsXuWySnKebRetuKCGj"
+	// 			: "goog_rcHUTFIPkKdXdEAQHcexulBdpOj";
+	// 	Purchases.configure({ apiKey, appUserID: user.uid });
+	// }, [user]);
 
 	// Derived state — must be defined before any handlers or JSX that reference them
 	const activeChild =
@@ -5085,9 +5308,12 @@ function MainApp({ user, isPro }) {
 
 	return (
 		<SafeAreaView
-			style={{ flex: 1, backgroundColor: "#f4f0fc" }}
+			style={{ flex: 1, backgroundColor: C.screen }}
 			edges={["top"]}>
-			<StatusBar barStyle="dark-content" backgroundColor={C.white} />
+			<StatusBar
+				barStyle={theme === "dark" ? "light-content" : "dark-content"}
+				backgroundColor={C.navBg}
+			/>
 
 			{/* ── Header ── */}
 			<View style={s.header}>
@@ -5242,7 +5468,7 @@ function MainApp({ user, isPro }) {
 					flex: 1,
 					paddingHorizontal: 16,
 					paddingTop: 16,
-					backgroundColor: "#f6f3fe",
+					backgroundColor: C.screen,
 				}}>
 				{page === "dashboard" && (
 					<DashboardScreen
@@ -5423,15 +5649,42 @@ function MainApp({ user, isPro }) {
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 function Root() {
 	const { user, loading, isPro } = useAuth();
+	const { C } = useTheme();
 	if (loading) return <LoadingScreen />;
 	if (!user) return <AuthScreen />;
 	return <MainApp user={user} isPro={isPro} />;
 }
+
 export default function App() {
+	const [theme, setThemeState] = useState("default");
+	const C = THEMES[theme] || THEMES.default;
+
+	// Load saved theme on startup
+	useEffect(() => {
+		import("@react-native-async-storage/async-storage").then(
+			({ default: AsyncStorage }) => {
+				AsyncStorage.getItem("appTheme").then((saved) => {
+					if (saved && THEMES[saved]) setThemeState(saved);
+				});
+			},
+		);
+	}, []);
+
+	const setTheme = (t) => {
+		setThemeState(t);
+		import("@react-native-async-storage/async-storage").then(
+			({ default: AsyncStorage }) => {
+				AsyncStorage.setItem("appTheme", t);
+			},
+		);
+	};
+
 	return (
-		<SafeAreaProvider>
-			<Root />
-		</SafeAreaProvider>
+		<ThemeContext.Provider value={{ theme, C, setTheme }}>
+			<SafeAreaProvider>
+				<Root />
+			</SafeAreaProvider>
+		</ThemeContext.Provider>
 	);
 }
 
