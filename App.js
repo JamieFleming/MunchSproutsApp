@@ -2563,6 +2563,16 @@ function RecipesScreen({
 			: filterAge === "saved"
 				? recipes.filter((r) => favouriteRecipeIds.includes(r.id))
 				: recipes.filter((r) => r.ageGroup === filterAge);
+
+	// For free users: sort free recipes to top, locked to bottom
+	// Pro users see everything in original order
+	if (!isPro) {
+		filtered = [
+			...filtered.filter((r) => !r.locked),
+			...filtered.filter((r) => r.locked),
+		];
+	}
+
 	const toggle = (id, locked) => {
 		if (locked && !isPro) return;
 		setExpandedId((prev) => (prev === id ? null : id));
@@ -3108,6 +3118,11 @@ function MoreScreen({
 	const [shareEmail, setShareEmail] = useState("");
 	const [shareLoading, setShareLoading] = useState(false);
 	const [selectedChildId, setSelectedChildId] = useState(null);
+	const [showSupport, setShowSupport] = useState(false);
+	const [supportType, setSupportType] = useState("");
+	const [supportMessage, setSupportMessage] = useState("");
+	const [supportSent, setSupportSent] = useState(false);
+	const [showSupportTypePicker, setShowSupportTypePicker] = useState(false);
 
 	const handleChangePassword = async () => {
 		if (!currentPw || !newPw || !confirmPw) {
@@ -3651,61 +3666,28 @@ function MoreScreen({
 							)}
 						</TouchableOpacity>
 
-						{/* Family Group */}
+						{/* Currently shared with */}
 						{(() => {
 							const targetChild = ownedChildren.find(
 								(c) => c.id === (selectedChildId || defaultChildId),
 							);
-							if (!targetChild) return null;
-							const isOwner = targetChild.isOwner !== false;
 							const sharedWith = targetChild?.sharedWith || [];
-							const sharedWithEmails = (
-								targetChild?.sharedWithEmails || []
-							).slice(0, sharedWith.length);
-
-							// Owner sees: people shared with, with Remove button
-							// Shared user sees: owner + other shared users (read only)
-							const familyRows = isOwner
-								? sharedWith.map((uid, i) => ({
-										uid,
-										email: sharedWithEmails[i] || uid,
-										role: "Shared with",
-										canRemove: true,
-									}))
-								: [
-										{
-											uid: targetChild.userId,
-											email: targetChild.ownerEmail || "Account owner",
-											role: "Owner",
-											canRemove: false,
-										},
-										...sharedWith
-											.filter((uid) => uid !== user.uid)
-											.map((uid, i) => ({
-												uid,
-												email: sharedWithEmails[sharedWith.indexOf(uid)] || uid,
-												role: "Also shared with",
-												canRemove: false,
-											})),
-									];
-
-							if (familyRows.length === 0) return null;
-
+							const sharedWithEmails = targetChild?.sharedWithEmails || [];
+							if (sharedWith.length === 0) return null;
 							return (
 								<View style={{ marginTop: 20 }}>
 									<Text style={[s.smallLabel, { marginBottom: 10 }]}>
-										Family Group
+										Currently shared with
 									</Text>
-									{familyRows.map((row) => (
+									{sharedWith.map((uid, i) => (
 										<View
-											key={row.uid}
+											key={uid}
 											style={{
 												flexDirection: "row",
 												alignItems: "center",
 												justifyContent: "space-between",
 												padding: 12,
-												backgroundColor:
-													row.role === "Owner" ? C.bgPurple : C.bgGreen,
+												backgroundColor: C.bgGreen,
 												borderRadius: 12,
 												marginBottom: 6,
 											}}>
@@ -3714,67 +3696,310 @@ function MoreScreen({
 													flexDirection: "row",
 													alignItems: "center",
 													gap: 10,
-													flex: 1,
 												}}>
-												<Icon
-													name={row.role === "Owner" ? "crown" : "user"}
-													size={16}
-													color={
-														row.role === "Owner"
-															? C.primaryPurple
-															: C.primaryGreen
-													}
-												/>
-												<View style={{ flex: 1 }}>
-													<Text
-														style={{
-															fontSize: 10,
-															fontWeight: "700",
-															color: C.mutedText,
-															textTransform: "uppercase",
-															letterSpacing: 0.5,
-														}}>
-														{row.role}
-													</Text>
-													<Text
-														style={{
-															fontSize: 13,
-															fontWeight: "700",
-															color:
-																row.role === "Owner"
-																	? C.primaryPurple
-																	: C.statGreenText,
-														}}
-														numberOfLines={1}>
-														{row.email}
-													</Text>
-												</View>
+												<Icon name="user" size={16} color={C.primaryGreen} />
+												<Text
+													style={{
+														fontSize: 13,
+														color: C.statGreenText,
+														fontWeight: "600",
+													}}
+													numberOfLines={1}>
+													{sharedWithEmails[i] || uid}
+												</Text>
 											</View>
-											{row.canRemove && (
-												<TouchableOpacity
-													onPress={() =>
-														onManageSharing(
-															row.uid,
-															selectedChildId || defaultChildId,
-															null,
-															true,
-														)
-													}>
-													<Text
-														style={{
-															fontSize: 12,
-															color: "#c0392b",
-															fontWeight: "700",
-														}}>
-														Remove
-													</Text>
-												</TouchableOpacity>
-											)}
+											<TouchableOpacity
+												onPress={() =>
+													onManageSharing(
+														uid,
+														selectedChildId || defaultChildId,
+														null,
+														true,
+													)
+												}>
+												<Text
+													style={{
+														fontSize: 12,
+														color: "#c0392b",
+														fontWeight: "700",
+													}}>
+													Remove
+												</Text>
+											</TouchableOpacity>
 										</View>
 									))}
 								</View>
 							);
 						})()}
+					</View>
+				</KeyboardAvoidingView>
+			</Modal>
+
+			{/* ── Customer Support ── */}
+			<Text
+				style={[
+					s.smallLabel,
+					{ paddingLeft: 4, marginBottom: 10, marginTop: 10 },
+				]}>
+				Support
+			</Text>
+			<TouchableOpacity
+				onPress={() => setShowSupport(true)}
+				style={{
+					flexDirection: "row",
+					alignItems: "center",
+					gap: 14,
+					padding: 16,
+					backgroundColor: C.white,
+					borderRadius: 16,
+					marginBottom: 10,
+					shadowColor: "#000",
+					shadowOpacity: 0.04,
+					shadowRadius: 6,
+					elevation: 1,
+				}}
+				activeOpacity={0.8}>
+				<View
+					style={{
+						width: 42,
+						height: 42,
+						borderRadius: 13,
+						backgroundColor: "#e8f5ff",
+						alignItems: "center",
+						justifyContent: "center",
+					}}>
+					<Icon name="info" size={20} color="#2a5f8f" />
+				</View>
+				<View style={{ flex: 1 }}>
+					<Text
+						style={{ fontWeight: "700", fontSize: 15, color: C.textCharcoal }}>
+						Contact Support
+					</Text>
+					<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>
+						Get help, report bugs or request features
+					</Text>
+				</View>
+				<Icon name="chevRight" size={16} color={C.mutedText} />
+			</TouchableOpacity>
+
+			{/* Support Modal */}
+			<Modal
+				visible={showSupport}
+				transparent
+				animationType="slide"
+				onRequestClose={() => setShowSupport(false)}>
+				<KeyboardAvoidingView
+					behavior={Platform.OS === "ios" ? "padding" : "height"}
+					style={s.modalOverlay}>
+					<View style={[s.modalSheet, { maxHeight: "90%" }]}>
+						<View
+							style={{
+								flexDirection: "row",
+								justifyContent: "space-between",
+								alignItems: "center",
+								marginBottom: 20,
+							}}>
+							<Text style={s.modalTitle}>Contact Support</Text>
+							<TouchableOpacity
+								onPress={() => {
+									setShowSupport(false);
+									setSupportType("");
+									setSupportMessage("");
+									setSupportSent(false);
+								}}
+								style={{
+									backgroundColor: C.bgPurple,
+									borderRadius: 10,
+									padding: 8,
+								}}>
+								<Icon name="close" size={16} color={C.mutedText} />
+							</TouchableOpacity>
+						</View>
+
+						{supportSent ? (
+							<View style={{ alignItems: "center", paddingVertical: 30 }}>
+								<View
+									style={{
+										width: 64,
+										height: 64,
+										borderRadius: 32,
+										backgroundColor: C.statGreenBg,
+										alignItems: "center",
+										justifyContent: "center",
+										marginBottom: 16,
+									}}>
+									<Icon name="check" size={28} color={C.statGreenText} />
+								</View>
+								<Text
+									style={{
+										fontWeight: "700",
+										fontSize: 18,
+										color: C.primaryPinkDark,
+										marginBottom: 8,
+									}}>
+									Message Sent!
+								</Text>
+								<Text
+									style={{
+										fontSize: 14,
+										color: C.mutedText,
+										textAlign: "center",
+										lineHeight: 22,
+									}}>
+									{"We'll get back to you at\n"}
+									{user.email}
+								</Text>
+								<TouchableOpacity
+									onPress={() => {
+										setShowSupport(false);
+										setSupportType("");
+										setSupportMessage("");
+										setSupportSent(false);
+									}}
+									style={[s.btnPrimary, { marginTop: 24 }]}>
+									<Text style={s.btnPrimaryText}>Done</Text>
+								</TouchableOpacity>
+							</View>
+						) : (
+							<ScrollView showsVerticalScrollIndicator={false}>
+								<View style={{ gap: 16, paddingBottom: 20 }}>
+									<View>
+										<Text style={s.label}>What can we help with?</Text>
+										<TouchableOpacity
+											onPress={() => setShowSupportTypePicker(true)}
+											style={[
+												s.input,
+												{
+													flexDirection: "row",
+													justifyContent: "space-between",
+													alignItems: "center",
+													backgroundColor: C.white,
+												},
+											]}>
+											<Text
+												style={{
+													color: supportType ? C.textCharcoal : C.mutedText,
+													fontWeight: "600",
+												}}>
+												{supportType || "Select a category…"}
+											</Text>
+											<Icon name="chevDown" size={14} color={C.mutedText} />
+										</TouchableOpacity>
+									</View>
+									<View>
+										<Text style={s.label}>Your Message</Text>
+										<TextInput
+											value={supportMessage}
+											onChangeText={setSupportMessage}
+											placeholder="Describe your issue or request in detail…"
+											multiline
+											numberOfLines={5}
+											style={[
+												s.input,
+												{
+													height: 120,
+													textAlignVertical: "top",
+													backgroundColor: C.white,
+												},
+											]}
+											placeholderTextColor={C.mutedText}
+											autoComplete="off"
+										/>
+									</View>
+									<View
+										style={{
+											backgroundColor: C.bgPurple,
+											borderRadius: 12,
+											padding: 14,
+										}}>
+										<Text style={[s.smallLabel, { marginBottom: 4 }]}>
+											Reply will be sent to
+										</Text>
+										<Text
+											style={{
+												fontSize: 14,
+												fontWeight: "700",
+												color: C.primaryPinkDark,
+											}}>
+											{user.email}
+										</Text>
+									</View>
+									<TouchableOpacity
+										onPress={async () => {
+											if (!supportType) {
+												Alert.alert(
+													"Select a category",
+													"Please choose what you need help with.",
+												);
+												return;
+											}
+											if (!supportMessage.trim()) {
+												Alert.alert(
+													"Add a message",
+													"Please describe your issue or request.",
+												);
+												return;
+											}
+											try {
+												const {
+													addDoc,
+													collection: col,
+													serverTimestamp: sts,
+												} = await import("firebase/firestore");
+												const { db: firedb } = await import("./firebase");
+												await addDoc(col(firedb, "supportRequests"), {
+													userId: user.uid,
+													userEmail: user.email,
+													type: supportType,
+													message: supportMessage.trim(),
+													platform: Platform.OS,
+													createdAt: sts(),
+													status: "open",
+												});
+												setSupportSent(true);
+											} catch (e) {
+												Alert.alert(
+													"Failed to send",
+													"Please try again or email munchsprouts@outlook.com directly.",
+												);
+											}
+										}}
+										style={[
+											s.btnPrimary,
+											(!supportType || !supportMessage.trim()) && {
+												opacity: 0.5,
+											},
+										]}
+										disabled={!supportType || !supportMessage.trim()}
+										activeOpacity={0.8}>
+										<Text style={s.btnPrimaryText}>Send Message</Text>
+									</TouchableOpacity>
+									<Text
+										style={{
+											fontSize: 11,
+											color: C.mutedText,
+											textAlign: "center",
+											lineHeight: 18,
+										}}>
+										Or email us directly at munchsprouts@outlook.com
+									</Text>
+								</View>
+							</ScrollView>
+						)}
+
+						<PickerModal
+							visible={showSupportTypePicker}
+							title="What can we help with?"
+							options={[
+								"General Help",
+								"Bug / Problem",
+								"Account Help",
+								"Feature Request",
+							]}
+							value={supportType}
+							onSelect={setSupportType}
+							onClose={() => setShowSupportTypePicker(false)}
+						/>
 					</View>
 				</KeyboardAvoidingView>
 			</Modal>
@@ -4234,15 +4459,15 @@ function MainApp({ user, isPro }) {
 	};
 
 	// RevenueCat init
-	useEffect(() => {
-		if (!user) return;
-		Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-		const apiKey =
-			Platform.OS === "ios"
-				? "appl_xNGjmEgufsXuWySnKebRetuKCGj"
-				: "goog_rcHUTFIPkKdXdEAQHcexulBdpOj";
-		Purchases.configure({ apiKey, appUserID: user.uid });
-	}, [user]);
+	// useEffect(() => {
+	// 	if (!user) return;
+	// 	Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+	// 	const apiKey =
+	// 		Platform.OS === "ios"
+	// 			? "appl_xNGjmEgufsXuWySnKebRetuKCGj"
+	// 			: "goog_rcHUTFIPkKdXdEAQHcexulBdpOj";
+	// 	Purchases.configure({ apiKey, appUserID: user.uid });
+	// }, [user]);
 
 	// Derived state — must be defined before any handlers or JSX that reference them
 	const activeChild =
