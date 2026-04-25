@@ -19,6 +19,7 @@ import {
 	Alert,
 	KeyboardAvoidingView,
 	ActivityIndicator,
+	RefreshControl,
 } from "react-native";
 import {
 	SafeAreaView,
@@ -101,7 +102,7 @@ const THEMES = {
 	},
 	dark: {
 		bgMain: "#121212",
-		bgPurple: "#2a2040",
+		bgPurple: "#f0ecfc",
 		bgGreen: "#0d2b1e",
 		bgWarning: "#2b1e0d",
 		primaryPurple: "#b39dfa",
@@ -109,22 +110,22 @@ const THEMES = {
 		primaryPurpleDark: "#d4c4ff",
 		primaryGreen: "#4dd494",
 		primaryGreenLight: "#2ea868",
-		primaryPinkDark: "#d4b0ff",
+		primaryPinkDark: "#b27bf5",
 		textCharcoal: "#f0ecff",
 		warningStroke: "#f0a060",
 		white: "#1e1e2e",
 		border: "#3a3060",
 		borderLight: "#2e2448",
 		mutedText: "#9988cc",
-		statGreenBg: "#0d2b1e",
+		statGreenBg: "#d4f0e0",
 		statGreenText: "#4dd494",
-		statRedBg: "#2b0d0d",
+		statRedBg: "#fad4d4",
 		statRedText: "#f07070",
-		statBlueBg: "#0d1e2b",
+		statBlueBg: "#d4e8f5",
 		statBlueText: "#70b8f0",
 		statOrangeBg: "#2b1a0d",
 		statOrangeText: "#f0a060",
-		statNeutralBg: "#2b1a0d",
+		statNeutralBg: "#fde8cc",
 		statNeutralText: "#d4a060",
 		card: "#1e1e2e",
 		screen: "#121212",
@@ -376,7 +377,12 @@ function groupByFood(log) {
 	log.forEach((e) => {
 		const k = normalize(e.name);
 		if (!g[k])
-			g[k] = { key: k, name: e.name, category: e.category, attempts: [] };
+			g[k] = {
+				key: k,
+				name: e.name,
+				category: e.category || (e.categories?.[0] ?? ""),
+				attempts: [],
+			};
 		g[k].attempts.push(e);
 	});
 	return g;
@@ -999,7 +1005,7 @@ function Card({ children, style, danger = false }) {
 		<View
 			style={[
 				s.card,
-				danger && { backgroundColor: "#fde8e8", borderColor: "#e07070" },
+				danger && { backgroundColor: C.statRedBg, borderColor: "#e07070" },
 				style,
 			]}>
 			{children}
@@ -1066,7 +1072,7 @@ function PrimaryBtn({ label, onPress, color, icon }) {
 					gap: 8,
 					justifyContent: "center",
 				}}>
-				{icon && <Icon name={icon} size={14} color={C.white} />}
+				{icon && <Icon name={icon} size={14} color="#ffffff" />}
 				<Text style={s.btnPrimaryText}>{label}</Text>
 			</View>
 		</TouchableOpacity>
@@ -1359,33 +1365,68 @@ function DateField({ label, value, onChange, minYear, maxYear }) {
 function FoodForm({ onSubmit, initial = {}, buttonLabel = "Add to Log" }) {
 	const { C } = useTheme();
 	const today = new Date().toISOString().split("T")[0];
+
+	// categories is now an array for multi-select
+	// ml is only used when Liquids is selected
+	const parseCategories = (cat) => {
+		if (!cat) return [];
+		if (Array.isArray(cat)) return cat;
+		return [cat]; // backwards compat with old single-string entries
+	};
+
 	const [form, setForm] = useState({
 		date: today,
 		name: "",
-		category: "",
+		categories: parseCategories(initial.category || initial.categories),
+		category: initial.category || "", // kept for backwards compat
 		form: "",
 		reaction: "",
 		notes: "",
 		favourite: false,
+		ml: "",
 		...initial,
+		// Override with parsed categories
+		categories: parseCategories(initial.category || initial.categories),
 	});
 	const [showFormPicker, setShowFormPicker] = useState(false);
 	const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+
+	const toggleCategory = (val) => {
+		setForm((p) => {
+			const cats = p.categories || [];
+			const exists = cats.includes(val);
+			const updated = exists ? cats.filter((c) => c !== val) : [...cats, val];
+			// Keep category as the first selected for backwards compat
+			return { ...p, categories: updated, category: updated[0] || "" };
+		});
+	};
+
+	const isLiquids = (form.categories || []).includes("Liquids");
+
 	const handleSubmit = () => {
-		if (!form.date || !form.name || !form.category) {
-			onSubmit(null, "Please fill in Date, Name and Category.");
+		const cats = form.categories || [];
+		if (!form.date || !form.name || cats.length === 0) {
+			onSubmit(null, "Please fill in Date, Name and at least one Category.");
 			return;
 		}
-		onSubmit(form);
+		const submitData = {
+			...form,
+			category: cats[0] || "", // primary category for backwards compat
+			categories: cats,
+			ml: isLiquids ? form.ml || "" : "",
+		};
+		onSubmit(submitData);
 		if (!initial.id)
 			setForm({
 				date: today,
 				name: "",
+				categories: [],
 				category: "",
 				form: "",
 				reaction: "",
 				notes: "",
 				favourite: false,
+				ml: "",
 			});
 	};
 	return (
@@ -1410,21 +1451,48 @@ function FoodForm({ onSubmit, initial = {}, buttonLabel = "Add to Log" }) {
 				/>
 			</View>
 
-			{/* Category — illustrated icons */}
+			{/* Category — multi-select illustrated icons */}
 			<View>
-				<Text style={s.label}>Category</Text>
+				<View
+					style={{
+						flexDirection: "row",
+						justifyContent: "space-between",
+						alignItems: "center",
+						marginBottom: 8,
+					}}>
+					<Text style={s.label}>Category</Text>
+					{(form.categories || []).length > 0 && (
+						<Text
+							style={{
+								fontSize: 11,
+								color: C.primaryPurple,
+								fontWeight: "700",
+							}}>
+							{(form.categories || []).join(" · ")}
+						</Text>
+					)}
+				</View>
+				<Text
+					style={{
+						fontSize: 11,
+						color: C.mutedText,
+						marginBottom: 10,
+						marginTop: -4,
+					}}>
+					Tap to select — you can pick multiple
+				</Text>
 				<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
 					{CATEGORIES.map((c) => {
-						const sel = form.category === c.value;
+						const sel = (form.categories || []).includes(c.value);
 						return (
 							<TouchableOpacity
 								key={c.value}
-								onPress={() => set("category", c.value)}
+								onPress={() => toggleCategory(c.value)}
 								style={{
 									alignItems: "center",
 									gap: 6,
 									width: "22%",
-									opacity: sel ? 1 : 0.7,
+									opacity: sel ? 1 : 0.65,
 								}}
 								activeOpacity={0.8}>
 								<View
@@ -1435,6 +1503,22 @@ function FoodForm({ onSubmit, initial = {}, buttonLabel = "Add to Log" }) {
 										padding: 2,
 									}}>
 									<CategoryIcon category={c.value} size={48} />
+									{sel && (
+										<View
+											style={{
+												position: "absolute",
+												top: -4,
+												right: -4,
+												width: 18,
+												height: 18,
+												borderRadius: 9,
+												backgroundColor: c.color,
+												alignItems: "center",
+												justifyContent: "center",
+											}}>
+											<Icon name="check" size={11} color="#ffffff" />
+										</View>
+									)}
 								</View>
 								<Text
 									style={{
@@ -1451,6 +1535,45 @@ function FoodForm({ onSubmit, initial = {}, buttonLabel = "Add to Log" }) {
 					})}
 				</View>
 			</View>
+
+			{/* ML amount — only shown when Liquids is selected */}
+			{isLiquids && (
+				<View>
+					<Text style={s.label}>Amount (ml) — optional</Text>
+					<View
+						style={[
+							s.input,
+							{
+								flexDirection: "row",
+								alignItems: "center",
+								backgroundColor: C.white,
+								gap: 8,
+							},
+						]}>
+						<TextInput
+							value={form.ml}
+							onChangeText={(v) => set("ml", v.replace(/[^0-9]/g, ""))}
+							placeholder="e.g. 120"
+							keyboardType="number-pad"
+							style={{
+								flex: 1,
+								color: C.textCharcoal,
+								fontWeight: "600",
+								fontSize: 15,
+							}}
+							placeholderTextColor={C.mutedText}
+							autoComplete="off"
+						/>
+						<Text
+							style={{ fontSize: 14, fontWeight: "700", color: C.mutedText }}>
+							ml
+						</Text>
+					</View>
+					<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 6 }}>
+						Record how much your baby drank
+					</Text>
+				</View>
+			)}
 
 			{/* Form/Texture */}
 			<View>
@@ -1560,7 +1683,7 @@ function FoodForm({ onSubmit, initial = {}, buttonLabel = "Add to Log" }) {
 						alignItems: "center",
 						justifyContent: "center",
 					}}>
-					{form.favourite && <Icon name="check" size={14} color={C.white} />}
+					{form.favourite && <Icon name="check" size={14} color="#ffffff" />}
 				</View>
 				<Icon name="starFill" size={16} color="#d4a017" />
 				<Text
@@ -1600,7 +1723,14 @@ function LoadingScreen() {
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function DashboardScreen({ child, foodLog, onNavigate, onNavigateFiltered }) {
+function DashboardScreen({
+	child,
+	foodLog,
+	onNavigate,
+	onNavigateFiltered,
+	refreshing,
+	onRefresh,
+}) {
 	const { C } = useTheme();
 	const groups = groupByFood(foodLog);
 	const keys = Object.keys(groups);
@@ -1632,7 +1762,16 @@ function DashboardScreen({ child, foodLog, onNavigate, onNavigateFiltered }) {
 		<ScrollView
 			style={{ flex: 1 }}
 			contentContainerStyle={{ gap: 18, paddingBottom: 24 }}
-			showsVerticalScrollIndicator={false}>
+			showsVerticalScrollIndicator={false}
+			refreshControl={
+				<RefreshControl
+					refreshing={refreshing}
+					onRefresh={onRefresh}
+					tintColor={C.primaryPurple}
+					colors={[C.primaryPurple]}
+					progressBackgroundColor={C.white}
+				/>
+			}>
 			{/* Child banner */}
 			{child ? (
 				<View
@@ -1654,7 +1793,7 @@ function DashboardScreen({ child, foodLog, onNavigate, onNavigateFiltered }) {
 							}}>
 							Tracking for
 						</Text>
-						<Text style={{ fontSize: 30, fontWeight: "800", color: C.white }}>
+						<Text style={{ fontSize: 30, fontWeight: "800", color: "#ffffff" }}>
 							{child.name}
 						</Text>
 						{weeks !== null && (
@@ -1667,7 +1806,11 @@ function DashboardScreen({ child, foodLog, onNavigate, onNavigateFiltered }) {
 										paddingVertical: 5,
 									}}>
 									<Text
-										style={{ fontSize: 12, color: C.white, fontWeight: "700" }}>
+										style={{
+											fontSize: 12,
+											color: "#ffffff",
+											fontWeight: "700",
+										}}>
 										{weeks} weeks
 									</Text>
 								</View>
@@ -1679,7 +1822,11 @@ function DashboardScreen({ child, foodLog, onNavigate, onNavigateFiltered }) {
 										paddingVertical: 5,
 									}}>
 									<Text
-										style={{ fontSize: 12, color: C.white, fontWeight: "700" }}>
+										style={{
+											fontSize: 12,
+											color: "#ffffff",
+											fontWeight: "700",
+										}}>
 										{months} months
 									</Text>
 								</View>
@@ -1787,7 +1934,7 @@ function DashboardScreen({ child, foodLog, onNavigate, onNavigateFiltered }) {
 			<View style={{ flexDirection: "row", gap: 10 }}>
 				<TouchableOpacity
 					onPress={() => onNavigateFiltered("log", "Allergic")}
-					style={[s.statCard, { backgroundColor: "#fde8e8", flex: 1 }]}
+					style={[s.statCard, { backgroundColor: C.statRedBg, flex: 1 }]}
 					activeOpacity={0.8}>
 					<ReactionFace reaction="Allergic" size={24} />
 					<Text style={[s.statValue, { color: "#c0392b" }]}>{allergic}</Text>
@@ -1805,7 +1952,7 @@ function DashboardScreen({ child, foodLog, onNavigate, onNavigateFiltered }) {
 				</TouchableOpacity>
 				<TouchableOpacity
 					onPress={() => onNavigateFiltered("log", "Favourites")}
-					style={[s.statCard, { backgroundColor: "#fef6d4", flex: 1 }]}
+					style={[s.statCard, { backgroundColor: C.statNeutralBg, flex: 1 }]}
 					activeOpacity={0.8}>
 					<Icon name="starFill" size={20} color="#c49a10" />
 					<Text style={[s.statValue, { color: "#c49a10" }]}>{favourites}</Text>
@@ -1817,7 +1964,7 @@ function DashboardScreen({ child, foodLog, onNavigate, onNavigateFiltered }) {
 			{allergic > 0 && (
 				<View
 					style={{
-						backgroundColor: "#fde8e8",
+						backgroundColor: C.statRedBg,
 						borderRadius: 16,
 						padding: 16,
 						flexDirection: "row",
@@ -1833,7 +1980,7 @@ function DashboardScreen({ child, foodLog, onNavigate, onNavigateFiltered }) {
 							width: 44,
 							height: 44,
 							borderRadius: 14,
-							backgroundColor: "#fad4d4",
+							backgroundColor: C.statRedBg,
 							alignItems: "center",
 							justifyContent: "center",
 						}}>
@@ -1950,10 +2097,11 @@ function DashboardScreen({ child, foodLog, onNavigate, onNavigateFiltered }) {
 											flexDirection: "row",
 											alignItems: "center",
 											gap: 8,
-											backgroundColor: "#fef6d4",
+											backgroundColor: C.statNeutralBg,
 											borderRadius: 12,
 											paddingHorizontal: 12,
 											paddingVertical: 8,
+											width: "100%",
 										}}
 										activeOpacity={0.8}>
 										<CategoryIcon category={g.category} size={28} />
@@ -2066,6 +2214,8 @@ function LogScreen({
 	onEdit,
 	onDelete,
 	onToggleFavourite,
+	refreshing,
+	onRefresh,
 }) {
 	const { C } = useTheme();
 	const [search, setSearch] = useState("");
@@ -2282,7 +2432,16 @@ function LogScreen({
 			</Text>
 			<ScrollView
 				showsVerticalScrollIndicator={false}
-				contentContainerStyle={{ gap: 10, paddingBottom: 20 }}>
+				contentContainerStyle={{ gap: 10, paddingBottom: 20 }}
+				refreshControl={
+					<RefreshControl
+						refreshing={refreshing}
+						onRefresh={onRefresh}
+						tintColor={C.primaryPurple}
+						colors={[C.primaryPurple]}
+						progressBackgroundColor={C.white}
+					/>
+				}>
 				{keys.map((key) => {
 					const g = groups[key];
 					const latest = g.attempts.at(-1);
@@ -2303,7 +2462,7 @@ function LogScreen({
 									overflow: "hidden",
 									borderWidth: hasAllergy ? 2 : 0,
 									borderColor: hasAllergy ? "#e07070" : "transparent",
-									backgroundColor: hasAllergy ? "#fde8e8" : C.white,
+									backgroundColor: hasAllergy ? C.statRedBg : C.white,
 								},
 							]}>
 							<TouchableOpacity
@@ -2338,7 +2497,7 @@ function LogScreen({
 										{hasAllergy && (
 											<View
 												style={{
-													backgroundColor: "#fde8e8",
+													backgroundColor: C.statRedBg,
 													borderRadius: 999,
 													paddingHorizontal: 8,
 													paddingVertical: 2,
@@ -2383,6 +2542,49 @@ function LogScreen({
 											{formatDate(latest.date)}
 										</Text>
 									</View>
+									{/* Category pills */}
+									{(() => {
+										const cats = g.attempts[0]?.categories?.length
+											? g.attempts[0].categories
+											: g.category
+												? [g.category]
+												: [];
+										if (cats.length === 0) return null;
+										const catCfg = (cat) =>
+											CATEGORIES.find((c) => c.value === cat) || CATEGORIES[7];
+										return (
+											<View
+												style={{
+													flexDirection: "row",
+													flexWrap: "wrap",
+													gap: 5,
+													marginTop: 5,
+												}}>
+												{cats.map((cat) => {
+													const cfg = catCfg(cat);
+													return (
+														<View
+															key={cat}
+															style={{
+																backgroundColor: cfg.bg,
+																borderRadius: 999,
+																paddingHorizontal: 8,
+																paddingVertical: 3,
+															}}>
+															<Text
+																style={{
+																	fontSize: 10,
+																	fontWeight: "700",
+																	color: cfg.color,
+																}}>
+																{cat}
+															</Text>
+														</View>
+													);
+												})}
+											</View>
+										);
+									})()}
 									{/* Like bar */}
 									<View
 										style={{
@@ -2476,6 +2678,24 @@ function LogScreen({
 															</Text>
 														</View>
 													)}
+													{a.ml ? (
+														<View
+															style={{
+																backgroundColor: C.statBlueBg,
+																borderRadius: 999,
+																paddingHorizontal: 10,
+																paddingVertical: 4,
+															}}>
+															<Text
+																style={{
+																	fontSize: 11,
+																	fontWeight: "700",
+																	color: C.statBlueText,
+																}}>
+																{a.ml}ml
+															</Text>
+														</View>
+													) : null}
 													<ReactionBadge reaction={a.reaction} />
 												</View>
 												{a.notes ? (
@@ -3147,6 +3367,7 @@ function RecipesScreen({
 								borderWidth: isOpen ? 2 : 0,
 								borderColor: C.primaryPurple,
 								opacity: effectiveLocked ? 0.75 : 1,
+								backgroundColor: C.white,
 							},
 						]}>
 						<TouchableOpacity
@@ -3758,12 +3979,12 @@ function MoreScreen({
 						sublabel: "Purple & white",
 						dot: "#9b7fe8",
 					},
-					{
-						id: "dark",
-						label: "Dark Mode",
-						sublabel: "Easy on the eyes",
-						dot: "#b39dfa",
-					},
+					// {
+					// 	id: "dark",
+					// 	label: "Dark Mode",
+					// 	sublabel: "Easy on the eyes",
+					// 	dot: "#b39dfa",
+					// },
 					{
 						id: "accessible",
 						label: "Accessibility",
@@ -3847,7 +4068,7 @@ function MoreScreen({
 			/>
 			<MoreRow
 				icon="logout"
-				iconBg="#fff0f0"
+				iconBg={C.statRedBg}
 				label="Sign Out"
 				sublabel="Sign out of your account"
 				color="#c0392b"
@@ -3885,7 +4106,7 @@ function MoreScreen({
 							width: 42,
 							height: 42,
 							borderRadius: 13,
-							backgroundColor: "#e8f5ff",
+							backgroundColor: C.statBlueBg,
 							alignItems: "center",
 							justifyContent: "center",
 						}}>
@@ -4264,7 +4485,7 @@ function MoreScreen({
 						width: 42,
 						height: 42,
 						borderRadius: 13,
-						backgroundColor: "#e8f5ff",
+						backgroundColor: C.statBlueBg,
 						alignItems: "center",
 						justifyContent: "center",
 					}}>
@@ -4513,7 +4734,7 @@ function MoreScreen({
 			</Text>
 			<MoreRow
 				icon="trash"
-				iconBg="#fff0f0"
+				iconBg={C.statRedBg}
 				label="Delete Account"
 				sublabel="Permanently delete account and all data"
 				color="#c0392b"
@@ -4867,6 +5088,7 @@ function MainApp({ user, isPro }) {
 	const [showLogRecipeModal, setShowLogRecipeModal] = useState(false);
 	const [logRecipeTarget, setLogRecipeTarget] = useState(null);
 	const [logFilter, setLogFilter] = useState("");
+	const [refreshing, setRefreshing] = useState(false);
 	const insets = useSafeAreaInsets();
 	const [recipes, setRecipes] = useState([]);
 	const [favouriteRecipeIds, setFavouriteRecipeIds] = useState([]);
@@ -4991,13 +5213,30 @@ function MainApp({ user, isPro }) {
 			Alert.alert("Missing Info", err || "Please fill in required fields.");
 			return;
 		}
+		// Guard — must have an active child
+		if (!activeChild) {
+			Alert.alert(
+				"No child selected",
+				"You need to add a child before logging food. Would you like to add one now?",
+				[
+					{ text: "Not now", style: "cancel" },
+					{ text: "Add child", onPress: () => setPage("children") },
+				],
+			);
+			return;
+		}
 		const existing = childLog.filter(
 			(f) => normalize(f.name) === normalize(form.name),
 		);
 		const entry = {
-			childId: activeChild?.id || null,
+			childId: activeChild.id,
 			attemptNum: existing.length + 1,
 			...form,
+			// Ensure categories is always stored as array
+			categories: form.categories || (form.category ? [form.category] : []),
+			category: form.category || (form.categories?.[0] ?? ""),
+			// Only store ml for liquids
+			ml: (form.categories || []).includes("Liquids") ? form.ml || "" : "",
 		};
 		try {
 			const newId = await addFoodEntry(user.uid, entry);
@@ -5214,6 +5453,31 @@ function MainApp({ user, isPro }) {
 				e.message || "Could not update sharing. Please try again.",
 			);
 		}
+	};
+
+	const onRefresh = async () => {
+		setRefreshing(true);
+		try {
+			const [log, kids, recs, favIds] = await Promise.all([
+				fetchFoodLog(user.uid),
+				fetchChildren(user.uid),
+				fetchRecipes(),
+				fetchFavouriteRecipes(user.uid),
+			]);
+			setFoodLog(log);
+			setChildren(kids);
+			setRecipes(recs);
+			setFavouriteRecipeIds(favIds);
+			// Keep activeChildId pointing to same child if still exists
+			if (kids.length > 0) {
+				const stillExists = kids.find((k) => k.id === activeChildId);
+				if (!stillExists) setActiveChildId(kids[0].id);
+			}
+			toast("Updated");
+		} catch (e) {
+			console.error("Refresh failed:", e);
+		}
+		setRefreshing(false);
 	};
 
 	const handleLogout = () =>
@@ -5479,6 +5743,8 @@ function MainApp({ user, isPro }) {
 							setLogFilter(filter);
 							setPage(pg);
 						}}
+						refreshing={refreshing}
+						onRefresh={onRefresh}
 					/>
 				)}
 				{page === "log" && (
@@ -5489,6 +5755,8 @@ function MainApp({ user, isPro }) {
 						onEdit={setEditEntry}
 						onDelete={deleteFood}
 						onToggleFavourite={toggleFav}
+						refreshing={refreshing}
+						onRefresh={onRefresh}
 					/>
 				)}
 				{page === "add" && (
@@ -5562,7 +5830,7 @@ function MainApp({ user, isPro }) {
 							activeOpacity={0.8}>
 							{isAdd ? (
 								<View style={s.navAddBtn}>
-									<Icon name="plus" size={26} color={C.white} />
+									<Icon name="plus" size={26} color="#ffffff" />
 								</View>
 							) : (
 								<>
@@ -5793,7 +6061,7 @@ const s = StyleSheet.create({
 		shadowRadius: 4,
 		elevation: 1,
 	},
-	btnDanger: { backgroundColor: "#fff0f0", borderRadius: 12, padding: 9 },
+	btnDanger: { backgroundColor: C.statRedBg, borderRadius: 12, padding: 9 },
 	statCard: {
 		borderRadius: 16,
 		padding: 12,
@@ -5909,7 +6177,7 @@ const s = StyleSheet.create({
 	},
 	tagGreenText: { fontSize: 11, fontWeight: "700", color: C.primaryGreen },
 	tagWarning: {
-		backgroundColor: "#fff3e0",
+		backgroundColor: C.bgWarning,
 		borderRadius: 999,
 		paddingHorizontal: 10,
 		paddingVertical: 4,
