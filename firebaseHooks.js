@@ -85,6 +85,18 @@ export async function logOut() {
 	await signOut(auth);
 }
 
+// UPDATE USER PROFILE (photo, display name etc)
+export async function updateUserProfile(userId, data) {
+	const safeData = { ...data };
+	if (safeData.photoURL && !isSafeBase64Size(safeData.photoURL)) {
+		console.warn(
+			"Profile photo too large for Firestore — saving without photo.",
+		);
+		safeData.photoURL = "";
+	}
+	await updateDoc(doc(db, "users", userId), safeData);
+}
+
 // PASSWORD RESET
 export async function sendPasswordReset(email) {
 	await sendPasswordResetEmail(auth, email);
@@ -102,6 +114,26 @@ export async function deleteAccount(userId) {
 		query(collection(db, "foodLog"), where("userId", "==", userId)),
 	);
 	await Promise.all(logSnap.docs.map((d) => deleteDoc(d.ref)));
+
+	// Delete favourite recipes subcollection
+	try {
+		const favSnap = await getDocs(
+			collection(db, "users", userId, "favouriteRecipes"),
+		);
+		await Promise.all(favSnap.docs.map((d) => deleteDoc(d.ref)));
+	} catch (e) {
+		console.warn("Could not delete favourite recipes:", e.message);
+	}
+
+	// Delete any recipe suggestions
+	try {
+		const suggestSnap = await getDocs(
+			query(collection(db, "recipeSuggestions"), where("userId", "==", userId)),
+		);
+		await Promise.all(suggestSnap.docs.map((d) => deleteDoc(d.ref)));
+	} catch (e) {
+		console.warn("Could not delete recipe suggestions:", e.message);
+	}
 
 	// Delete user document
 	await deleteDoc(doc(db, "users", userId));
@@ -160,7 +192,12 @@ export async function addChild(userId, child) {
 }
 
 export async function updateChild(childId, data) {
-	await updateDoc(doc(db, "children", childId), data);
+	const safeData = { ...data };
+	if (safeData.photoUri && !isSafeBase64Size(safeData.photoUri)) {
+		console.warn("Child photo too large for Firestore — saving without photo.");
+		safeData.photoUri = "";
+	}
+	await updateDoc(doc(db, "children", childId), safeData);
 }
 
 export async function deleteChild(childId, userId) {
@@ -217,16 +254,39 @@ export async function fetchFoodLog(userId) {
 	return Array.from(allEntries.values());
 }
 
+// Check if a base64 string is within Firestore's safe limit (~700kb to leave room)
+function isSafeBase64Size(base64str, maxKb = 700) {
+	if (!base64str) return true;
+	// base64 encodes 3 bytes as 4 chars, so length * 0.75 = bytes
+	const bytes = base64str.length * 0.75;
+	return bytes < maxKb * 1024;
+}
+
 export async function addFoodEntry(userId, entry) {
+	const safeEntry = { ...entry };
+	// If photo is too large for Firestore, store without it and warn
+	if (safeEntry.photoUri && !isSafeBase64Size(safeEntry.photoUri)) {
+		console.warn(
+			"Photo too large for Firestore — storing entry without photo.",
+		);
+		safeEntry.photoUri = "";
+	}
 	const ref = await addDoc(collection(db, "foodLog"), {
 		userId,
-		...entry,
+		...safeEntry,
 	});
 	return ref.id;
 }
 
 export async function updateFoodEntry(entryId, data) {
-	await updateDoc(doc(db, "foodLog", entryId), data);
+	const safeData = { ...data };
+	if (safeData.photoUri && !isSafeBase64Size(safeData.photoUri)) {
+		console.warn(
+			"Photo too large for Firestore — updating entry without photo.",
+		);
+		safeData.photoUri = "";
+	}
+	await updateDoc(doc(db, "foodLog", entryId), safeData);
 }
 
 export async function deleteFoodEntry(entryId) {

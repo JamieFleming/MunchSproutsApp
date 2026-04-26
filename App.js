@@ -62,6 +62,8 @@ import {
 import AuthScreen from "./AuthScreen";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "./firebase";
 import Purchases, { LOG_LEVEL } from "react-native-purchases";
@@ -177,6 +179,39 @@ const useTheme = () => useContext(ThemeContext);
 // This is only used for the StyleSheet which needs static values
 let C = THEMES.default;
 
+// ─── IMAGE UTILITIES ─────────────────────────────────────────────────────────
+// Picks an image from library and returns a base64 data URI string
+// We store as base64 directly in Firestore (small images only, ~300kb max)
+async function pickImageAsBase64(aspect = [4, 3]) {
+	const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+	if (!perm.granted) {
+		Alert.alert(
+			"Permission needed",
+			"Please allow access to your photo library in Settings.",
+		);
+		return null;
+	}
+
+	const result = await ImagePicker.launchImageLibraryAsync({
+		mediaTypes: ["images"],
+		allowsEditing: true,
+		aspect,
+		quality: 0.3,
+		base64: true,
+		exif: false,
+	});
+
+	if (result.canceled || !result.assets?.[0]) return null;
+
+	const asset = result.assets[0];
+	if (!asset.base64) return null;
+
+	const ext = asset.uri.split(".").pop()?.toLowerCase() || "jpg";
+	const mimeType = ext === "png" ? "image/png" : "image/jpeg";
+	return `data:${mimeType};base64,${asset.base64}`;
+}
+
 const CATEGORIES = [
 	{ value: "Vegetables", color: "#4caf7d", bg: "#d4f0e0" },
 	{ value: "Fruits", color: "#e05c7a", bg: "#fad4de" },
@@ -205,148 +240,6 @@ const REACTIONS = [
 	{ value: "Rejected", color: "#a83232", bg: "#fad4d4", border: "#dca8a8" },
 	{ value: "Allergic", color: "#c0392b", bg: "#fde8e8", border: "#e07070" },
 ];
-
-// ─── RECIPES ──────────────────────────────────────────────────────────────────
-// const RECIPES = [
-// 	{
-// 		id: 1,
-// 		title: "Banana Oat Pancakes",
-// 		category: "Breakfast",
-// 		ageGroup: "6m+",
-// 		time: "15 min",
-// 		tags: ["dairy-free", "egg-free"],
-// 		locked: false,
-// 		description: "Soft, naturally sweet pancakes perfect for little hands.",
-// 		ingredients: [
-// 			"1 ripe banana",
-// 			"4 tbsp rolled oats",
-// 			"1 egg",
-// 			"Pinch of cinnamon",
-// 			"Coconut oil for frying",
-// 		],
-// 		steps: [
-// 			"Mash the banana well until smooth.",
-// 			"Blend oats to a rough flour and mix in.",
-// 			"Beat in the egg and cinnamon.",
-// 			"Heat coconut oil in a non-stick pan on medium-low.",
-// 			"Drop tablespoons of batter and cook 2–3 min each side.",
-// 			"Cool completely. Cut into strips for easy gripping.",
-// 		],
-// 	},
-// 	{
-// 		id: 2,
-// 		title: "Sweet Potato Fingers",
-// 		category: "Finger Foods",
-// 		ageGroup: "6m+",
-// 		time: "30 min",
-// 		tags: ["vegan", "iron-rich"],
-// 		locked: false,
-// 		description:
-// 			"Soft-baked wedges that are easy to pick up and naturally sweet.",
-// 		ingredients: [
-// 			"1 medium sweet potato",
-// 			"1 tsp olive oil",
-// 			"Pinch of cumin (optional)",
-// 		],
-// 		steps: [
-// 			"Preheat oven to 200°C / 180°C fan.",
-// 			"Peel sweet potato and cut into finger-sized wedges.",
-// 			"Toss in olive oil and cumin.",
-// 			"Spread on lined baking tray.",
-// 			"Bake 25–30 minutes until soft and slightly golden.",
-// 			"Cool until just warm before serving.",
-// 		],
-// 	},
-// 	{
-// 		id: 3,
-// 		title: "Salmon & Broccoli Bites",
-// 		category: "Mains",
-// 		ageGroup: "7m+",
-// 		time: "25 min",
-// 		tags: ["omega-3", "iron-rich"],
-// 		locked: true,
-// 		description: "Omega-3 packed bites with hidden veg.",
-// 		ingredients: [
-// 			"150g cooked salmon",
-// 			"80g cooked broccoli",
-// 			"2 tbsp breadcrumbs",
-// 			"1 egg yolk",
-// 		],
-// 		steps: [
-// 			"Flake salmon and finely chop broccoli.",
-// 			"Mix with breadcrumbs and egg yolk.",
-// 			"Shape into small patties.",
-// 			"Bake at 180°C for 15–18 minutes.",
-// 			"Cool before serving.",
-// 		],
-// 	},
-// 	{
-// 		id: 4,
-// 		title: "Avocado Toast Soldiers",
-// 		category: "Breakfast",
-// 		ageGroup: "6m+",
-// 		time: "10 min",
-// 		tags: ["healthy-fats"],
-// 		locked: true,
-// 		description: "Creamy avocado on toast cut into soldiers.",
-// 		ingredients: [
-// 			"½ ripe avocado",
-// 			"1 slice wholemeal toast",
-// 			"Squeeze of lemon juice",
-// 		],
-// 		steps: [
-// 			"Mash avocado with lemon juice.",
-// 			"Toast bread until golden.",
-// 			"Spread avocado on toast.",
-// 			"Cut into soldiers and serve.",
-// 		],
-// 	},
-// 	{
-// 		id: 5,
-// 		title: "Lentil & Veggie Fritters",
-// 		category: "Mains",
-// 		ageGroup: "7m+",
-// 		time: "35 min",
-// 		tags: ["high-protein", "iron-rich"],
-// 		locked: true,
-// 		description: "Iron-rich fritters packed with hidden veg.",
-// 		ingredients: [
-// 			"100g cooked red lentils",
-// 			"1 grated carrot",
-// 			"1 grated courgette",
-// 			"2 tbsp plain flour",
-// 			"1 egg",
-// 		],
-// 		steps: [
-// 			"Squeeze moisture from grated veg.",
-// 			"Mix lentils, veg, flour, egg.",
-// 			"Shape into patties.",
-// 			"Fry on medium heat 3–4 min each side.",
-// 			"Drain and cool before serving.",
-// 		],
-// 	},
-// 	{
-// 		id: 6,
-// 		title: "Mango Yoghurt Pots",
-// 		category: "Snacks",
-// 		ageGroup: "6m+",
-// 		time: "5 min",
-// 		tags: ["probiotic"],
-// 		locked: true,
-// 		description: "A quick creamy snack full of probiotics.",
-// 		ingredients: [
-// 			"3 tbsp full-fat plain yoghurt",
-// 			"2 tbsp fresh or frozen mango",
-// 			"Optional: pinch of cardamom",
-// 		],
-// 		steps: [
-// 			"Defrost mango if frozen.",
-// 			"Mash or blend mango to a purée.",
-// 			"Swirl through yoghurt.",
-// 			"Serve in a bowl or on a preloaded spoon.",
-// 		],
-// 	},
-// ];
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 function calcAgeWeeks(dob) {
@@ -503,6 +396,22 @@ function Icon({ name, size = 18, color }) {
 					fill={color}
 					points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
 				/>
+			</Svg>
+		),
+		image: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				<Rect {...p} x="3" y="3" width="18" height="18" rx="2" ry="2" />
+				<Circle {...p} cx="8.5" cy="8.5" r="1.5" />
+				<Polyline {...p} points="21 15 16 10 5 21" />
+			</Svg>
+		),
+		Camera: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				<Path
+					{...p}
+					d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+				/>
+				<Circle {...p} cx="12" cy="13" r="4" />
 			</Svg>
 		),
 		edit: (
@@ -1362,7 +1271,12 @@ function DateField({ label, value, onChange, minYear, maxYear }) {
 }
 
 // ─── FOOD FORM ────────────────────────────────────────────────────────────────
-function FoodForm({ onSubmit, initial = {}, buttonLabel = "Add to Log" }) {
+function FoodForm({
+	onSubmit,
+	initial = {},
+	buttonLabel = "Add to Log",
+	isPro = false,
+}) {
 	const { C } = useTheme();
 	const today = new Date().toISOString().split("T")[0];
 
@@ -1383,6 +1297,7 @@ function FoodForm({ onSubmit, initial = {}, buttonLabel = "Add to Log" }) {
 		reaction: "",
 		notes: "",
 		favourite: false,
+		photoUri: "",
 		ml: "",
 		...initial,
 		// Override with parsed categories
@@ -1427,6 +1342,7 @@ function FoodForm({ onSubmit, initial = {}, buttonLabel = "Add to Log" }) {
 				notes: "",
 				favourite: false,
 				ml: "",
+				photoUri: "",
 			});
 	};
 	return (
@@ -1692,6 +1608,115 @@ function FoodForm({ onSubmit, initial = {}, buttonLabel = "Add to Log" }) {
 				</Text>
 			</TouchableOpacity>
 
+			{/* ── Memory Photo — Pro only ── */}
+			<View>
+				<View
+					style={{
+						flexDirection: "row",
+						justifyContent: "space-between",
+						alignItems: "center",
+						marginBottom: 6,
+					}}>
+					<Text style={s.label}>Memory Photo (optional)</Text>
+					{!isPro && (
+						<View
+							style={{
+								backgroundColor: C.warningStroke,
+								borderRadius: 999,
+								paddingHorizontal: 8,
+								paddingVertical: 2,
+							}}>
+							<Text
+								style={{ fontSize: 10, fontWeight: "700", color: "#ffffff" }}>
+								PRO
+							</Text>
+						</View>
+					)}
+				</View>
+				{isPro ? (
+					<TouchableOpacity
+						onPress={async () => {
+							const uri = await pickImageAsBase64([4, 3]);
+							if (uri) set("photoUri", uri);
+						}}
+						style={{
+							borderWidth: 2,
+							borderColor: form.photoUri ? C.primaryPurple : C.borderLight,
+							borderStyle: form.photoUri ? "solid" : "dashed",
+							borderRadius: 16,
+							overflow: "hidden",
+							minHeight: 120,
+							alignItems: "center",
+							justifyContent: "center",
+						}}
+						activeOpacity={0.8}>
+						{form.photoUri ? (
+							<>
+								<Image
+									source={{ uri: form.photoUri }}
+									style={{ width: "100%", height: 180, borderRadius: 14 }}
+									resizeMode="cover"
+								/>
+								<TouchableOpacity
+									onPress={() => set("photoUri", null)}
+									style={{
+										position: "absolute",
+										top: 8,
+										right: 8,
+										backgroundColor: "rgba(0,0,0,0.55)",
+										borderRadius: 999,
+										padding: 6,
+									}}>
+									<Icon name="close" size={14} color="#ffffff" />
+								</TouchableOpacity>
+							</>
+						) : (
+							<View
+								style={{ alignItems: "center", gap: 8, paddingVertical: 24 }}>
+								<Icon name="image" size={32} color={C.mutedText} />
+								<Text
+									style={{
+										fontSize: 13,
+										color: C.mutedText,
+										fontWeight: "600",
+									}}>
+									Tap to add a photo memory
+								</Text>
+							</View>
+						)}
+					</TouchableOpacity>
+				) : (
+					<View
+						style={{
+							borderWidth: 2,
+							borderColor: C.borderLight,
+							borderStyle: "dashed",
+							borderRadius: 16,
+							minHeight: 120,
+							alignItems: "center",
+							justifyContent: "center",
+							opacity: 0.6,
+						}}>
+						<View style={{ alignItems: "center", gap: 8, paddingVertical: 24 }}>
+							<Icon name="lock" size={28} color={C.mutedText} />
+							<Text
+								style={{ fontSize: 13, color: C.mutedText, fontWeight: "600" }}>
+								Photo memories — Pro only
+							</Text>
+							<Text
+								style={{
+									fontSize: 11,
+									color: C.mutedText,
+									textAlign: "center",
+									paddingHorizontal: 20,
+								}}>
+								Upgrade to Pro to attach photos to food log entries
+							</Text>
+						</View>
+					</View>
+				)}
+			</View>
+
 			<PrimaryBtn label={buttonLabel} onPress={handleSubmit} />
 		</View>
 	);
@@ -1843,27 +1868,65 @@ function DashboardScreen({
 							</Text>
 						)}
 					</View>
-					{/* Illustrated baby face in SVG */}
-					<Svg width={64} height={64} viewBox="0 0 64 64">
-						<Circle cx="32" cy="32" r="30" fill="rgba(255,255,255,0.15)" />
-						<Circle cx="32" cy="28" r="16" fill="rgba(255,255,255,0.25)" />
-						<Circle cx="24" cy="26" r="3" fill="rgba(255,255,255,0.8)" />
-						<Circle cx="40" cy="26" r="3" fill="rgba(255,255,255,0.8)" />
-						<Path
-							d="M26 34 Q32 39 38 34"
-							stroke="rgba(255,255,255,0.8)"
-							strokeWidth="2.5"
-							strokeLinecap="round"
-							fill="none"
-						/>
-						<Path
-							d="M14 44 Q32 56 50 44"
-							stroke="rgba(255,255,255,0.25)"
-							strokeWidth="3"
-							strokeLinecap="round"
-							fill="none"
-						/>
-					</Svg>
+					{/* Child photo or SVG face — tappable to edit */}
+					<TouchableOpacity
+						onPress={() => onNavigate("children")}
+						activeOpacity={0.8}
+						style={{ position: "relative" }}>
+						{child.photoUri ? (
+							<View
+								style={{
+									width: 72,
+									height: 72,
+									borderRadius: 36,
+									overflow: "hidden",
+									borderWidth: 3,
+									borderColor: "rgba(255,255,255,0.4)",
+								}}>
+								<Image
+									source={{ uri: child.photoUri }}
+									style={{ width: 72, height: 72 }}
+									resizeMode="cover"
+								/>
+							</View>
+						) : (
+							<Svg width={64} height={64} viewBox="0 0 64 64">
+								<Circle cx="32" cy="32" r="30" fill="rgba(255,255,255,0.15)" />
+								<Circle cx="32" cy="28" r="16" fill="rgba(255,255,255,0.25)" />
+								<Circle cx="24" cy="26" r="3" fill="rgba(255,255,255,0.8)" />
+								<Circle cx="40" cy="26" r="3" fill="rgba(255,255,255,0.8)" />
+								<Path
+									d="M26 34 Q32 39 38 34"
+									stroke="rgba(255,255,255,0.8)"
+									strokeWidth="2.5"
+									strokeLinecap="round"
+									fill="none"
+								/>
+								<Path
+									d="M14 44 Q32 56 50 44"
+									stroke="rgba(255,255,255,0.25)"
+									strokeWidth="3"
+									strokeLinecap="round"
+									fill="none"
+								/>
+							</Svg>
+						)}
+						{/* Edit badge */}
+						<View
+							style={{
+								position: "absolute",
+								bottom: 0,
+								right: 0,
+								width: 22,
+								height: 22,
+								borderRadius: 11,
+								backgroundColor: "rgba(0,0,0,0.45)",
+								alignItems: "center",
+								justifyContent: "center",
+							}}>
+							<Icon name="edit" size={11} color="#ffffff" />
+						</View>
+					</TouchableOpacity>
 				</View>
 			) : (
 				<View style={[s.card, { alignItems: "center", paddingVertical: 28 }]}>
@@ -2021,11 +2084,10 @@ function DashboardScreen({
 						</TouchableOpacity>
 					</View>
 					{recent.map((e, i) => {
-						const cat =
-							CATEGORIES.find((c) => c.value === e.category) || CATEGORIES[7];
 						return (
-							<View
+							<TouchableOpacity
 								key={e.id}
+								onPress={() => onNavigateFiltered("log", "", normalize(e.name))}
 								style={{
 									flexDirection: "row",
 									alignItems: "center",
@@ -2033,7 +2095,8 @@ function DashboardScreen({
 									paddingVertical: 12,
 									borderBottomWidth: i < recent.length - 1 ? 1 : 0,
 									borderBottomColor: C.borderLight,
-								}}>
+								}}
+								activeOpacity={0.7}>
 								<CategoryIcon category={e.category} size={44} />
 								<View style={{ flex: 1 }}>
 									<Text
@@ -2051,8 +2114,16 @@ function DashboardScreen({
 										{e.form ? ` · ${e.form}` : ""}
 									</Text>
 								</View>
-								<ReactionFace reaction={e.reaction} size={34} />
-							</View>
+								<View
+									style={{
+										flexDirection: "row",
+										alignItems: "center",
+										gap: 8,
+									}}>
+									<ReactionFace reaction={e.reaction} size={34} />
+									<Icon name="chevRight" size={14} color={C.borderLight} />
+								</View>
+							</TouchableOpacity>
 						);
 					})}
 				</View>
@@ -2211,17 +2282,32 @@ function LogScreen({
 	foodLog,
 	childName,
 	initialFilter,
+	initialOpenKey,
+	userMap = {},
+	currentUserId,
 	onEdit,
 	onDelete,
 	onToggleFavourite,
 	refreshing,
 	onRefresh,
 }) {
+	// Work out if sharing is active — only show "Added by" when there are
+	// multiple known users (i.e. family sharing is set up)
+	const hasMultipleUsers = Object.keys(userMap).length > 1;
 	const { C } = useTheme();
 	const [search, setSearch] = useState("");
 	const [sortBy, setSortBy] = useState("date-desc");
 	const [reactionFilter, setReactionFilter] = useState(initialFilter || "");
-	const [expanded, setExpanded] = useState(new Set());
+	const [expanded, setExpanded] = useState(
+		initialOpenKey ? new Set([initialOpenKey]) : new Set(),
+	);
+
+	// When initialOpenKey changes, expand that entry
+	useEffect(() => {
+		if (initialOpenKey) {
+			setExpanded(new Set([initialOpenKey]));
+		}
+	}, [initialOpenKey]);
 	const groups = groupByFood(foodLog);
 	let keys = Object.keys(groups);
 	if (search)
@@ -2709,6 +2795,41 @@ function LogScreen({
 														"{a.notes}"
 													</Text>
 												) : null}
+												{/* Added by — only shown when family sharing active */}
+												{hasMultipleUsers && a.userId && (
+													<View
+														style={{
+															flexDirection: "row",
+															alignItems: "center",
+															gap: 5,
+															marginTop: 6,
+														}}>
+														<Icon name="user" size={11} color={C.mutedText} />
+														<Text
+															style={{
+																fontSize: 11,
+																color: C.mutedText,
+																fontStyle: "italic",
+															}}>
+															{a.userId === currentUserId
+																? "Added by you"
+																: `Added by ${userMap[a.userId]?.split("@")[0] || "partner"}`}
+														</Text>
+													</View>
+												)}
+												{a.photoUri ? (
+													<View style={{ marginTop: 10 }}>
+														<Image
+															source={{ uri: a.photoUri }}
+															style={{
+																width: "100%",
+																height: 180,
+																borderRadius: 12,
+															}}
+															resizeMode="cover"
+														/>
+													</View>
+												) : null}
 											</View>
 											<View style={{ flexDirection: "row", gap: 6 }}>
 												<SecondaryBtn
@@ -2788,9 +2909,12 @@ function ChildrenScreen({
 	const [modalVisible, setModalVisible] = useState(false);
 	const [editTarget, setEditTarget] = useState(null);
 	const [form, setForm] = useState({ name: "", dob: "", weaningStart: "" });
+	const [childPhoto, setChildPhoto] = useState("");
 	const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+
 	const openAdd = () => {
 		setForm({ name: "", dob: "", weaningStart: "" });
+		setChildPhoto(null);
 		setEditTarget(null);
 		setModalVisible(true);
 	};
@@ -2800,14 +2924,25 @@ function ChildrenScreen({
 			dob: child.dob,
 			weaningStart: child.weaningStart || "",
 		});
+		setChildPhoto(child.photoUri || "");
 		setEditTarget(child);
 		setModalVisible(true);
 	};
+
 	const save = () => {
 		if (!form.name || !form.dob) return;
-		editTarget ? onEdit({ ...editTarget, ...form }) : onAdd({ ...form });
+		const data = { ...form, photoUri: childPhoto };
+		editTarget ? onEdit({ ...editTarget, ...data }) : onAdd({ ...data });
 		setModalVisible(false);
+		setChildPhoto("");
 	};
+
+	// Child photo — tapping always opens picker directly
+	const handlePickChildPhoto = async () => {
+		const uri = await pickImageAsBase64([1, 1]);
+		if (uri) setChildPhoto(uri);
+	};
+
 	return (
 		<View style={{ flex: 1 }}>
 			<View
@@ -2877,43 +3012,56 @@ function ChildrenScreen({
 											gap: 10,
 											marginBottom: 6,
 										}}>
-										{/* SVG baby avatar */}
-										<View
-											style={{
-												width: 44,
-												height: 44,
-												borderRadius: 22,
-												backgroundColor: C.primaryPurple + "22",
-												alignItems: "center",
-												justifyContent: "center",
-											}}>
-											<Svg width={32} height={32} viewBox="0 0 32 32">
-												<Circle
-													cx="16"
-													cy="13"
-													r="8"
-													fill={C.primaryPurple}
-													opacity="0.7"
-												/>
-												<Circle cx="12" cy="12" r="1.5" fill={C.white} />
-												<Circle cx="20" cy="12" r="1.5" fill={C.white} />
-												<Path
-													d="M12 17 Q16 20 20 17"
-													stroke={C.white}
-													strokeWidth="1.5"
-													strokeLinecap="round"
-													fill="none"
-												/>
-												<Path
-													d="M6 26 Q16 32 26 26"
-													stroke={C.primaryPurple}
-													strokeWidth="2"
-													strokeLinecap="round"
-													fill="none"
-													opacity="0.5"
-												/>
-											</Svg>
-										</View>
+										{/* Child avatar — photo or SVG, tappable to edit */}
+										<TouchableOpacity
+											onPress={() => openEdit(child)}
+											activeOpacity={0.8}>
+											<View
+												style={{
+													width: 52,
+													height: 52,
+													borderRadius: 26,
+													backgroundColor: C.primaryPurple + "22",
+													alignItems: "center",
+													justifyContent: "center",
+													overflow: "hidden",
+												}}>
+												{child.photoUri ? (
+													<Image
+														source={{ uri: child.photoUri }}
+														style={{ width: 52, height: 52 }}
+														resizeMode="cover"
+													/>
+												) : (
+													<Svg width={32} height={32} viewBox="0 0 32 32">
+														<Circle
+															cx="16"
+															cy="13"
+															r="8"
+															fill={C.primaryPurple}
+															opacity="0.7"
+														/>
+														<Circle cx="12" cy="12" r="1.5" fill={C.white} />
+														<Circle cx="20" cy="12" r="1.5" fill={C.white} />
+														<Path
+															d="M12 17 Q16 20 20 17"
+															stroke={C.white}
+															strokeWidth="1.5"
+															strokeLinecap="round"
+															fill="none"
+														/>
+														<Path
+															d="M6 26 Q16 32 26 26"
+															stroke={C.primaryPurple}
+															strokeWidth="2"
+															strokeLinecap="round"
+															fill="none"
+															opacity="0.5"
+														/>
+													</Svg>
+												)}
+											</View>
+										</TouchableOpacity>
 										<View>
 											<Text
 												style={{
@@ -3049,6 +3197,45 @@ function ChildrenScreen({
 						</View>
 						<ScrollView showsVerticalScrollIndicator={false}>
 							<View style={{ gap: 16, paddingBottom: 20 }}>
+								{/* Child photo picker */}
+								<TouchableOpacity
+									onPress={handlePickChildPhoto}
+									style={{ alignItems: "center" }}
+									activeOpacity={0.8}>
+									<View
+										style={{
+											width: 90,
+											height: 90,
+											borderRadius: 45,
+											backgroundColor: C.bgPurple,
+											alignItems: "center",
+											justifyContent: "center",
+											overflow: "hidden",
+											borderWidth: 2.5,
+											borderColor: childPhoto ? C.primaryPurple : C.borderLight,
+										}}>
+										{childPhoto ? (
+											<Image
+												source={{ uri: childPhoto }}
+												style={{ width: 90, height: 90 }}
+												resizeMode="cover"
+											/>
+										) : (
+											<Icon name="Camera" size={28} color={C.mutedText} />
+										)}
+									</View>
+									<Text
+										style={{
+											fontSize: 12,
+											color: C.primaryPurple,
+											fontWeight: "700",
+											marginTop: 8,
+										}}>
+										{childPhoto
+											? "Change or Remove Photo"
+											: "Add Photo (optional)"}
+									</Text>
+								</TouchableOpacity>
 								<View>
 									<Text style={s.label}>Name</Text>
 									<TextInput
@@ -3096,11 +3283,69 @@ function RecipesScreen({
 	onUpgradePro,
 	onToggleFav,
 	onLogRecipe,
+	user,
 }) {
 	const { C } = useTheme();
 	const [expandedId, setExpandedId] = useState(null);
 	const [filterAge, setFilterAge] = useState("all");
 	const [upgradeLoading, setUpgradeLoading] = useState(false);
+	const [showSuggest, setShowSuggest] = useState(false);
+	const [suggestForm, setSuggestForm] = useState({
+		title: "",
+		category: "",
+		ageGroup: "",
+		time: "",
+		description: "",
+		ingredients: "",
+		steps: "",
+	});
+	const [suggestSent, setSuggestSent] = useState(false);
+	const [suggestLoading, setSuggestLoading] = useState(false);
+	const setSF = (k, v) => setSuggestForm((p) => ({ ...p, [k]: v }));
+
+	const handleSuggestSubmit = async () => {
+		if (
+			!suggestForm.title ||
+			!suggestForm.description ||
+			!suggestForm.ingredients ||
+			!suggestForm.steps
+		) {
+			Alert.alert(
+				"Missing info",
+				"Please fill in title, description, ingredients and steps.",
+			);
+			return;
+		}
+		setSuggestLoading(true);
+		try {
+			const {
+				addDoc,
+				collection: col,
+				serverTimestamp: sts,
+			} = await import("firebase/firestore");
+			const { db: firedb } = await import("./firebase");
+			await addDoc(col(firedb, "recipeSuggestions"), {
+				...suggestForm,
+				// Parse ingredients and steps into arrays
+				ingredients: suggestForm.ingredients
+					.split("\n")
+					.map((s) => s.trim())
+					.filter(Boolean),
+				steps: suggestForm.steps
+					.split("\n")
+					.map((s) => s.trim())
+					.filter(Boolean),
+				userId: user?.uid || "",
+				userEmail: user?.email || "",
+				status: "pending",
+				createdAt: sts(),
+			});
+			setSuggestSent(true);
+		} catch (e) {
+			Alert.alert("Error", "Could not submit. Please try again.");
+		}
+		setSuggestLoading(false);
+	};
 	const ageGroups = ["all", "4-6m+", "6m+", "7-9m+", "10m+"];
 	let filtered =
 		filterAge === "all"
@@ -3350,6 +3595,269 @@ function RecipesScreen({
 					</Text>
 				</TouchableOpacity>
 			</ScrollView>
+
+			{/* ── Suggest a Recipe button ── */}
+			<TouchableOpacity
+				onPress={() => {
+					setShowSuggest(true);
+					setSuggestSent(false);
+					setSuggestForm({
+						title: "",
+						category: "",
+						ageGroup: "",
+						time: "",
+						description: "",
+						ingredients: "",
+						steps: "",
+					});
+				}}
+				style={{
+					flexDirection: "row",
+					alignItems: "center",
+					gap: 12,
+					backgroundColor: C.bgPurple,
+					borderRadius: 16,
+					padding: 16,
+					borderWidth: 1.5,
+					borderColor: C.borderLight,
+				}}
+				activeOpacity={0.8}>
+				<View
+					style={{
+						width: 42,
+						height: 42,
+						borderRadius: 13,
+						backgroundColor: C.primaryPurple + "22",
+						alignItems: "center",
+						justifyContent: "center",
+					}}>
+					<Icon name="plus" size={18} color={C.primaryPurple} />
+				</View>
+				<View style={{ flex: 1 }}>
+					<Text
+						style={{ fontWeight: "700", fontSize: 14, color: C.primaryPurple }}>
+						Suggest a Recipe
+					</Text>
+					<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>
+						Submit your own BLW recipe for review
+					</Text>
+				</View>
+				<Icon name="chevRight" size={16} color={C.mutedText} />
+			</TouchableOpacity>
+
+			{/* ── Suggest Recipe Modal ── */}
+			<Modal
+				visible={showSuggest}
+				transparent
+				animationType="slide"
+				onRequestClose={() => setShowSuggest(false)}>
+				<KeyboardAvoidingView
+					behavior={Platform.OS === "ios" ? "padding" : "height"}
+					style={s.modalOverlay}>
+					<View style={[s.modalSheet, { maxHeight: "92%" }]}>
+						<View
+							style={{
+								flexDirection: "row",
+								justifyContent: "space-between",
+								alignItems: "center",
+								marginBottom: 20,
+							}}>
+							<Text style={s.modalTitle}>Suggest a Recipe</Text>
+							<TouchableOpacity
+								onPress={() => setShowSuggest(false)}
+								style={{
+									backgroundColor: C.bgPurple,
+									borderRadius: 10,
+									padding: 8,
+								}}>
+								<Icon name="close" size={16} color={C.mutedText} />
+							</TouchableOpacity>
+						</View>
+						{suggestSent ? (
+							<View style={{ alignItems: "center", paddingVertical: 30 }}>
+								<View
+									style={{
+										width: 64,
+										height: 64,
+										borderRadius: 32,
+										backgroundColor: C.statGreenBg,
+										alignItems: "center",
+										justifyContent: "center",
+										marginBottom: 16,
+									}}>
+									<Icon name="check" size={28} color={C.statGreenText} />
+								</View>
+								<Text
+									style={{
+										fontWeight: "700",
+										fontSize: 18,
+										color: C.primaryPinkDark,
+										marginBottom: 8,
+									}}>
+									Recipe Submitted!
+								</Text>
+								<Text
+									style={{
+										fontSize: 14,
+										color: C.mutedText,
+										textAlign: "center",
+										lineHeight: 22,
+									}}>
+									{
+										"Thank you! We'll review your recipe and add it to the app if approved."
+									}
+								</Text>
+								<TouchableOpacity
+									onPress={() => setShowSuggest(false)}
+									style={[s.btnPrimary, { marginTop: 24 }]}>
+									<Text style={s.btnPrimaryText}>Done</Text>
+								</TouchableOpacity>
+							</View>
+						) : (
+							<ScrollView showsVerticalScrollIndicator={false}>
+								<View style={{ gap: 14, paddingBottom: 20 }}>
+									<View>
+										<Text style={s.label}>Recipe Name *</Text>
+										<TextInput
+											value={suggestForm.title}
+											onChangeText={(v) => setSF("title", v)}
+											placeholder="e.g. Sweet Potato Fritters"
+											style={[s.input, { backgroundColor: C.white }]}
+											placeholderTextColor={C.mutedText}
+											autoComplete="off"
+											autoCorrect={false}
+										/>
+									</View>
+									<View style={{ flexDirection: "row", gap: 10 }}>
+										<View style={{ flex: 1 }}>
+											<Text style={s.label}>Category</Text>
+											<TextInput
+												value={suggestForm.category}
+												onChangeText={(v) => setSF("category", v)}
+												placeholder="e.g. Mains"
+												style={[s.input, { backgroundColor: C.white }]}
+												placeholderTextColor={C.mutedText}
+												autoComplete="off"
+											/>
+										</View>
+										<View style={{ flex: 1 }}>
+											<Text style={s.label}>Age Group</Text>
+											<TextInput
+												value={suggestForm.ageGroup}
+												onChangeText={(v) => setSF("ageGroup", v)}
+												placeholder="e.g. 6m+"
+												style={[s.input, { backgroundColor: C.white }]}
+												placeholderTextColor={C.mutedText}
+												autoComplete="off"
+											/>
+										</View>
+									</View>
+									<View>
+										<Text style={s.label}>Prep Time</Text>
+										<TextInput
+											value={suggestForm.time}
+											onChangeText={(v) => setSF("time", v)}
+											placeholder="e.g. 20 min"
+											style={[s.input, { backgroundColor: C.white }]}
+											placeholderTextColor={C.mutedText}
+											autoComplete="off"
+										/>
+									</View>
+									<View>
+										<Text style={s.label}>Description *</Text>
+										<TextInput
+											value={suggestForm.description}
+											onChangeText={(v) => setSF("description", v)}
+											placeholder="Brief description of the recipe"
+											multiline
+											numberOfLines={3}
+											style={[
+												s.input,
+												{
+													height: 80,
+													textAlignVertical: "top",
+													backgroundColor: C.white,
+												},
+											]}
+											placeholderTextColor={C.mutedText}
+											autoComplete="off"
+										/>
+									</View>
+									<View>
+										<Text style={s.label}>Ingredients * (one per line)</Text>
+										<TextInput
+											value={suggestForm.ingredients}
+											onChangeText={(v) => setSF("ingredients", v)}
+											placeholder={"1 sweet potato\n2 tbsp flour\n1 egg"}
+											multiline
+											numberOfLines={5}
+											style={[
+												s.input,
+												{
+													height: 120,
+													textAlignVertical: "top",
+													backgroundColor: C.white,
+												},
+											]}
+											placeholderTextColor={C.mutedText}
+											autoComplete="off"
+										/>
+									</View>
+									<View>
+										<Text style={s.label}>Method / Steps * (one per line)</Text>
+										<TextInput
+											value={suggestForm.steps}
+											onChangeText={(v) => setSF("steps", v)}
+											placeholder={
+												"Peel and grate the sweet potato\nMix with flour and egg\nFry until golden"
+											}
+											multiline
+											numberOfLines={6}
+											style={[
+												s.input,
+												{
+													height: 140,
+													textAlignVertical: "top",
+													backgroundColor: C.white,
+												},
+											]}
+											placeholderTextColor={C.mutedText}
+											autoComplete="off"
+										/>
+									</View>
+									<View
+										style={{
+											backgroundColor: C.bgPurple,
+											borderRadius: 12,
+											padding: 14,
+										}}>
+										<Text
+											style={{
+												fontSize: 12,
+												color: C.mutedText,
+												lineHeight: 18,
+											}}>
+											Your recipe will be reviewed by the Munch Sprouts team
+											before being added to the app.
+										</Text>
+									</View>
+									<TouchableOpacity
+										onPress={handleSuggestSubmit}
+										disabled={suggestLoading}
+										style={[s.btnPrimary, suggestLoading && { opacity: 0.6 }]}
+										activeOpacity={0.8}>
+										{suggestLoading ? (
+											<ActivityIndicator color="#ffffff" />
+										) : (
+											<Text style={s.btnPrimaryText}>Submit Recipe</Text>
+										)}
+									</TouchableOpacity>
+								</View>
+							</ScrollView>
+						)}
+					</View>
+				</KeyboardAvoidingView>
+			</Modal>
 
 			{filtered.map((r) => {
 				const effectiveLocked = r.locked && !isPro;
@@ -3673,7 +4181,45 @@ function MoreScreen({
 	const [supportMessage, setSupportMessage] = useState("");
 	const [supportSent, setSupportSent] = useState(false);
 	const [showSupportTypePicker, setShowSupportTypePicker] = useState(false);
+	const [profilePhoto, setProfilePhoto] = useState("");
 
+	// Load profile photo from userDoc on mount
+	useEffect(() => {
+		if (user?.uid) {
+			import("firebase/firestore").then(({ doc: fsDoc, getDoc: fsGetDoc }) =>
+				import("./firebase").then(({ db: firedb }) =>
+					fsGetDoc(fsDoc(firedb, "users", user.uid)).then((snap) => {
+						if (snap.exists() && snap.data().photoURL) {
+							setProfilePhoto(snap.data().photoURL);
+						}
+					}),
+				),
+			);
+		}
+	}, [user?.uid]);
+
+	// Profile photo — tapping always opens picker directly (no modal/sheet)
+	const handlePickProfilePhoto = async () => {
+		const uri = await pickImageAsBase64([1, 1]);
+		if (!uri) return;
+		setProfilePhoto(uri);
+		try {
+			const { updateUserProfile } = await import("./firebaseHooks");
+			await updateUserProfile(user.uid, { photoURL: uri });
+		} catch (e) {
+			Alert.alert("Error", "Could not save photo.");
+		}
+	};
+
+	const handleRemoveProfilePhoto = async () => {
+		setProfilePhoto("");
+		try {
+			const { updateUserProfile } = await import("./firebaseHooks");
+			await updateUserProfile(user.uid, { photoURL: "" });
+		} catch (e) {
+			console.warn("Could not remove photo");
+		}
+	};
 	const handleChangePassword = async () => {
 		if (!currentPw || !newPw || !confirmPw) {
 			Alert.alert("Missing Fields", "Please fill in all fields.");
@@ -3782,16 +4328,55 @@ function MoreScreen({
 						gap: 14,
 					},
 				]}>
-				<View
-					style={{
-						width: 52,
-						height: 52,
-						borderRadius: 26,
-						backgroundColor: C.primaryPurple,
-						alignItems: "center",
-						justifyContent: "center",
-					}}>
-					<Icon name="user" size={24} color={C.white} />
+				<View style={{ alignItems: "center", gap: 4 }}>
+					<TouchableOpacity
+						onPress={handlePickProfilePhoto}
+						activeOpacity={0.8}>
+						<View
+							style={{
+								width: 60,
+								height: 60,
+								borderRadius: 30,
+								backgroundColor: C.primaryPurple,
+								alignItems: "center",
+								justifyContent: "center",
+								overflow: "hidden",
+							}}>
+							{profilePhoto ? (
+								<Image
+									source={{ uri: profilePhoto }}
+									style={{ width: 60, height: 60 }}
+									resizeMode="cover"
+								/>
+							) : (
+								<Icon name="user" size={26} color="#ffffff" />
+							)}
+						</View>
+						<View
+							style={{
+								position: "absolute",
+								bottom: 0,
+								right: 0,
+								width: 20,
+								height: 20,
+								borderRadius: 10,
+								backgroundColor: C.primaryPurple,
+								alignItems: "center",
+								justifyContent: "center",
+								borderWidth: 2,
+								borderColor: C.white,
+							}}>
+							<Icon name="Camera" size={10} color="#ffffff" />
+						</View>
+					</TouchableOpacity>
+					{profilePhoto ? (
+						<TouchableOpacity onPress={handleRemoveProfilePhoto}>
+							<Text
+								style={{ fontSize: 10, color: "#c0392b", fontWeight: "700" }}>
+								Remove
+							</Text>
+						</TouchableOpacity>
+					) : null}
 				</View>
 				<View style={{ flex: 1 }}>
 					<Text
@@ -5029,7 +5614,7 @@ function LogRecipeModal({ visible, recipe, childName, onConfirm, onClose }) {
 }
 
 // ─── EDIT MODAL ───────────────────────────────────────────────────────────────
-function EditModal({ visible, entry, onSubmit, onClose }) {
+function EditModal({ visible, entry, onSubmit, onClose, isPro = false }) {
 	const { C } = useTheme();
 	return (
 		<Modal
@@ -5065,6 +5650,7 @@ function EditModal({ visible, entry, onSubmit, onClose }) {
 								initial={entry}
 								onSubmit={onSubmit}
 								buttonLabel="Update Entry"
+								isPro={isPro}
 							/>
 						)}
 					</ScrollView>
@@ -5088,7 +5674,9 @@ function MainApp({ user, isPro }) {
 	const [showLogRecipeModal, setShowLogRecipeModal] = useState(false);
 	const [logRecipeTarget, setLogRecipeTarget] = useState(null);
 	const [logFilter, setLogFilter] = useState("");
+	const [logOpenKey, setLogOpenKey] = useState(null);
 	const [refreshing, setRefreshing] = useState(false);
+	const [userMap, setUserMap] = useState({});
 	const insets = useSafeAreaInsets();
 	const [recipes, setRecipes] = useState([]);
 	const [favouriteRecipeIds, setFavouriteRecipeIds] = useState([]);
@@ -5108,6 +5696,20 @@ function MainApp({ user, isPro }) {
 				setFavouriteRecipeIds(favIds);
 				if (kids.length > 0) setActiveChildId(kids[0].id);
 				setDataLoaded(true);
+				// Build userMap: uid → email for "Added by" attribution
+				const map = {};
+				map[user.uid] = user.email;
+				for (const child of kids) {
+					if (child.ownerEmail && child.userId)
+						map[child.userId] = child.ownerEmail;
+					if (child.sharedWith && child.sharedWithEmails) {
+						child.sharedWith.forEach((uid, i) => {
+							if (child.sharedWithEmails[i])
+								map[uid] = child.sharedWithEmails[i];
+						});
+					}
+				}
+				setUserMap(map);
 			})
 			.catch((err) => {
 				console.error("Error loading data:", err);
@@ -5473,6 +6075,18 @@ function MainApp({ user, isPro }) {
 				const stillExists = kids.find((k) => k.id === activeChildId);
 				if (!stillExists) setActiveChildId(kids[0].id);
 			}
+			// Rebuild userMap
+			const map = { [user.uid]: user.email };
+			for (const child of kids) {
+				if (child.ownerEmail && child.userId)
+					map[child.userId] = child.ownerEmail;
+				if (child.sharedWith && child.sharedWithEmails) {
+					child.sharedWith.forEach((uid, i) => {
+						if (child.sharedWithEmails[i]) map[uid] = child.sharedWithEmails[i];
+					});
+				}
+			}
+			setUserMap(map);
 			toast("Updated");
 		} catch (e) {
 			console.error("Refresh failed:", e);
@@ -5673,14 +6287,23 @@ function MainApp({ user, isPro }) {
 										}}>
 										<View
 											style={{
-												width: 36,
-												height: 36,
-												borderRadius: 18,
+												width: 44,
+												height: 44,
+												borderRadius: 22,
 												backgroundColor: C.primaryPurple + "22",
 												alignItems: "center",
 												justifyContent: "center",
+												overflow: "hidden",
 											}}>
-											<Icon name="baby" size={18} color={C.primaryPurple} />
+											{c.photoUri ? (
+												<Image
+													source={{ uri: c.photoUri }}
+													style={{ width: 44, height: 44 }}
+													resizeMode="cover"
+												/>
+											) : (
+												<Icon name="baby" size={20} color={C.primaryPurple} />
+											)}
 										</View>
 										<View>
 											<Text
@@ -5739,8 +6362,9 @@ function MainApp({ user, isPro }) {
 						child={activeChild}
 						foodLog={childLog}
 						onNavigate={setPage}
-						onNavigateFiltered={(pg, filter) => {
+						onNavigateFiltered={(pg, filter, openKey) => {
 							setLogFilter(filter);
+							setLogOpenKey(openKey || null);
 							setPage(pg);
 						}}
 						refreshing={refreshing}
@@ -5752,6 +6376,9 @@ function MainApp({ user, isPro }) {
 						foodLog={childLog}
 						childName={activeChild?.name || null}
 						initialFilter={logFilter}
+						initialOpenKey={logOpenKey}
+						userMap={userMap}
+						currentUserId={user.uid}
 						onEdit={setEditEntry}
 						onDelete={deleteFood}
 						onToggleFavourite={toggleFav}
@@ -5770,7 +6397,7 @@ function MainApp({ user, isPro }) {
 								Log Food or Drink
 							</Text>
 							<View style={s.card}>
-								<FoodForm onSubmit={addFood} />
+								<FoodForm onSubmit={addFood} isPro={isPro} />
 							</View>
 						</ScrollView>
 					</KeyboardAvoidingView>
@@ -5783,6 +6410,7 @@ function MainApp({ user, isPro }) {
 						onUpgradePro={handleUpgradePro}
 						onToggleFav={handleToggleRecipeFav}
 						onLogRecipe={handleLogRecipe}
+						user={user}
 					/>
 				)}
 				{page === "more" && (
@@ -5870,6 +6498,7 @@ function MainApp({ user, isPro }) {
 				entry={editEntry}
 				onSubmit={editFood}
 				onClose={() => setEditEntry(null)}
+				isPro={isPro}
 			/>
 
 			{/* Log Recipe Modal */}
