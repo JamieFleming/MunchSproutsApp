@@ -278,6 +278,14 @@ function groupByFood(log) {
 			};
 		g[k].attempts.push(e);
 	});
+	// Sort each food's attempts: oldest date first (attempt 1), newest last
+	Object.values(g).forEach((food) => {
+		food.attempts.sort((a, b) => {
+			const da = new Date((a.date || "1970-01-01") + "T" + (a.time || "00:00"));
+			const db = new Date((b.date || "1970-01-01") + "T" + (b.time || "00:00"));
+			return da - db;
+		});
+	});
 	return g;
 }
 function reactionCfg(r) {
@@ -2288,6 +2296,7 @@ function LogScreen({
 	onEdit,
 	onDelete,
 	onToggleFavourite,
+	onAddAttempt,
 	refreshing,
 	onRefresh,
 }) {
@@ -2625,7 +2634,8 @@ function LogScreen({
 										}}>
 										<ReactionBadge reaction={latest.reaction} />
 										<Text style={{ fontSize: 11, color: C.mutedText }}>
-											{formatDate(latest.date)}
+											Latest · {formatDate(latest.date)}
+											{latest.time ? ` at ${latest.time}` : ""}
 										</Text>
 									</View>
 									{/* Category pills */}
@@ -2714,7 +2724,7 @@ function LogScreen({
 								/>
 							</TouchableOpacity>
 							{isOpen &&
-								g.attempts.map((a, i) => (
+								[...g.attempts].reverse().map((a, i) => (
 									<View
 										key={a.id}
 										style={{
@@ -2732,7 +2742,8 @@ function LogScreen({
 											}}>
 											<View style={{ flex: 1 }}>
 												<Text style={[s.smallLabel, { marginBottom: 6 }]}>
-													Attempt {i + 1} · {formatDate(a.date)}
+													Attempt {g.attempts.length - i} · {formatDate(a.date)}
+													{a.time ? ` at ${a.time}` : ""}
 													{a.favourite ? " ★" : ""}
 												</Text>
 												<View
@@ -2864,6 +2875,34 @@ function LogScreen({
 										</View>
 									</View>
 								))}
+							{/* Add Another Attempt */}
+							{isOpen && onAddAttempt && (
+								<TouchableOpacity
+									onPress={() => onAddAttempt(g)}
+									style={{
+										flexDirection: "row",
+										alignItems: "center",
+										justifyContent: "center",
+										gap: 8,
+										padding: 14,
+										borderTopWidth: 1,
+										borderTopColor: C.borderLight,
+										backgroundColor: C.bgPurple,
+										borderBottomLeftRadius: 16,
+										borderBottomRightRadius: 16,
+									}}
+									activeOpacity={0.8}>
+									<Icon name="plus" size={14} color={C.primaryPurple} />
+									<Text
+										style={{
+											fontSize: 13,
+											fontWeight: "700",
+											color: C.primaryPurple,
+										}}>
+										Add Another Attempt
+									</Text>
+								</TouchableOpacity>
+							)}
 						</View>
 					);
 				})}
@@ -5675,6 +5714,7 @@ function MainApp({ user, isPro }) {
 	const [logRecipeTarget, setLogRecipeTarget] = useState(null);
 	const [logFilter, setLogFilter] = useState("");
 	const [logOpenKey, setLogOpenKey] = useState(null);
+	const [prefillFood, setPrefillFood] = useState(null);
 	const [refreshing, setRefreshing] = useState(false);
 	const [userMap, setUserMap] = useState({});
 	const insets = useSafeAreaInsets();
@@ -5808,6 +5848,18 @@ function MainApp({ user, isPro }) {
 		const id = Date.now();
 		setToasts((p) => [...p, { id, msg, type }]);
 		setTimeout(() => setToasts((p) => p.filter((t) => t.id !== id)), 3000);
+	};
+
+	const handleAddAttempt = (group) => {
+		setPrefillFood({
+			name: group.name,
+			category: group.category,
+			categories:
+				group.attempts?.[0]?.categories ||
+				(group.category ? [group.category] : []),
+			feedType: group.attempts?.[0]?.feedType || "",
+		});
+		setPage("add");
 	};
 
 	const addFood = async (form, err) => {
@@ -6382,6 +6434,7 @@ function MainApp({ user, isPro }) {
 						onEdit={setEditEntry}
 						onDelete={deleteFood}
 						onToggleFavourite={toggleFav}
+						onAddAttempt={handleAddAttempt}
 						refreshing={refreshing}
 						onRefresh={onRefresh}
 					/>
@@ -6397,7 +6450,15 @@ function MainApp({ user, isPro }) {
 								Log Food or Drink
 							</Text>
 							<View style={s.card}>
-								<FoodForm onSubmit={addFood} isPro={isPro} />
+								<FoodForm
+									onSubmit={(form, err) => {
+										addFood(form, err);
+										if (!err) setPrefillFood(null);
+									}}
+									isPro={isPro}
+									initial={prefillFood || {}}
+									existingFoods={Object.values(groupByFood(childLog))}
+								/>
 							</View>
 						</ScrollView>
 					</KeyboardAvoidingView>
