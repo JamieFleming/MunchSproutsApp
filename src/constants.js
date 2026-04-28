@@ -124,6 +124,15 @@ export const REACTIONS = [
 	{ value: "Allergic", color: "#c0392b", bg: "#fde8e8", border: "#e07070" },
 ];
 
+export const MEAL_TIMES = [
+	{ value: "Breakfast", color: "#d4860a", bg: "#fff0cc" },
+	{ value: "Morning Snack", color: "#a85a1a", bg: "#fde8d4" },
+	{ value: "Lunch", color: "#2d7a55", bg: "#d4f0e0" },
+	{ value: "Afternoon Snack", color: "#3a7a3a", bg: "#ddf0dd" },
+	{ value: "Dinner / Tea", color: "#2a5f8f", bg: "#d4e8f5" },
+	{ value: "Drink", color: "#4ab8d8", bg: "#d4eef5" },
+];
+
 export const MONTHS = [
 	"Jan", "Feb", "Mar", "Apr", "May", "Jun",
 	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec",

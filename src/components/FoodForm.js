@@ -5,7 +5,7 @@ import { Icon, CategoryIcon, ReactionFace } from "./Icon";
 import { PrimaryBtn } from "./SharedComponents";
 import { PickerModal } from "./PickerModal";
 import { DateField } from "./DatePickerModal";
-import { CATEGORIES, FORMS, REACTIONS } from "../constants";
+import { CATEGORIES, FORMS, REACTIONS, MEAL_TIMES } from "../constants";
 import { pickImageAsBase64 } from "../helpers";
 
 const EMPTY_FORM = {
@@ -19,6 +19,7 @@ const EMPTY_FORM = {
 	favourite: false,
 	ml: "",
 	photoUri: "",
+	mealTime: "",
 };
 
 function parseCategories(cat) {
@@ -83,6 +84,37 @@ export function FoodForm({
 				minYear={2020}
 				maxYear={new Date().getFullYear() + 1}
 			/>
+
+			<View>
+				<Text style={s.label}>Meal Time (optional)</Text>
+				<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+					{MEAL_TIMES.map((m) => {
+						const sel = form.mealTime === m.value;
+						return (
+							<TouchableOpacity
+								key={m.value}
+								onPress={() => set("mealTime", sel ? "" : m.value)}
+								style={{
+									flexDirection: "row",
+									alignItems: "center",
+									gap: 5,
+									paddingHorizontal: 12,
+									paddingVertical: 8,
+									borderRadius: 999,
+									backgroundColor: sel ? m.color : C.white,
+									borderWidth: 2,
+									borderColor: sel ? m.color : C.borderLight,
+								}}
+								activeOpacity={0.8}>
+								<Text style={{ fontSize: 12, fontWeight: "700", color: sel ? "#ffffff" : C.mutedText }}>
+									{m.value}
+								</Text>
+							</TouchableOpacity>
+						);
+					})}
+				</View>
+			</View>
+
 			<View>
 				<Text style={s.label}>Food or Drink Name</Text>
 				<TextInput

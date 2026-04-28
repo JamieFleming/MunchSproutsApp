@@ -73,6 +73,28 @@ export function buildDays(m, y) {
 	return d;
 }
 
+export function formatTime(time) {
+	if (!time) return "";
+	const [h, m] = time.split(":");
+	const hour = parseInt(h, 10);
+	const ampm = hour >= 12 ? "pm" : "am";
+	const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+	return `${h12}:${m}${ampm}`;
+}
+
+export function toMl(amount, unit) {
+	const n = parseFloat(amount) || 0;
+	return unit === "oz" ? Math.round(n * 29.5735) : Math.round(n);
+}
+
+export function buildHours() {
+	return Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+}
+
+export function buildMinutes() {
+	return ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
+}
+
 export async function pickImageAsBase64(aspect = [4, 3]) {
 	const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
 

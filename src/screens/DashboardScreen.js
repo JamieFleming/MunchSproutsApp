@@ -13,7 +13,7 @@ import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon, CategoryIcon, ReactionFace } from "../components/Icon";
-import { groupByFood, calcAgeWeeks, calcAgeMonths, formatDate, normalize, reactionCfg } from "../helpers";
+import { groupByFood, calcAgeWeeks, calcAgeMonths, formatDate, normalize, reactionCfg, formatTime, toMl } from "../helpers";
 
 async function exportFoodLogAsPDF(foodLog, childName) {
 	if (!foodLog.length) {
@@ -57,9 +57,53 @@ async function exportFoodLogAsPDF(foodLog, childName) {
 	}
 }
 
+const MILK_TYPE_COLORS = {
+	formula: { color: "#2a5f8f", bg: "#d4e8f5" },
+	breast: { color: "#7a2d6a", bg: "#f5d4f0" },
+	specialised: { color: "#a85a1a", bg: "#fde8cc" },
+};
+
+function MilkGraph({ entries }) {
+	const { C } = useTheme();
+	if (entries.length === 0) return null;
+
+	const BAR_HEIGHT = 64;
+	const maxMl = Math.max(...entries.map((e) => toMl(e.amount, e.unit)));
+
+	return (
+		<View style={{ flexDirection: "row", alignItems: "flex-end", gap: 6, height: BAR_HEIGHT + 28 }}>
+			{entries.map((e) => {
+				const ml = toMl(e.amount, e.unit);
+				const height = Math.max(8, Math.round((ml / maxMl) * BAR_HEIGHT));
+				const tc = MILK_TYPE_COLORS[e.type] || MILK_TYPE_COLORS.formula;
+				return (
+					<View key={e.id} style={{ flex: 1, alignItems: "center", justifyContent: "flex-end" }}>
+						<Text style={{ fontSize: 9, fontWeight: "700", color: tc.color, marginBottom: 3 }}>
+							{e.amount}{e.unit}
+						</Text>
+						<View
+							style={{
+								width: "100%",
+								height,
+								backgroundColor: tc.color,
+								borderRadius: 6,
+								opacity: 0.85,
+							}}
+						/>
+						<Text style={{ fontSize: 9, color: C.mutedText, marginTop: 4, fontWeight: "600" }}>
+							{formatTime(e.time)}
+						</Text>
+					</View>
+				);
+			})}
+		</View>
+	);
+}
+
 export function DashboardScreen({
 	child,
 	foodLog,
+	bottleLog = [],
 	onNavigate,
 	onNavigateFiltered,
 	refreshing,
@@ -87,6 +131,13 @@ export function DashboardScreen({
 	const weeks = child ? calcAgeWeeks(child.dob) : null;
 	const months = child ? calcAgeMonths(child.dob) : null;
 	const recent = [...foodLog].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+
+	const today = new Date().toISOString().split("T")[0];
+	const todayBottles = [...bottleLog]
+		.filter((e) => e.date === today)
+		.sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+	const todayTotalMl = todayBottles.reduce((sum, e) => sum + toMl(e.amount, e.unit), 0);
+	const lastBottle = todayBottles.at(-1);
 
 	return (
 		<ScrollView
@@ -194,6 +245,64 @@ export function DashboardScreen({
 				</TouchableOpacity>
 			</View>
 
+			{/* ── Milk Tracking Card ── */}
+			<TouchableOpacity onPress={() => onNavigate("bottle")} activeOpacity={0.92} style={s.card}>
+				<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+					<View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+						<View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#d4e8f5", alignItems: "center", justifyContent: "center" }}>
+							<Icon name="bottle" size={20} color="#2a5f8f" />
+						</View>
+						<View>
+							<Text style={s.sectionTitle}>Milk Today</Text>
+							{lastBottle && (
+								<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>
+									Last feed {formatTime(lastBottle.time)}
+								</Text>
+							)}
+						</View>
+					</View>
+					<View style={{ alignItems: "flex-end" }}>
+						<Text style={{ fontSize: 22, fontWeight: "800", color: "#2a5f8f" }}>{todayTotalMl} ml</Text>
+						<Text style={{ fontSize: 11, color: C.mutedText }}>
+							{todayBottles.length} feed{todayBottles.length !== 1 ? "s" : ""}
+						</Text>
+					</View>
+				</View>
+
+				{todayBottles.length > 0 ? (
+					<MilkGraph entries={todayBottles} />
+				) : (
+					<View style={{ alignItems: "center", paddingVertical: 16, backgroundColor: C.bgPurple, borderRadius: 14 }}>
+						<Icon name="bottle" size={28} color={C.secondaryPurple} />
+						<Text style={{ fontSize: 13, color: C.mutedText, fontWeight: "600", marginTop: 6 }}>
+							No bottles logged today
+						</Text>
+					</View>
+				)}
+
+				{todayBottles.length > 0 && (
+					<View style={{ flexDirection: "row", gap: 6, marginTop: 12, flexWrap: "wrap" }}>
+						{Object.entries(
+							todayBottles.reduce((acc, e) => {
+								acc[e.type] = (acc[e.type] || 0) + 1;
+								return acc;
+							}, {}),
+						).map(([type, count]) => {
+							const tc = MILK_TYPE_COLORS[type] || MILK_TYPE_COLORS.formula;
+							const label = { formula: "Formula", breast: "Breast Milk", specialised: "Specialised" }[type] || type;
+							return (
+								<View key={type} style={{ backgroundColor: tc.bg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexDirection: "row", alignItems: "center", gap: 4 }}>
+									<View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: tc.color }} />
+									<Text style={{ fontSize: 11, fontWeight: "700", color: tc.color }}>
+										{count}× {label}
+									</Text>
+								</View>
+							);
+						})}
+					</View>
+				)}
+			</TouchableOpacity>
+
 			{allergic > 0 && (
 				<View style={{ backgroundColor: C.statRedBg, borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", gap: 14, shadowColor: "#c0392b", shadowOpacity: 0.1, shadowRadius: 8, elevation: 2 }}>
 					<View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: C.statRedBg, alignItems: "center", justifyContent: "center" }}>
@@ -248,7 +357,7 @@ export function DashboardScreen({
 				return (
 					<View style={s.card}>
 						<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-							<Text style={s.sectionTitle}>⭐ Favourites</Text>
+							<Text style={s.sectionTitle}>Favourites</Text>
 							<TouchableOpacity onPress={() => onNavigateFiltered("log", "Favourites")}>
 								<Text style={{ fontSize: 13, color: C.primaryPurple, fontWeight: "700" }}>View all</Text>
 							</TouchableOpacity>

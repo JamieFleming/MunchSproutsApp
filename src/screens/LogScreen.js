@@ -12,7 +12,7 @@ import {
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon, CategoryIcon } from "../components/Icon";
 import { ReactionBadge, SecondaryBtn, DangerBtn } from "../components/SharedComponents";
-import { CATEGORIES } from "../constants";
+import { CATEGORIES, MEAL_TIMES } from "../constants";
 import { groupByFood, normalize, formatDate } from "../helpers";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -227,6 +227,7 @@ export function LogScreen({
 					const pct = Math.round((likedCnt / g.attempts.length) * 100);
 					const hasAllergy = g.attempts.some((a) => a.reaction === "Allergic");
 					const hasFav = g.attempts.some((a) => a.favourite);
+					const hasPhoto = g.attempts.some((a) => a.photoUri);
 					const isOpen = expanded.has(key);
 					return (
 						<View
@@ -241,6 +242,7 @@ export function LogScreen({
 									<View style={{ flexDirection: "row", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
 										<Text style={{ fontWeight: "700", fontSize: 15, color: C.primaryPinkDark }}>{g.name}</Text>
 										{hasFav && <Icon name="starFill" size={13} color="#d4a017" />}
+										{hasPhoto && <Icon name="image" size={13} color={C.mutedText} />}
 										{hasAllergy && (
 											<View style={{ backgroundColor: C.statRedBg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
 												<Text style={{ fontSize: 9, fontWeight: "700", color: "#c0392b", textTransform: "uppercase" }}>Allergy</Text>
@@ -295,6 +297,14 @@ export function LogScreen({
 												Attempt {g.attempts.length - i} · {formatDate(a.date)}{a.time ? ` at ${a.time}` : ""}{a.favourite ? " ★" : ""}
 											</Text>
 											<View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+												{a.mealTime && (() => {
+													const mt = MEAL_TIMES.find((m) => m.value === a.mealTime);
+													return mt ? (
+														<View style={{ backgroundColor: mt.bg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+															<Text style={{ fontSize: 11, fontWeight: "700", color: mt.color }}>{mt.value}</Text>
+														</View>
+													) : null;
+												})()}
 												{a.form && (
 													<View style={{ backgroundColor: C.white, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 }}>
 														<Text style={{ fontSize: 11, fontWeight: "600", color: C.mutedText }}>{a.form}</Text>

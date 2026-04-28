@@ -125,6 +125,16 @@ export async function deleteAccount(userId) {
 		console.warn("Could not delete favourite recipes:", e.message);
 	}
 
+	// Delete bottle log entries
+	try {
+		const bottleSnap = await getDocs(
+			query(collection(db, "bottleLog"), where("userId", "==", userId)),
+		);
+		await Promise.all(bottleSnap.docs.map((d) => deleteDoc(d.ref)));
+	} catch (e) {
+		console.warn("Could not delete bottle log entries:", e.message);
+	}
+
 	// Delete any recipe suggestions
 	try {
 		const suggestSnap = await getDocs(
@@ -213,6 +223,17 @@ export async function deleteChild(childId, userId) {
 		await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
 	} catch (e) {
 		console.warn("Could not delete food log entries:", e.message);
+	}
+
+	try {
+		const q = query(
+			collection(db, "bottleLog"),
+			where("childId", "==", childId),
+		);
+		const snap = await getDocs(q);
+		await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
+	} catch (e) {
+		console.warn("Could not delete bottle log entries:", e.message);
 	}
 }
 
@@ -313,4 +334,48 @@ export async function fetchFavouriteRecipes(userId) {
 		collection(db, "users", userId, "favouriteRecipes"),
 	);
 	return snap.docs.map((d) => d.id); // just the recipe IDs
+}
+
+// BOTTLE LOG
+export async function fetchBottleLog(userId) {
+	const children = await fetchChildren(userId);
+
+	const ownedQuery = query(
+		collection(db, "bottleLog"),
+		where("userId", "==", userId),
+	);
+	const ownedSnap = await getDocs(ownedQuery);
+
+	const allChildIds = children.map((c) => c.id);
+	let childEntries = [];
+	if (allChildIds.length > 0) {
+		for (let i = 0; i < allChildIds.length; i += 30) {
+			const batch = allChildIds.slice(i, i + 30);
+			const childQuery = query(
+				collection(db, "bottleLog"),
+				where("childId", "in", batch),
+			);
+			const snap = await getDocs(childQuery);
+			snap.docs.forEach((d) => childEntries.push({ ...d.data(), id: d.id }));
+		}
+	}
+
+	const allEntries = new Map();
+	ownedSnap.docs.forEach((d) => allEntries.set(d.id, { ...d.data(), id: d.id }));
+	childEntries.forEach((e) => allEntries.set(e.id, e));
+
+	return Array.from(allEntries.values());
+}
+
+export async function addBottleEntry(userId, entry) {
+	const ref = await addDoc(collection(db, "bottleLog"), { userId, ...entry });
+	return ref.id;
+}
+
+export async function updateBottleEntry(entryId, data) {
+	await updateDoc(doc(db, "bottleLog", entryId), data);
+}
+
+export async function deleteBottleEntry(entryId) {
+	await deleteDoc(doc(db, "bottleLog", entryId));
 }

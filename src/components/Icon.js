@@ -300,6 +300,24 @@ export function Icon({ name, size = 18, color }) {
 				<Polyline {...p} points="10 9 9 9 8 9" />
 			</Svg>
 		),
+		bottle: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				{/* Nipple tip */}
+				<Rect {...p} x="10.5" y="1" width="3" height="2" rx="1" fill={color} stroke={color} strokeWidth={1} />
+				{/* Collar */}
+				<Path {...p} d="M9 3h6v3H9z" />
+				{/* Body */}
+				<Path {...p} d="M8 6h8l1.5 4v9a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-9L8 6z" />
+				{/* Measurement lines */}
+				<Line {...p} strokeWidth={1.2} x1="9.5" y1="14" x2="12.5" y2="14" />
+				<Line {...p} strokeWidth={1.2} x1="9.5" y1="17" x2="12.5" y2="17" />
+			</Svg>
+		),
+		drop: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				<Path {...p} d="M12 2C6 9 4 13 4 16a8 8 0 0 0 16 0c0-3-2-7-8-14z" />
+			</Svg>
+		),
 	};
 	return icons[name] || null;
 }
@@ -353,9 +371,11 @@ export function CategoryIcon({ category, size = 32 }) {
 		),
 		Other: (
 			<Svg width={s2} height={s2} viewBox="0 0 24 24">
-				<Circle cx={s2 / 2} cy={s2 / 2} r={s2 * 0.4} fill={cfg.bg} stroke={cfg.color} strokeWidth={2} />
-				<Line x1={s2 * 0.35} y1={s2 / 2} x2={s2 * 0.65} y2={s2 / 2} stroke={cfg.color} strokeWidth={2} strokeLinecap="round" />
-				<Line x1={s2 / 2} y1={s2 * 0.35} x2={s2 / 2} y2={s2 * 0.65} stroke={cfg.color} strokeWidth={2} strokeLinecap="round" />
+				{/* Fork */}
+				<Line x1="5" y1="2" x2="5" y2="22" stroke={cfg.color} strokeWidth={2} strokeLinecap="round" />
+				<Path stroke={cfg.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" d="M3 2v6a2 2 0 0 0 4 0V2" />
+				{/* Knife */}
+				<Path stroke={cfg.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" d="M19 2v7a2 2 0 0 1-2 2v11" />
 			</Svg>
 		),
 	};
