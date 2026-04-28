@@ -41,7 +41,8 @@ import {
 	EmailAuthProvider,
 	reauthenticateWithCredential,
 } from "firebase/auth";
-import { auth } from "./firebase";
+import { auth, db } from "./firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import {
 	useAuth,
 	logOut,
@@ -64,8 +65,6 @@ import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "./firebase";
 import Purchases, { LOG_LEVEL } from "react-native-purchases";
 
 // ─── COLOURS ──────────────────────────────────────────────────────────────────
@@ -5827,15 +5826,15 @@ function MainApp({ user, isPro }) {
 	};
 
 	// RevenueCat init
-	// useEffect(() => {
-	// 	if (!user) return;
-	// 	Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-	// 	const apiKey =
-	// 		Platform.OS === "ios"
-	// 			? "appl_xNGjmEgufsXuWySnKebRetuKCGj"
-	// 			: "goog_rcHUTFIPkKdXdEAQHcexulBdpOj";
-	// 	Purchases.configure({ apiKey, appUserID: user.uid });
-	// }, [user]);
+	useEffect(() => {
+		if (!user) return;
+		Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+		const apiKey =
+			Platform.OS === "ios"
+				? "appl_xNGjmEgufsXuWySnKebRetuKCGj"
+				: "goog_rcHUTFIPkKdXdEAQHcexulBdpOj";
+		Purchases.configure({ apiKey, appUserID: user.uid });
+	}, [user]);
 
 	// Derived state — must be defined before any handlers or JSX that reference them
 	const activeChild =
