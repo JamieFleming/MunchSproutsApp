@@ -28,6 +28,8 @@ export function MoreScreen({
 	isPro,
 	ownedChildren,
 	defaultChildId,
+	showMilkOnDashboard = true,
+	onToggleMilkOnDashboard,
 	onLogout,
 	onDeleteAccount,
 	onUpgradePro,
@@ -394,6 +396,71 @@ export function MoreScreen({
 						)}
 					</TouchableOpacity>
 				))}
+			</View>
+
+			{/* Dashboard */}
+			<Text style={[s.smallLabel, { paddingLeft: 4, marginBottom: 10, marginTop: 6 }]}>Dashboard</Text>
+			<View
+				style={{
+					backgroundColor: C.white,
+					borderRadius: 16,
+					padding: 16,
+					marginBottom: 10,
+					shadowColor: "#000",
+					shadowOpacity: 0.04,
+					shadowRadius: 6,
+					elevation: 1,
+				}}>
+				<TouchableOpacity
+					onPress={onToggleMilkOnDashboard}
+					style={{ flexDirection: "row", alignItems: "center", gap: 14 }}
+					activeOpacity={0.8}>
+					<View
+						style={{
+							width: 42,
+							height: 42,
+							borderRadius: 13,
+							backgroundColor: "#d4e8f5",
+							alignItems: "center",
+							justifyContent: "center",
+						}}>
+						<Icon name="bottle" size={20} color="#2a5f8f" />
+					</View>
+					<View style={{ flex: 1 }}>
+						<Text style={{ fontWeight: "700", fontSize: 14, color: C.textCharcoal }}>
+							Show Milk on Dashboard
+						</Text>
+						<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>
+							Display today's bottle feeds on the home screen
+						</Text>
+					</View>
+					{/* Toggle pill */}
+					<TouchableOpacity
+						onPress={onToggleMilkOnDashboard}
+						activeOpacity={0.85}
+						style={{
+							width: 48,
+							height: 28,
+							borderRadius: 14,
+							backgroundColor: showMilkOnDashboard ? C.primaryPurple : C.borderLight,
+							justifyContent: "center",
+							paddingHorizontal: 3,
+						}}>
+						<View
+							style={{
+								width: 22,
+								height: 22,
+								borderRadius: 11,
+								backgroundColor: "#ffffff",
+								alignSelf: showMilkOnDashboard ? "flex-end" : "flex-start",
+								shadowColor: "#000",
+								shadowOpacity: 0.15,
+								shadowRadius: 2,
+								elevation: 2,
+							}}
+						/>
+					</TouchableOpacity>
+				</TouchableOpacity>
 			</View>
 
 			{/* Account */}

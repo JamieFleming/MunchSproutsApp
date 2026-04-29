@@ -104,7 +104,10 @@ export function DashboardScreen({
 	child,
 	foodLog,
 	bottleLog = [],
+	showMilkOnDashboard = true,
+	recipes = [],
 	onNavigate,
+	onNavigateToRecipe,
 	onNavigateFiltered,
 	refreshing,
 	onRefresh,
@@ -131,6 +134,13 @@ export function DashboardScreen({
 	const weeks = child ? calcAgeWeeks(child.dob) : null;
 	const months = child ? calcAgeMonths(child.dob) : null;
 	const recent = [...foodLog].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+
+	// Pick a featured recipe of the day (rotates daily)
+	const featuredRecipes = recipes.filter((r) => r.featured);
+	const dayIndex = Math.floor(Date.now() / 86400000);
+	const featuredRecipe = featuredRecipes.length > 0
+		? featuredRecipes[dayIndex % featuredRecipes.length]
+		: null;
 
 	const today = new Date().toISOString().split("T")[0];
 	const todayBottles = [...bottleLog]
@@ -246,7 +256,7 @@ export function DashboardScreen({
 			</View>
 
 			{/* ── Milk Tracking Card ── */}
-			<TouchableOpacity onPress={() => onNavigate("bottle")} activeOpacity={0.92} style={s.card}>
+			{showMilkOnDashboard && <TouchableOpacity onPress={() => onNavigate("bottle")} activeOpacity={0.92} style={s.card}>
 				<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
 					<View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
 						<View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#d4e8f5", alignItems: "center", justifyContent: "center" }}>
@@ -301,7 +311,78 @@ export function DashboardScreen({
 						})}
 					</View>
 				)}
-			</TouchableOpacity>
+			</TouchableOpacity>}
+
+			{/* ── Featured Recipe Card ── */}
+			{featuredRecipe && (
+				<TouchableOpacity
+					onPress={() => onNavigateToRecipe?.(featuredRecipe.id)}
+					activeOpacity={0.88}
+					style={{
+						borderRadius: 20,
+						overflow: "hidden",
+						backgroundColor: C.white,
+						shadowColor: "#9b7fe8",
+						shadowOpacity: 0.1,
+						shadowRadius: 10,
+						shadowOffset: { width: 0, height: 4 },
+						elevation: 3,
+					}}>
+					{featuredRecipe.imageUrl ? (
+						<Image
+							source={{ uri: featuredRecipe.imageUrl }}
+							style={{ width: "100%", height: 160 }}
+							resizeMode="cover"
+						/>
+					) : (
+						<View style={{ width: "100%", height: 120, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center" }}>
+							<CategoryIcon category={featuredRecipe.category} size={64} />
+						</View>
+					)}
+					<View style={{ position: "absolute", top: 12, left: 12 }}>
+						<View style={{ backgroundColor: "rgba(196,154,16,0.92)", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+							<Text style={{ fontSize: 11, fontWeight: "700", color: "#fff" }}>★ Recipe of the Day</Text>
+						</View>
+					</View>
+					{featuredRecipe.freezable && (
+						<View style={{ position: "absolute", top: 12, right: 12, backgroundColor: "rgba(42,95,143,0.9)", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, flexDirection: "row", alignItems: "center", gap: 4 }}>
+							<Text style={{ fontSize: 11 }}>❄️</Text>
+							<Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>Freezable</Text>
+						</View>
+					)}
+					<View style={{ padding: 16 }}>
+						<Text style={{ fontWeight: "800", fontSize: 16, color: C.primaryPinkDark, marginBottom: 8 }}>
+							{featuredRecipe.title}
+						</Text>
+						<View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+							{featuredRecipe.ageGroup && (
+								<View style={{ backgroundColor: C.bgGreen, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+									<Text style={{ fontSize: 11, fontWeight: "700", color: "#2e7d52" }}>{featuredRecipe.ageGroup}</Text>
+								</View>
+							)}
+							{featuredRecipe.time && (
+								<View style={{ backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+									<Text style={{ fontSize: 11, fontWeight: "700", color: C.primaryPurple }}>⏱ {featuredRecipe.time}</Text>
+								</View>
+							)}
+							{featuredRecipe.servings && (
+								<View style={{ backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+									<Text style={{ fontSize: 11, fontWeight: "700", color: C.primaryPurple }}>🍽 {featuredRecipe.servings} servings</Text>
+								</View>
+							)}
+						</View>
+						{featuredRecipe.description ? (
+							<Text style={{ fontSize: 13, color: C.mutedText, lineHeight: 19, marginBottom: 14 }} numberOfLines={2}>
+								{featuredRecipe.description}
+							</Text>
+						) : null}
+						<View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+							<Text style={{ fontSize: 13, fontWeight: "700", color: C.primaryPurple }}>View Recipe</Text>
+							<Icon name="chevRight" size={13} color={C.primaryPurple} />
+						</View>
+					</View>
+				</TouchableOpacity>
+			)}
 
 			{allergic > 0 && (
 				<View style={{ backgroundColor: C.statRedBg, borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", gap: 14, shadowColor: "#c0392b", shadowOpacity: 0.1, shadowRadius: 8, elevation: 2 }}>

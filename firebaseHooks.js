@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import {
 	createUserWithEmailAndPassword,
 	signInWithEmailAndPassword,
+	signInWithCredential,
+	GoogleAuthProvider,
 	signOut,
 	onAuthStateChanged,
 	sendPasswordResetEmail,
@@ -78,6 +80,28 @@ export async function signUp(email, password) {
 export async function signIn(email, password) {
 	const cred = await signInWithEmailAndPassword(auth, email, password);
 	return cred.user;
+}
+
+// GOOGLE SIGN-IN
+// idToken comes from expo-auth-session Google flow in the calling screen
+export async function signInWithGoogle(idToken) {
+	if (!idToken) throw new Error("No Google ID token provided.");
+	const credential = GoogleAuthProvider.credential(idToken);
+	const result = await signInWithCredential(auth, credential);
+	const { user } = result;
+
+	// Create Firestore user doc if this is a new Google user
+	const userRef = doc(db, "users", user.uid);
+	const snap = await getDoc(userRef);
+	if (!snap.exists()) {
+		await setDoc(userRef, {
+			email: user.email,
+			plan: "free",
+			createdAt: serverTimestamp(),
+		});
+	}
+
+	return user;
 }
 
 // SIGN OUT

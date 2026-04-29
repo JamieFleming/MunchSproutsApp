@@ -4,7 +4,10 @@
       "Bash(xargs ls *)",
       "Bash(python3 -c ' *)",
       "Bash(python3 -c \"import base64; d=open\\('/Users/jamie/Documents/Websites/MunchSproutsAppNative/MunchSproutsNative/assets/splash-icon.png','rb'\\).read\\(\\); print\\(base64.b64encode\\(d\\).decode\\(\\)\\)\")",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(pip3 install *)",
+      "Bash(python3 -c \"from PIL import Image; print\\('ok'\\)\")",
+      "Bash(npx expo *)"
     ]
   }
 }

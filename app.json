@@ -1,43 +1,59 @@
 {
-	"expo": {
-		"name": "Munch Sprouts Weaning Tracker",
-		"slug": "MunchSproutsNative",
-		"version": "1.3.0",
-		"orientation": "portrait",
-		"icon": "./assets/logo.png",
-		"userInterfaceStyle": "light",
-		"newArchEnabled": true,
-		"splash": {
-			"image": "./assets/logo.png",
-			"resizeMode": "contain",
-			"backgroundColor": "#ffffff"
-		},
-		"ios": {
-			"supportsTablet": true,
-			"bundleIdentifier": "com.munchsprouts.app",
-			"buildNumber": "1",
-			"infoPlist": {
-				"ITSAppUsesNonExemptEncryption": false
-			}
-		},
-		"android": {
-			"adaptiveIcon": {
-				"foregroundImage": "./assets/logo.png",
-				"backgroundColor": "#ffffff"
-			},
-			"package": "com.munchsprouts.app",
-			"versionCode": 1,
-			"edgeToEdgeEnabled": true
-		},
-		"web": {
-			"favicon": "./assets/favicon.ico"
-		},
-		"plugins": ["expo-secure-store"],
-		"extra": {
-			"eas": {
-				"projectId": "add89f65-91f0-442e-986c-364d818892bb"
-			}
-		},
-		"owner": "fleming1411"
-	}
+  "expo": {
+    "name": "Munch Sprouts Weaning Tracker",
+    "slug": "MunchSproutsNative",
+    "version": "1.3.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.munchsprouts.app",
+      "scheme": "com.googleusercontent.apps.406023036087-4ci5jet3el9aqgnuetadrocdp3d3s2jr",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.munchsprouts.app",
+      "versionCode": 1,
+      "edgeToEdgeEnabled": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "com.googleusercontent.apps.406023036087-71leqh6hjhigatatn3akjsvf3ml97eir"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.ico"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "@react-native-google-signin/google-signin",
+      "expo-web-browser"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "add89f65-91f0-442e-986c-364d818892bb"
+      }
+    },
+    "owner": "fleming1411"
+  }
 }

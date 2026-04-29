@@ -39,6 +39,7 @@ import {
 } from "./firebaseHooks";
 import AuthScreen from "./AuthScreen";
 import Purchases, { LOG_LEVEL } from "react-native-purchases";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { ThemeContext, useTheme, useStyles } from "./src/ThemeContext";
 import { THEMES } from "./src/constants";
@@ -77,13 +78,25 @@ function MainApp({ user, isPro: isPropPro }) {
 	const s = useStyles();
 	const insets = useSafeAreaInsets();
 	const [isPro, setIsPro] = useState(isPropPro);
+	const [showMilkOnDashboard, setShowMilkOnDashboard] = useState(true);
 
 	// Sync when Firestore finishes loading (isPropPro starts false while auth resolves)
 	useEffect(() => {
 		if (isPropPro) setIsPro(true);
 	}, [isPropPro]);
 
+	// Load dashboard preferences
+	useEffect(() => {
+		if (!user) return;
+		AsyncStorage.getItem(`showMilkDash_${user.uid}`)
+			.then((val) => {
+				if (val === "false") setShowMilkOnDashboard(false);
+			})
+			.catch(() => {});
+	}, [user]);
+
 	const [page, setPage] = useState("dashboard");
+	const [jumpToRecipeId, setJumpToRecipeId] = useState(null);
 	const [foodLog, setFoodLog] = useState([]);
 	const [children, setChildren] = useState([]);
 	const [activeChildId, setActiveChildId] = useState(null);
@@ -114,6 +127,14 @@ function MainApp({ user, isPro: isPropPro }) {
 		Purchases.configure({ apiKey, appUserID: user.uid });
 	}, [user]);
 
+	// ── Default child helpers ──
+	const STORAGE_KEY = `defaultChildId_${user?.uid}`;
+	const saveDefaultChild = async (id) => {
+		try {
+			await AsyncStorage.setItem(STORAGE_KEY, id);
+		} catch (_) {}
+	};
+
 	// ── Initial data load ──
 	useEffect(() => {
 		if (!user) return;
@@ -123,14 +144,18 @@ function MainApp({ user, isPro: isPropPro }) {
 			fetchRecipes(),
 			fetchFavouriteRecipes(user.uid),
 			fetchBottleLog(user.uid),
+			AsyncStorage.getItem(`defaultChildId_${user.uid}`).catch(() => null),
 		])
-			.then(([log, kids, recs, favIds, bottles]) => {
+			.then(([log, kids, recs, favIds, bottles, savedId]) => {
 				setFoodLog(log);
 				setChildren(kids);
 				setRecipes(recs);
 				setFavouriteRecipeIds(favIds);
 				setBottleLog(bottles);
-				if (kids.length > 0) setActiveChildId(kids[0].id);
+				if (kids.length > 0) {
+					const restoredChild = savedId && kids.find((k) => k.id === savedId);
+					setActiveChildId(restoredChild ? savedId : kids[0].id);
+				}
 				setDataLoaded(true);
 				setUserMap(buildUserMap(user.uid, user.email, kids));
 			})
@@ -141,8 +166,11 @@ function MainApp({ user, isPro: isPropPro }) {
 	}, [user]);
 
 	// ── Derived state ──
-	const activeChild = children.find((c) => c.id === activeChildId) || children[0] || null;
-	const childLog = activeChild ? foodLog.filter((f) => f.childId === activeChild.id) : foodLog;
+	const activeChild =
+		children.find((c) => c.id === activeChildId) || children[0] || null;
+	const childLog = activeChild
+		? foodLog.filter((f) => f.childId === activeChild.id)
+		: foodLog;
 
 	// ── Toast helper ──
 	const toast = (msg, type = "success") => {
@@ -155,12 +183,13 @@ function MainApp({ user, isPro: isPropPro }) {
 	const onRefresh = async () => {
 		setRefreshing(true);
 		try {
-			const [log, kids, recs, favIds, bottles] = await Promise.all([
+			const [log, kids, recs, favIds, bottles, savedId] = await Promise.all([
 				fetchFoodLog(user.uid),
 				fetchChildren(user.uid),
 				fetchRecipes(),
 				fetchFavouriteRecipes(user.uid),
 				fetchBottleLog(user.uid),
+				AsyncStorage.getItem(STORAGE_KEY).catch(() => null),
 			]);
 			setFoodLog(log);
 			setChildren(kids);
@@ -168,8 +197,9 @@ function MainApp({ user, isPro: isPropPro }) {
 			setFavouriteRecipeIds(favIds);
 			setBottleLog(bottles);
 			if (kids.length > 0) {
+				const preferred = savedId && kids.find((k) => k.id === savedId);
 				const stillExists = kids.find((k) => k.id === activeChildId);
-				if (!stillExists) setActiveChildId(kids[0].id);
+				if (!stillExists) setActiveChildId(preferred ? savedId : kids[0].id);
 			}
 			setUserMap(buildUserMap(user.uid, user.email, kids));
 			toast("Updated");
@@ -184,7 +214,9 @@ function MainApp({ user, isPro: isPropPro }) {
 		setPrefillFood({
 			name: group.name,
 			category: group.category,
-			categories: group.attempts?.[0]?.categories || (group.category ? [group.category] : []),
+			categories:
+				group.attempts?.[0]?.categories ||
+				(group.category ? [group.category] : []),
 			feedType: group.attempts?.[0]?.feedType || "",
 		});
 		setPage("add");
@@ -206,7 +238,9 @@ function MainApp({ user, isPro: isPropPro }) {
 			);
 			return;
 		}
-		const existing = childLog.filter((f) => normalize(f.name) === normalize(form.name));
+		const existing = childLog.filter(
+			(f) => normalize(f.name) === normalize(form.name),
+		);
 		const entry = {
 			childId: activeChild.id,
 			attemptNum: existing.length + 1,
@@ -218,7 +252,11 @@ function MainApp({ user, isPro: isPropPro }) {
 		try {
 			const newId = await addFoodEntry(user.uid, entry);
 			setFoodLog((p) => [...p, { id: newId, ...entry }]);
-			toast(existing.length === 0 ? `Added "${form.name}"` : `"${form.name}" attempt #${existing.length + 1}`);
+			toast(
+				existing.length === 0
+					? `Added "${form.name}"`
+					: `"${form.name}" attempt #${existing.length + 1}`,
+			);
 			setPage("log");
 		} catch (e) {
 			Alert.alert("Error", "Could not save entry.");
@@ -232,7 +270,9 @@ function MainApp({ user, isPro: isPropPro }) {
 		}
 		try {
 			await updateFoodEntry(updated.id, updated);
-			setFoodLog((p) => p.map((f) => (f.id === updated.id ? { ...f, ...updated } : f)));
+			setFoodLog((p) =>
+				p.map((f) => (f.id === updated.id ? { ...f, ...updated } : f)),
+			);
 			setEditEntry(null);
 			toast("Entry updated");
 		} catch (e) {
@@ -256,7 +296,9 @@ function MainApp({ user, isPro: isPropPro }) {
 		const newVal = !entry.favourite;
 		try {
 			await updateFoodEntry(id, { favourite: newVal });
-			setFoodLog((p) => p.map((f) => (f.id === id ? { ...f, favourite: newVal } : f)));
+			setFoodLog((p) =>
+				p.map((f) => (f.id === id ? { ...f, favourite: newVal } : f)),
+			);
 		} catch (e) {}
 	};
 
@@ -267,8 +309,14 @@ function MainApp({ user, isPro: isPropPro }) {
 			return;
 		}
 		try {
-			const newId = await addBottleEntry(user.uid, { ...entry, childId: activeChild.id });
-			setBottleLog((p) => [...p, { id: newId, ...entry, childId: activeChild.id }]);
+			const newId = await addBottleEntry(user.uid, {
+				...entry,
+				childId: activeChild.id,
+			});
+			setBottleLog((p) => [
+				...p,
+				{ id: newId, ...entry, childId: activeChild.id },
+			]);
 			toast("Bottle logged");
 		} catch (e) {
 			Alert.alert("Error", "Could not save bottle entry.");
@@ -278,7 +326,9 @@ function MainApp({ user, isPro: isPropPro }) {
 	const editBottle = async (updated) => {
 		try {
 			await updateBottleEntry(updated.id, updated);
-			setBottleLog((p) => p.map((b) => (b.id === updated.id ? { ...b, ...updated } : b)));
+			setBottleLog((p) =>
+				p.map((b) => (b.id === updated.id ? { ...b, ...updated } : b)),
+			);
 			toast("Updated");
 		} catch (e) {
 			Alert.alert("Error", "Could not update entry.");
@@ -301,7 +351,10 @@ function MainApp({ user, isPro: isPropPro }) {
 			const newId = await fbAddChild(user.uid, child);
 			const newChild = { id: newId, ...child };
 			setChildren((p) => [...p, newChild]);
-			if (!activeChildId) setActiveChildId(newId);
+			if (!activeChildId) {
+				setActiveChildId(newId);
+				saveDefaultChild(newId);
+			}
 			toast(`${child.name} added`);
 		} catch (e) {
 			Alert.alert("Error", "Could not add child.");
@@ -337,11 +390,15 @@ function MainApp({ user, isPro: isPropPro }) {
 	// ── Recipes ──
 	const handleToggleRecipeFav = async (recipeId) => {
 		const isFav = favouriteRecipeIds.includes(recipeId);
-		setFavouriteRecipeIds((prev) => (isFav ? prev.filter((id) => id !== recipeId) : [...prev, recipeId]));
+		setFavouriteRecipeIds((prev) =>
+			isFav ? prev.filter((id) => id !== recipeId) : [...prev, recipeId],
+		);
 		try {
 			await toggleRecipeFavourite(user.uid, recipeId, isFav);
 		} catch (e) {
-			setFavouriteRecipeIds((prev) => (isFav ? [...prev, recipeId] : prev.filter((id) => id !== recipeId)));
+			setFavouriteRecipeIds((prev) =>
+				isFav ? [...prev, recipeId] : prev.filter((id) => id !== recipeId),
+			);
 			Alert.alert("Error", e.message || "Could not update favourite.");
 		}
 	};
@@ -366,12 +423,17 @@ function MainApp({ user, isPro: isPropPro }) {
 			Dinner: "Proteins",
 			Desserts: "Fruits",
 		};
-		const existing = childLog.filter((f) => normalize(f.name) === normalize(logRecipeTarget.title));
+		const existing = childLog.filter(
+			(f) => normalize(f.name) === normalize(logRecipeTarget.title),
+		);
 		const entry = {
 			childId: activeChild.id,
 			date: new Date().toISOString().split("T")[0],
 			name: logRecipeTarget.title,
-			category: categoryMap[logRecipeTarget.category] || logRecipeTarget.category || "Other",
+			category:
+				categoryMap[logRecipeTarget.category] ||
+				logRecipeTarget.category ||
+				"Other",
 			form: "Mixed Texture",
 			reaction: reaction || "",
 			notes: notes || "",
@@ -390,6 +452,15 @@ function MainApp({ user, isPro: isPropPro }) {
 		}
 	};
 
+	// ── Dashboard preferences ──
+	const toggleMilkOnDashboard = async () => {
+		const next = !showMilkOnDashboard;
+		setShowMilkOnDashboard(next);
+		try {
+			await AsyncStorage.setItem(`showMilkDash_${user.uid}`, String(next));
+		} catch (_) {}
+	};
+
 	// ── Account handlers ──
 	const handleLogout = () =>
 		Alert.alert("Sign Out", "Are you sure?", [
@@ -402,7 +473,10 @@ function MainApp({ user, isPro: isPropPro }) {
 			await deleteAccount(user.uid);
 		} catch (e) {
 			if (e.code === "auth/requires-recent-login") {
-				Alert.alert("Please sign in again", "Sign out and back in before deleting your account.");
+				Alert.alert(
+					"Please sign in again",
+					"Sign out and back in before deleting your account.",
+				);
 			} else {
 				Alert.alert("Error", e.message || "Could not delete account.");
 			}
@@ -412,7 +486,10 @@ function MainApp({ user, isPro: isPropPro }) {
 	const handleUpgradePro = async () => {
 		try {
 			const offerings = await Purchases.getOfferings();
-			if (!offerings.current || offerings.current.availablePackages.length === 0) {
+			if (
+				!offerings.current ||
+				offerings.current.availablePackages.length === 0
+			) {
 				Alert.alert(
 					"Not available",
 					"Purchase not available right now. Make sure you have set up a product in App Store Connect and linked it in RevenueCat.",
@@ -426,11 +503,17 @@ function MainApp({ user, isPro: isPropPro }) {
 				const { db: firedb } = await import("./firebase");
 				await updateDoc(doc(firedb, "users", user.uid), { plan: "pro" });
 				setIsPro(true);
-				Alert.alert("Welcome to Pro! 🎉", "You now have access to all recipes and premium features.");
+				Alert.alert(
+					"Welcome to Pro! 🎉",
+					"You now have access to all recipes and premium features.",
+				);
 			}
 		} catch (e) {
 			if (e.userCancelled) return;
-			Alert.alert("Purchase failed", e.message || "Something went wrong. Please try again.");
+			Alert.alert(
+				"Purchase failed",
+				e.message || "Something went wrong. Please try again.",
+			);
 		}
 	};
 
@@ -444,7 +527,10 @@ function MainApp({ user, isPro: isPropPro }) {
 				setIsPro(true);
 				Alert.alert("Restored ✓", "Your Pro purchase has been restored.");
 			} else {
-				Alert.alert("Nothing to restore", "No previous Pro purchase found on this Apple/Google account.");
+				Alert.alert(
+					"Nothing to restore",
+					"No previous Pro purchase found on this Apple/Google account.",
+				);
 			}
 		} catch (e) {
 			Alert.alert("Error", e.message || "Could not restore purchases.");
@@ -452,7 +538,12 @@ function MainApp({ user, isPro: isPropPro }) {
 	};
 
 	// ── Family sharing ──
-	const handleManageSharing = async (emailOrUid, childId, onSuccess, isRemove = false) => {
+	const handleManageSharing = async (
+		emailOrUid,
+		childId,
+		onSuccess,
+		isRemove = false,
+	) => {
 		if (!childId) {
 			Alert.alert("No child selected", "Please select a child to share.");
 			return;
@@ -471,10 +562,13 @@ function MainApp({ user, isPro: isPropPro }) {
 			const { db: firedb } = await import("./firebase");
 
 			if (isRemove) {
-				await updateDoc(doc(firedb, "children", childId), { sharedWith: arrayRemove(emailOrUid) });
+				await updateDoc(doc(firedb, "children", childId), {
+					sharedWith: arrayRemove(emailOrUid),
+				});
 				const child = children.find((c) => c.id === childId);
 				const uidIndex = (child?.sharedWith || []).indexOf(emailOrUid);
-				const matchingEmail = uidIndex !== -1 ? (child?.sharedWithEmails || [])[uidIndex] : null;
+				const matchingEmail =
+					uidIndex !== -1 ? (child?.sharedWithEmails || [])[uidIndex] : null;
 				if (matchingEmail) {
 					await updateDoc(doc(firedb, "children", childId), {
 						sharedWithEmails: arrayRemove(matchingEmail),
@@ -485,9 +579,13 @@ function MainApp({ user, isPro: isPropPro }) {
 						c.id === childId
 							? {
 									...c,
-									sharedWith: (c.sharedWith || []).filter((u) => u !== emailOrUid),
+									sharedWith: (c.sharedWith || []).filter(
+										(u) => u !== emailOrUid,
+									),
 									sharedWithEmails: matchingEmail
-										? (c.sharedWithEmails || []).filter((e) => e !== matchingEmail)
+										? (c.sharedWithEmails || []).filter(
+												(e) => e !== matchingEmail,
+											)
 										: c.sharedWithEmails || [],
 								}
 							: c,
@@ -516,7 +614,10 @@ function MainApp({ user, isPro: isPropPro }) {
 			}
 			const child = children.find((c) => c.id === childId);
 			if (child?.sharedWith?.includes(theirUid)) {
-				Alert.alert("Already shared", `${emailOrUid} already has access to ${child.name}.`);
+				Alert.alert(
+					"Already shared",
+					`${emailOrUid} already has access to ${child.name}.`,
+				);
 				return;
 			}
 			const theirEmail = emailOrUid.toLowerCase().trim();
@@ -543,7 +644,10 @@ function MainApp({ user, isPro: isPropPro }) {
 			if (onSuccess) onSuccess();
 		} catch (e) {
 			console.error("Sharing error:", e);
-			Alert.alert("Error", e.message || "Could not update sharing. Please try again.");
+			Alert.alert(
+				"Error",
+				e.message || "Could not update sharing. Please try again.",
+			);
 		}
 	};
 
@@ -567,7 +671,9 @@ function MainApp({ user, isPro: isPropPro }) {
 	};
 
 	return (
-		<SafeAreaView style={{ flex: 1, backgroundColor: C.screen }} edges={["top"]}>
+		<SafeAreaView
+			style={{ flex: 1, backgroundColor: C.screen }}
+			edges={["top"]}>
 			<StatusBar
 				barStyle={theme === "dark" ? "light-content" : "dark-content"}
 				backgroundColor={C.navBg}
@@ -599,7 +705,13 @@ function MainApp({ user, isPro: isPropPro }) {
 						gap: 6,
 					}}>
 					<Svg width={16} height={16} viewBox="0 0 32 32">
-						<Circle cx="16" cy="13" r="7" fill={C.primaryPurple} opacity="0.8" />
+						<Circle
+							cx="16"
+							cy="13"
+							r="7"
+							fill={C.primaryPurple}
+							opacity="0.8"
+						/>
 						<Circle cx="11" cy="12" r="1.5" fill={C.white} />
 						<Circle cx="21" cy="12" r="1.5" fill={C.white} />
 						<Path
@@ -610,7 +722,9 @@ function MainApp({ user, isPro: isPropPro }) {
 							fill="none"
 						/>
 					</Svg>
-					<Text style={{ fontSize: 13, fontWeight: "700", color: C.primaryPurple }} numberOfLines={1}>
+					<Text
+						style={{ fontSize: 13, fontWeight: "700", color: C.primaryPurple }}
+						numberOfLines={1}>
 						{activeChild ? activeChild.name : "Add Baby"}
 					</Text>
 					<Icon name="chevDown" size={12} color={C.primaryPurple} />
@@ -631,16 +745,36 @@ function MainApp({ user, isPro: isPropPro }) {
 						style={[s.pickerSheet, { maxHeight: "70%" }]}
 						onStartShouldSetResponder={() => true}>
 						<Text style={s.pickerTitle}>Select Child</Text>
+						<Text
+							style={{
+								fontSize: 11,
+								color: C.mutedText,
+								textAlign: "center",
+								marginTop: -8,
+								marginBottom: 10,
+							}}>
+							Tap ★ to set a default child
+						</Text>
 						<ScrollView>
 							{children.map((c) => (
 								<TouchableOpacity
 									key={c.id}
 									onPress={() => {
 										setActiveChildId(c.id);
+										saveDefaultChild(c.id);
 										setShowChildPicker(false);
 									}}
-									style={[s.pickerItem, c.id === activeChildId && { backgroundColor: C.bgPurple }]}>
-									<View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+									style={[
+										s.pickerItem,
+										c.id === activeChildId && { backgroundColor: C.bgPurple },
+									]}>
+									<View
+										style={{
+											flexDirection: "row",
+											alignItems: "center",
+											gap: 12,
+											flex: 1,
+										}}>
 										{c.photoUri ? (
 											<Image
 												source={{ uri: c.photoUri }}
@@ -663,12 +797,42 @@ function MainApp({ user, isPro: isPropPro }) {
 										<Text
 											style={[
 												s.pickerItemText,
-												c.id === activeChildId && { color: C.primaryPurple, fontWeight: "700" },
+												c.id === activeChildId && {
+													color: C.primaryPurple,
+													fontWeight: "700",
+												},
 											]}>
 											{c.name}
 										</Text>
 									</View>
-									{c.id === activeChildId && <Icon name="check" size={16} color={C.primaryPurple} />}
+									<View
+										style={{
+											flexDirection: "row",
+											alignItems: "center",
+											gap: 8,
+										}}>
+										<TouchableOpacity
+											hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+											onPress={async (e) => {
+												e.stopPropagation();
+												await saveDefaultChild(c.id);
+												setActiveChildId(c.id);
+												setShowChildPicker(false);
+												toast(`${c.name} set as default`);
+											}}>
+											<Text
+												style={{
+													fontSize: 18,
+													color:
+														c.id === activeChildId ? "#d4a017" : C.borderLight,
+												}}>
+												★
+											</Text>
+										</TouchableOpacity>
+										{c.id === activeChildId && (
+											<Icon name="check" size={16} color={C.primaryPurple} />
+										)}
+									</View>
 								</TouchableOpacity>
 							))}
 							<TouchableOpacity
@@ -678,9 +842,19 @@ function MainApp({ user, isPro: isPropPro }) {
 								}}
 								style={[
 									s.pickerItem,
-									{ borderWidth: 1.5, borderColor: C.borderLight, borderRadius: 14, marginTop: 8 },
+									{
+										borderWidth: 1.5,
+										borderColor: C.borderLight,
+										borderRadius: 14,
+										marginTop: 8,
+									},
 								]}>
-								<View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+								<View
+									style={{
+										flexDirection: "row",
+										alignItems: "center",
+										gap: 12,
+									}}>
 									<View
 										style={{
 											width: 34,
@@ -692,7 +866,9 @@ function MainApp({ user, isPro: isPropPro }) {
 										}}>
 										<Icon name="plus" size={16} color={C.primaryPurple} />
 									</View>
-									<Text style={[s.pickerItemText, { color: C.primaryPurple }]}>Manage Children</Text>
+									<Text style={[s.pickerItemText, { color: C.primaryPurple }]}>
+										Manage Children
+									</Text>
 								</View>
 							</TouchableOpacity>
 						</ScrollView>
@@ -701,13 +877,29 @@ function MainApp({ user, isPro: isPropPro }) {
 			</Modal>
 
 			{/* ── Page content ── */}
-			<View style={{ flex: 1, paddingHorizontal: 16, paddingTop: 16, backgroundColor: C.screen }}>
+			<View
+				style={{
+					flex: 1,
+					paddingHorizontal: 16,
+					paddingTop: 16,
+					backgroundColor: C.screen,
+				}}>
 				{page === "dashboard" && (
 					<DashboardScreen
 						child={activeChild}
 						foodLog={childLog}
-						bottleLog={activeChild ? bottleLog.filter((b) => b.childId === activeChild.id) : bottleLog}
+						bottleLog={
+							activeChild
+								? bottleLog.filter((b) => b.childId === activeChild.id)
+								: bottleLog
+						}
+						showMilkOnDashboard={showMilkOnDashboard}
+						recipes={recipes}
 						onNavigate={setPage}
+						onNavigateToRecipe={(id) => {
+							setJumpToRecipeId(id);
+							setPage("recipes");
+						}}
 						onNavigateFiltered={(pg, filter, openKey) => {
 							setLogFilter(filter);
 							setLogOpenKey(openKey || null);
@@ -721,6 +913,11 @@ function MainApp({ user, isPro: isPropPro }) {
 					<LogScreen
 						foodLog={childLog}
 						childName={activeChild?.name || null}
+						bottleLog={
+							activeChild
+								? bottleLog.filter((b) => b.childId === activeChild.id)
+								: bottleLog
+						}
 						initialFilter={logFilter}
 						initialOpenKey={logOpenKey}
 						userMap={userMap}
@@ -740,7 +937,9 @@ function MainApp({ user, isPro: isPropPro }) {
 						<ScrollView
 							showsVerticalScrollIndicator={false}
 							contentContainerStyle={{ paddingBottom: 40 }}>
-							<Text style={[s.pageTitle, { marginBottom: 20 }]}>Log Food or Drink</Text>
+							<Text style={[s.pageTitle, { marginBottom: 20 }]}>
+								Log Food or Drink
+							</Text>
 							<View style={s.card}>
 								<FoodForm
 									onSubmit={(form, err) => {
@@ -764,11 +963,17 @@ function MainApp({ user, isPro: isPropPro }) {
 						onToggleFav={handleToggleRecipeFav}
 						onLogRecipe={handleLogRecipe}
 						user={user}
+						jumpToRecipeId={jumpToRecipeId}
+						onJumpHandled={() => setJumpToRecipeId(null)}
 					/>
 				)}
 				{page === "bottle" && (
 					<BottleScreen
-						bottleLog={activeChild ? bottleLog.filter((b) => b.childId === activeChild.id) : bottleLog}
+						bottleLog={
+							activeChild
+								? bottleLog.filter((b) => b.childId === activeChild.id)
+								: bottleLog
+						}
 						childName={activeChild?.name || null}
 						onAdd={addBottle}
 						onEdit={editBottle}
@@ -781,6 +986,8 @@ function MainApp({ user, isPro: isPropPro }) {
 						isPro={isPro}
 						ownedChildren={children}
 						defaultChildId={activeChild?.id || null}
+						showMilkOnDashboard={showMilkOnDashboard}
+						onToggleMilkOnDashboard={toggleMilkOnDashboard}
 						onLogout={handleLogout}
 						onDeleteAccount={handleDeleteAccount}
 						onUpgradePro={handleUpgradePro}
@@ -801,26 +1008,44 @@ function MainApp({ user, isPro: isPropPro }) {
 			</View>
 
 			{/* ── Bottom Nav ── */}
-			<View style={[s.bottomNav, { paddingBottom: insets.bottom > 0 ? insets.bottom : 10 }]}>
+			<View
+				style={[
+					s.bottomNav,
+					{ paddingBottom: insets.bottom > 0 ? insets.bottom : 10 },
+				]}>
 				{nav.map((n) => {
 					const active =
 						page === n.id ||
 						(n.id === "more" && page === "settings") ||
 						(n.id === "more" && page === "children");
 					return (
-						<TouchableOpacity key={n.id} onPress={() => setPage(n.id)} style={s.navItem} activeOpacity={0.8}>
+						<TouchableOpacity
+							key={n.id}
+							onPress={() => setPage(n.id)}
+							style={s.navItem}
+							activeOpacity={0.8}>
 							<View
 								style={{
 									width: 28,
 									height: 28,
 									borderRadius: 10,
-									backgroundColor: active ? C.primaryPurple + "18" : "transparent",
+									backgroundColor: active
+										? C.primaryPurple + "18"
+										: "transparent",
 									alignItems: "center",
 									justifyContent: "center",
 								}}>
-								<Icon name={n.icon} size={20} color={active ? C.primaryPurple : C.mutedText} />
+								<Icon
+									name={n.icon}
+									size={20}
+									color={active ? C.primaryPurple : C.mutedText}
+								/>
 							</View>
-							<Text style={[s.navLabel, active && { color: C.primaryPurple, fontWeight: "700" }]}>
+							<Text
+								style={[
+									s.navLabel,
+									active && { color: C.primaryPurple, fontWeight: "700" },
+								]}>
 								{n.label}
 							</Text>
 						</TouchableOpacity>
@@ -860,40 +1085,119 @@ function MainApp({ user, isPro: isPropPro }) {
 				animationType="slide"
 				onRequestClose={() => setShowAddMenu(false)}>
 				<TouchableOpacity
-					style={{ flex: 1, backgroundColor: "rgba(90,45,122,0.35)", justifyContent: "flex-end" }}
+					style={{
+						flex: 1,
+						backgroundColor: "rgba(90,45,122,0.35)",
+						justifyContent: "flex-end",
+					}}
 					onPress={() => setShowAddMenu(false)}
 					activeOpacity={1}>
 					<View
-						style={{ backgroundColor: C.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: (insets.bottom > 0 ? insets.bottom : 16) + 8 }}
+						style={{
+							backgroundColor: C.white,
+							borderTopLeftRadius: 28,
+							borderTopRightRadius: 28,
+							padding: 24,
+							paddingBottom: (insets.bottom > 0 ? insets.bottom : 16) + 8,
+						}}
 						onStartShouldSetResponder={() => true}>
-						<Text style={{ fontWeight: "800", fontSize: 18, color: C.primaryPinkDark, marginBottom: 20 }}>
+						<Text
+							style={{
+								fontWeight: "800",
+								fontSize: 18,
+								color: C.primaryPinkDark,
+								marginBottom: 20,
+							}}>
 							What would you like to log?
 						</Text>
 						<TouchableOpacity
-							onPress={() => { setShowAddMenu(false); setPage("add"); }}
+							onPress={() => {
+								setShowAddMenu(false);
+								setPage("add");
+							}}
 							activeOpacity={0.85}
-							style={{ flexDirection: "row", alignItems: "center", gap: 16, backgroundColor: C.bgPurple, borderRadius: 18, padding: 18, marginBottom: 12 }}>
-							<View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: C.primaryPurple, alignItems: "center", justifyContent: "center" }}>
+							style={{
+								flexDirection: "row",
+								alignItems: "center",
+								gap: 16,
+								backgroundColor: C.bgPurple,
+								borderRadius: 18,
+								padding: 18,
+								marginBottom: 12,
+							}}>
+							<View
+								style={{
+									width: 48,
+									height: 48,
+									borderRadius: 14,
+									backgroundColor: C.primaryPurple,
+									alignItems: "center",
+									justifyContent: "center",
+								}}>
 								<Icon name="utensils" size={22} color="#ffffff" />
 							</View>
 							<View>
-								<Text style={{ fontWeight: "700", fontSize: 16, color: C.primaryPinkDark }}>Food or Drink</Text>
-								<Text style={{ fontSize: 13, color: C.mutedText, marginTop: 2 }}>Log a meal, snack or liquid</Text>
+								<Text
+									style={{
+										fontWeight: "700",
+										fontSize: 16,
+										color: C.primaryPinkDark,
+									}}>
+									Food or Drink
+								</Text>
+								<Text
+									style={{ fontSize: 13, color: C.mutedText, marginTop: 2 }}>
+									Log a meal, snack or liquid
+								</Text>
 							</View>
-							<Icon name="chevRight" size={16} color={C.mutedText} style={{ marginLeft: "auto" }} />
+							<Icon
+								name="chevRight"
+								size={16}
+								color={C.mutedText}
+								style={{ marginLeft: "auto" }}
+							/>
 						</TouchableOpacity>
 						<TouchableOpacity
-							onPress={() => { setShowAddMenu(false); setPage("bottle"); }}
+							onPress={() => {
+								setShowAddMenu(false);
+								setPage("bottle");
+							}}
 							activeOpacity={0.85}
-							style={{ flexDirection: "row", alignItems: "center", gap: 16, backgroundColor: "#d4e8f5", borderRadius: 18, padding: 18 }}>
-							<View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: "#2a5f8f", alignItems: "center", justifyContent: "center" }}>
+							style={{
+								flexDirection: "row",
+								alignItems: "center",
+								gap: 16,
+								backgroundColor: "#d4e8f5",
+								borderRadius: 18,
+								padding: 18,
+							}}>
+							<View
+								style={{
+									width: 48,
+									height: 48,
+									borderRadius: 14,
+									backgroundColor: "#2a5f8f",
+									alignItems: "center",
+									justifyContent: "center",
+								}}>
 								<Icon name="bottle" size={22} color="#ffffff" />
 							</View>
 							<View>
-								<Text style={{ fontWeight: "700", fontSize: 16, color: "#1a3f5f" }}>Bottle Feed</Text>
-								<Text style={{ fontSize: 13, color: "#2a5f8f99", marginTop: 2 }}>Log formula, breast or specialised milk</Text>
+								<Text
+									style={{ fontWeight: "700", fontSize: 16, color: "#1a3f5f" }}>
+									Bottle Feed
+								</Text>
+								<Text
+									style={{ fontSize: 13, color: "#2a5f8f99", marginTop: 2 }}>
+									Log formula, breast or specialised milk
+								</Text>
 							</View>
-							<Icon name="chevRight" size={16} color="#2a5f8f" style={{ marginLeft: "auto" }} />
+							<Icon
+								name="chevRight"
+								size={16}
+								color="#2a5f8f"
+								style={{ marginLeft: "auto" }}
+							/>
 						</TouchableOpacity>
 					</View>
 				</TouchableOpacity>
@@ -926,9 +1230,11 @@ function MainApp({ user, isPro: isPropPro }) {
 						style={[
 							s.toast,
 							{
-								backgroundColor: t.type === "warning" ? C.bgWarning : C.statGreenBg,
+								backgroundColor:
+									t.type === "warning" ? C.bgWarning : C.statGreenBg,
 								borderWidth: 1.5,
-								borderColor: t.type === "warning" ? C.warningStroke : C.primaryGreenLight,
+								borderColor:
+									t.type === "warning" ? C.warningStroke : C.primaryGreenLight,
 							},
 						]}>
 						<Text
@@ -960,18 +1266,22 @@ export default function App() {
 	const C = THEMES[theme] || THEMES.default;
 
 	useEffect(() => {
-		import("@react-native-async-storage/async-storage").then(({ default: AsyncStorage }) => {
-			AsyncStorage.getItem("appTheme").then((saved) => {
-				if (saved && THEMES[saved]) setThemeState(saved);
-			});
-		});
+		import("@react-native-async-storage/async-storage").then(
+			({ default: AsyncStorage }) => {
+				AsyncStorage.getItem("appTheme").then((saved) => {
+					if (saved && THEMES[saved]) setThemeState(saved);
+				});
+			},
+		);
 	}, []);
 
 	const setTheme = (t) => {
 		setThemeState(t);
-		import("@react-native-async-storage/async-storage").then(({ default: AsyncStorage }) => {
-			AsyncStorage.setItem("appTheme", t);
-		});
+		import("@react-native-async-storage/async-storage").then(
+			({ default: AsyncStorage }) => {
+				AsyncStorage.setItem("appTheme", t);
+			},
+		);
 	};
 
 	return (

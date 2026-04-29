@@ -19,3 +19,13 @@ export const auth = initializeAuth(app, {
 });
 
 export const db = getFirestore(app);
+
+export const GOOGLE_WEB_CLIENT_ID =
+	"406023036087-71leqh6hjhigatatn3akjsvf3ml97eir.apps.googleusercontent.com";
+
+export const GOOGLE_IOS_CLIENT_ID =
+	"406023036087-4ci5jet3el9aqgnuetadrocdp3d3s2jr.apps.googleusercontent.com";
+
+// Android OAuth client ID — from google-services.json → oauth_client → client_type: 1
+export const GOOGLE_ANDROID_CLIENT_ID =
+	"406023036087-mbb3lsl7i5kakj32mkuptjd926sit26v.apps.googleusercontent.com";
