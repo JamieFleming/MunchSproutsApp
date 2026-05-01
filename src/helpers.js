@@ -2,6 +2,44 @@ import { Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { REACTIONS, MONTHS } from "./constants";
 
+/**
+ * Weekly featured recipe rotation.
+ *
+ * In Firestore, mark any recipe with `featured: true` to add it to the pool.
+ * This function picks one recipe from the pool per week (rotating automatically),
+ * sets it as featured and free (locked: false), and hides the rest from the
+ * featured section until their week comes around.
+ *
+ * Week number is based on days since Unix epoch ÷ 7, so it flips every Monday UTC.
+ */
+export function applyWeeklyFeaturedRotation(recipes) {
+	const weekNum = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000));
+	const pool = recipes.filter((r) => r.featured);
+	if (pool.length === 0) return recipes;
+
+	// Sort pool by document order so rotation is deterministic across devices
+	const sorted = [...pool].sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+
+	// Pick 5 consecutive recipes this week, wrapping around the pool
+	const WEEKLY_COUNT = 5;
+	const startIndex = (weekNum * WEEKLY_COUNT) % sorted.length;
+	const thisWeekIds = new Set(
+		Array.from({ length: WEEKLY_COUNT }, (_, i) => sorted[(startIndex + i) % sorted.length].id),
+	);
+
+	return recipes.map((r) => {
+		if (thisWeekIds.has(r.id)) {
+			// This week's picks — show as featured and make them free
+			return { ...r, featured: true, locked: false };
+		}
+		if (r.featured) {
+			// In the pool but not this week — hide from featured section
+			return { ...r, featured: false };
+		}
+		return r;
+	});
+}
+
 export function calcAgeWeeks(dob) {
 	if (!dob) return null;
 	return Math.floor((Date.now() - new Date(dob)) / (7 * 24 * 60 * 60 * 1000));

@@ -5,12 +5,15 @@ import {
 	TextInput,
 	TouchableOpacity,
 	ScrollView,
+	Modal,
 	Image,
 	Alert,
 	RefreshControl,
+	Platform,
 } from "react-native";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon, CategoryIcon } from "../components/Icon";
+import { ZoomableImage } from "../components/ZoomableImage";
 import {
 	ReactionBadge,
 	SecondaryBtn,
@@ -137,6 +140,7 @@ export function LogScreen({
 	const [search, setSearch] = useState("");
 	const [sortBy, setSortBy] = useState("date-desc");
 	const [reactionFilter, setReactionFilter] = useState(initialFilter || "");
+	const [lightboxPhoto, setLightboxPhoto] = useState(null); // { uri, name }
 	const [expanded, setExpanded] = useState(
 		initialOpenKey ? new Set([initialOpenKey]) : new Set(),
 	);
@@ -682,7 +686,10 @@ export function LogScreen({
 													</View>
 												)}
 												{a.photoUri ? (
-													<View style={{ marginTop: 10 }}>
+													<TouchableOpacity
+														onPress={() => setLightboxPhoto({ uri: a.photoUri, name: g.name })}
+														activeOpacity={0.9}
+														style={{ marginTop: 10 }}>
 														<Image
 															source={{ uri: a.photoUri }}
 															style={{
@@ -692,7 +699,17 @@ export function LogScreen({
 															}}
 															resizeMode="cover"
 														/>
-													</View>
+														<View style={{
+															position: "absolute",
+															bottom: 8,
+															right: 8,
+															backgroundColor: "rgba(0,0,0,0.45)",
+															borderRadius: 8,
+															padding: 5,
+														}}>
+															<Icon name="search" size={14} color="#fff" />
+														</View>
+													</TouchableOpacity>
 												) : null}
 											</View>
 											<View style={{ flexDirection: "row", gap: 6 }}>
@@ -784,6 +801,50 @@ export function LogScreen({
 					</Text>
 				</TouchableOpacity>
 			</ScrollView>
+
+			{/* ── Photo Lightbox ── */}
+			<Modal
+				visible={!!lightboxPhoto}
+				animationType="fade"
+				statusBarTranslucent
+				onRequestClose={() => setLightboxPhoto(null)}>
+				<View style={{ flex: 1, backgroundColor: "#000" }}>
+					{/* Close */}
+					<TouchableOpacity
+						onPress={() => setLightboxPhoto(null)}
+						style={{
+							position: "absolute",
+							top: Platform.OS === "ios" ? 56 : 20,
+							right: 20,
+							zIndex: 10,
+							backgroundColor: "rgba(0,0,0,0.5)",
+							borderRadius: 20,
+							padding: 10,
+						}}>
+						<Icon name="close" size={20} color="#fff" />
+					</TouchableOpacity>
+
+					{lightboxPhoto && <ZoomableImage uri={lightboxPhoto.uri} />}
+
+					<Text style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, textAlign: "center", paddingBottom: 6 }}>
+						Pinch to zoom · Double-tap to reset
+					</Text>
+
+					{/* Food name strip */}
+					{lightboxPhoto?.name && (
+						<View style={{
+							backgroundColor: "rgba(0,0,0,0.7)",
+							paddingHorizontal: 24,
+							paddingVertical: 16,
+							paddingBottom: Platform.OS === "ios" ? 36 : 16,
+						}}>
+							<Text style={{ fontSize: 18, fontWeight: "800", color: "#fff" }}>
+								{lightboxPhoto.name}
+							</Text>
+						</View>
+					)}
+				</View>
+			</Modal>
 		</View>
 	);
 }

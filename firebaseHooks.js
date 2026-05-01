@@ -25,7 +25,8 @@ import {
 	serverTimestamp,
 	orderBy,
 } from "firebase/firestore";
-import { auth, db } from "./firebase";
+import { auth, db, storage } from "./firebase";
+import { ref, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
 
 // AUTH STATE
 export function useAuth() {
@@ -112,11 +113,16 @@ export async function logOut() {
 // UPDATE USER PROFILE (photo, display name etc)
 export async function updateUserProfile(userId, data) {
 	const safeData = { ...data };
-	if (safeData.photoURL && !isSafeBase64Size(safeData.photoURL)) {
-		console.warn(
-			"Profile photo too large for Firestore — saving without photo.",
-		);
-		safeData.photoURL = "";
+	if (safeData.photoURL) {
+		try {
+			safeData.photoURL = await uploadPhotoIfBase64(
+				safeData.photoURL,
+				`profilePhotos/${userId}/profile.jpg`,
+			);
+		} catch (e) {
+			console.warn("Profile photo upload failed:", e.message);
+			safeData.photoURL = "";
+		}
 	}
 	await updateDoc(doc(db, "users", userId), safeData);
 }
@@ -227,9 +233,16 @@ export async function addChild(userId, child) {
 
 export async function updateChild(childId, data) {
 	const safeData = { ...data };
-	if (safeData.photoUri && !isSafeBase64Size(safeData.photoUri)) {
-		console.warn("Child photo too large for Firestore — saving without photo.");
-		safeData.photoUri = "";
+	if (safeData.photoUri) {
+		try {
+			safeData.photoUri = await uploadPhotoIfBase64(
+				safeData.photoUri,
+				`childPhotos/${safeData.userId || "unknown"}/${childId}.jpg`,
+			);
+		} catch (e) {
+			console.warn("Child photo upload failed:", e.message);
+			safeData.photoUri = "";
+		}
 	}
 	await updateDoc(doc(db, "children", childId), safeData);
 }
@@ -299,6 +312,16 @@ export async function fetchFoodLog(userId) {
 	return Array.from(allEntries.values());
 }
 
+// Upload a base64 photo to Firebase Storage and return the download URL.
+// If the value is already an https:// URL (already migrated) it passes through unchanged.
+async function uploadPhotoIfBase64(base64Uri, storagePath) {
+	if (!base64Uri) return "";
+	if (base64Uri.startsWith("http")) return base64Uri; // already a URL
+	const photoRef = ref(storage, storagePath);
+	await uploadString(photoRef, base64Uri, "data_url");
+	return await getDownloadURL(photoRef);
+}
+
 // Check if a base64 string is within Firestore's safe limit (~700kb to leave room)
 function isSafeBase64Size(base64str, maxKb = 700) {
 	if (!base64str) return true;
@@ -309,27 +332,38 @@ function isSafeBase64Size(base64str, maxKb = 700) {
 
 export async function addFoodEntry(userId, entry) {
 	const safeEntry = { ...entry };
-	// If photo is too large for Firestore, store without it and warn
-	if (safeEntry.photoUri && !isSafeBase64Size(safeEntry.photoUri)) {
-		console.warn(
-			"Photo too large for Firestore — storing entry without photo.",
-		);
-		safeEntry.photoUri = "";
-	}
-	const ref = await addDoc(collection(db, "foodLog"), {
+	// First create the doc to get an ID, then upload photo using that ID
+	const docRef = await addDoc(collection(db, "foodLog"), {
 		userId,
 		...safeEntry,
+		photoUri: "", // placeholder while we upload
 	});
-	return ref.id;
+	if (safeEntry.photoUri) {
+		try {
+			const url = await uploadPhotoIfBase64(
+				safeEntry.photoUri,
+				`foodPhotos/${userId}/${docRef.id}.jpg`,
+			);
+			await updateDoc(docRef, { photoUri: url });
+		} catch (e) {
+			console.warn("Photo upload failed — entry saved without photo:", e.message);
+		}
+	}
+	return docRef.id;
 }
 
 export async function updateFoodEntry(entryId, data) {
 	const safeData = { ...data };
-	if (safeData.photoUri && !isSafeBase64Size(safeData.photoUri)) {
-		console.warn(
-			"Photo too large for Firestore — updating entry without photo.",
-		);
-		safeData.photoUri = "";
+	if (safeData.photoUri) {
+		try {
+			safeData.photoUri = await uploadPhotoIfBase64(
+				safeData.photoUri,
+				`foodPhotos/${safeData.userId || "unknown"}/${entryId}.jpg`,
+			);
+		} catch (e) {
+			console.warn("Photo upload failed — updating without photo:", e.message);
+			safeData.photoUri = "";
+		}
 	}
 	await updateDoc(doc(db, "foodLog", entryId), safeData);
 }

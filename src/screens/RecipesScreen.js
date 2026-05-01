@@ -1174,6 +1174,22 @@ export function RecipesScreen({
 											<Text style={s.tagWarningText}>{t}</Text>
 										</View>
 									))}
+									{r.allergens && r.allergens.length > 0 && (
+										<View style={{
+											flexDirection: "row",
+											alignItems: "center",
+											gap: 4,
+											backgroundColor: "#fde8e8",
+											borderRadius: 999,
+											paddingHorizontal: 8,
+											paddingVertical: 3,
+										}}>
+											<Icon name="alert" size={10} color="#c0392b" />
+											<Text style={{ fontSize: 10, fontWeight: "700", color: "#c0392b" }}>
+												{r.allergens.join(", ")}
+											</Text>
+										</View>
+									)}
 								</View>
 							</View>
 						</TouchableOpacity>

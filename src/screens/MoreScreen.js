@@ -1,16 +1,19 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
 	View,
 	Text,
 	TextInput,
 	TouchableOpacity,
 	ScrollView,
+	FlatList,
 	Modal,
 	KeyboardAvoidingView,
 	Platform,
 	Alert,
 	ActivityIndicator,
 	Image,
+	Dimensions,
+	StatusBar,
 } from "react-native";
 import {
 	updatePassword,
@@ -20,8 +23,12 @@ import {
 import { auth } from "../../firebase";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon } from "../components/Icon";
+import { ZoomableImage } from "../components/ZoomableImage";
 import { PickerModal } from "../components/PickerModal";
 import { pickImageAsBase64 } from "../helpers";
+
+const SCREEN_W = Dimensions.get("window").width;
+const THUMB_SIZE = (SCREEN_W - 48 - 8) / 3; // 3 columns, 16px side padding, 4px gaps
 
 export function MoreScreen({
 	user,
@@ -35,6 +42,7 @@ export function MoreScreen({
 	onUpgradePro,
 	onRestorePurchases,
 	onManageSharing,
+	foodLog = [],
 }) {
 	const { C, theme, setTheme } = useTheme();
 	const s = useStyles();
@@ -54,6 +62,13 @@ export function MoreScreen({
 	const [supportSent, setSupportSent] = useState(false);
 	const [showSupportTypePicker, setShowSupportTypePicker] = useState(false);
 	const [profilePhoto, setProfilePhoto] = useState("");
+	const [showGallery, setShowGallery] = useState(false);
+	const [lightboxPhoto, setLightboxPhoto] = useState(null); // { uri, name, date, reaction }
+
+	// All food log entries that have a photo, newest first
+	const photoEntries = [...foodLog]
+		.filter((e) => !!e.photoUri)
+		.sort((a, b) => new Date(b.date) - new Date(a.date));
 
 	// Load profile photo from userDoc on mount
 	useEffect(() => {
@@ -462,6 +477,14 @@ export function MoreScreen({
 					</TouchableOpacity>
 				</TouchableOpacity>
 			</View>
+
+			<MoreRow
+				icon="Camera"
+				iconBg={C.bgPurple}
+				label="Photo Gallery"
+				sublabel={`${photoEntries.length} food photo${photoEntries.length !== 1 ? "s" : ""} saved`}
+				onPress={() => setShowGallery(true)}
+			/>
 
 			{/* Account */}
 			<Text style={[s.smallLabel, { paddingLeft: 4, marginBottom: 10 }]}>Account</Text>
@@ -1036,6 +1059,146 @@ export function MoreScreen({
 				}}
 				right={<View />}
 			/>
+
+			{/* ── Photo Gallery Modal ── */}
+			<Modal
+				visible={showGallery}
+				animationType="slide"
+				onRequestClose={() => setShowGallery(false)}>
+				<View style={{ flex: 1, backgroundColor: C.bgMain }}>
+					{/* Header */}
+					<View style={{
+						flexDirection: "row",
+						alignItems: "center",
+						justifyContent: "space-between",
+						paddingHorizontal: 20,
+						paddingTop: Platform.OS === "ios" ? 56 : 20,
+						paddingBottom: 16,
+						backgroundColor: C.white,
+						borderBottomWidth: 1,
+						borderBottomColor: C.borderLight,
+					}}>
+						<View>
+							<Text style={{ fontWeight: "800", fontSize: 20, color: C.primaryPinkDark }}>
+								Photo Gallery
+							</Text>
+							<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>
+								{photoEntries.length} food photo{photoEntries.length !== 1 ? "s" : ""}
+							</Text>
+						</View>
+						<TouchableOpacity
+							onPress={() => setShowGallery(false)}
+							style={{ backgroundColor: C.bgPurple, borderRadius: 10, padding: 10 }}>
+							<Icon name="close" size={18} color={C.mutedText} />
+						</TouchableOpacity>
+					</View>
+
+					{photoEntries.length === 0 ? (
+						<View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12 }}>
+							<Icon name="Camera" size={52} color={C.secondaryPurple} />
+							<Text style={{ fontWeight: "700", fontSize: 16, color: C.mutedText }}>No photos yet</Text>
+							<Text style={{ fontSize: 13, color: C.mutedText, textAlign: "center", paddingHorizontal: 40 }}>
+								Add photos when logging food to see them here
+							</Text>
+						</View>
+					) : (
+						<FlatList
+							data={photoEntries}
+							keyExtractor={(item) => item.id}
+							numColumns={3}
+							contentContainerStyle={{ padding: 16, gap: 4 }}
+							columnWrapperStyle={{ gap: 4, marginBottom: 4 }}
+							renderItem={({ item }) => (
+								<TouchableOpacity
+									onPress={() => setLightboxPhoto(item)}
+									activeOpacity={0.85}
+									style={{ width: THUMB_SIZE, height: THUMB_SIZE, borderRadius: 10, overflow: "hidden", backgroundColor: C.bgPurple }}>
+									<Image
+										source={{ uri: item.photoUri }}
+										style={{ width: THUMB_SIZE, height: THUMB_SIZE }}
+										resizeMode="cover"
+									/>
+									{/* Food name overlay at bottom */}
+									<View style={{
+										position: "absolute",
+										bottom: 0,
+										left: 0,
+										right: 0,
+										backgroundColor: "rgba(0,0,0,0.45)",
+										paddingHorizontal: 5,
+										paddingVertical: 4,
+									}}>
+										<Text style={{ fontSize: 9, fontWeight: "700", color: "#fff" }} numberOfLines={1}>
+											{item.name}
+										</Text>
+									</View>
+								</TouchableOpacity>
+							)}
+						/>
+					)}
+
+					{/* ── Lightbox overlay (inside gallery modal to avoid nesting modals) ── */}
+					{lightboxPhoto && (
+						<View style={{
+							position: "absolute",
+							top: 0, left: 0, right: 0, bottom: 0,
+							backgroundColor: "#000",
+							zIndex: 100,
+						}}>
+							{/* Close */}
+							<TouchableOpacity
+								onPress={() => setLightboxPhoto(null)}
+								style={{
+									position: "absolute",
+									top: Platform.OS === "ios" ? 56 : 20,
+									right: 20,
+									zIndex: 10,
+									backgroundColor: "rgba(0,0,0,0.5)",
+									borderRadius: 20,
+									padding: 10,
+								}}>
+								<Icon name="close" size={20} color="#fff" />
+							</TouchableOpacity>
+
+							{/* Zoomable image */}
+							<ZoomableImage uri={lightboxPhoto.photoUri} />
+
+							<Text style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, textAlign: "center", paddingBottom: 4 }}>
+								Pinch to zoom · Double-tap to reset
+							</Text>
+
+							{/* Info strip */}
+							<View style={{
+								backgroundColor: "rgba(0,0,0,0.7)",
+								paddingHorizontal: 24,
+								paddingVertical: 18,
+								paddingBottom: Platform.OS === "ios" ? 36 : 18,
+							}}>
+								<Text style={{ fontSize: 18, fontWeight: "800", color: "#fff", marginBottom: 4 }}>
+									{lightboxPhoto.name}
+								</Text>
+								<View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+									{lightboxPhoto.date && (
+										<Text style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>
+											{lightboxPhoto.date}
+										</Text>
+									)}
+									{lightboxPhoto.reaction && (
+										<Text style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>
+											· {lightboxPhoto.reaction}
+										</Text>
+									)}
+									{lightboxPhoto.form && (
+										<Text style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>
+											· {lightboxPhoto.form}
+										</Text>
+									)}
+								</View>
+							</View>
+						</View>
+					)}
+				</View>
+			</Modal>
 
 			{/* Change Password Modal */}
 			<Modal

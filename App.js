@@ -43,7 +43,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { ThemeContext, useTheme, useStyles } from "./src/ThemeContext";
 import { THEMES } from "./src/constants";
-import { normalize, groupByFood } from "./src/helpers";
+import { normalize, groupByFood, applyWeeklyFeaturedRotation } from "./src/helpers";
 
 import { LoadingScreen } from "./src/screens/LoadingScreen";
 import { DashboardScreen } from "./src/screens/DashboardScreen";
@@ -149,7 +149,7 @@ function MainApp({ user, isPro: isPropPro }) {
 			.then(([log, kids, recs, favIds, bottles, savedId]) => {
 				setFoodLog(log);
 				setChildren(kids);
-				setRecipes(recs);
+				setRecipes(applyWeeklyFeaturedRotation(recs));
 				setFavouriteRecipeIds(favIds);
 				setBottleLog(bottles);
 				if (kids.length > 0) {
@@ -193,7 +193,7 @@ function MainApp({ user, isPro: isPropPro }) {
 			]);
 			setFoodLog(log);
 			setChildren(kids);
-			setRecipes(recs);
+			setRecipes(applyWeeklyFeaturedRotation(recs));
 			setFavouriteRecipeIds(favIds);
 			setBottleLog(bottles);
 			if (kids.length > 0) {
@@ -993,6 +993,7 @@ function MainApp({ user, isPro: isPropPro }) {
 						onUpgradePro={handleUpgradePro}
 						onRestorePurchases={handleRestorePurchases}
 						onManageSharing={handleManageSharing}
+						foodLog={childLog}
 					/>
 				)}
 				{page === "children" && (
