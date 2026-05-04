@@ -5,7 +5,7 @@ import { Icon, CategoryIcon, ReactionFace } from "./Icon";
 import { PrimaryBtn } from "./SharedComponents";
 import { PickerModal } from "./PickerModal";
 import { DateField } from "./DatePickerModal";
-import { CATEGORIES, FORMS, REACTIONS, MEAL_TIMES } from "../constants";
+import { CATEGORIES, FORMS, REACTIONS, MEAL_TIMES, ALLERGENS } from "../constants";
 import { pickImageAsBase64 } from "../helpers";
 
 const EMPTY_FORM = {
@@ -20,6 +20,7 @@ const EMPTY_FORM = {
 	ml: "",
 	photoUri: "",
 	mealTime: "",
+	allergens: [],
 };
 
 function parseCategories(cat) {
@@ -69,6 +70,7 @@ export function FoodForm({
 			category: cats[0] || "",
 			categories: cats,
 			ml: isLiquids ? form.ml || "" : "",
+			allergens: form.allergens || [],
 		};
 		onSubmit(submitData);
 		if (!initial.id)
@@ -85,34 +87,54 @@ export function FoodForm({
 				maxYear={new Date().getFullYear() + 1}
 			/>
 
+			{/* ── Meal Time (Pro) ── */}
 			<View>
-				<Text style={s.label}>Meal Time (optional)</Text>
-				<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+				<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+					<Text style={s.label}>Meal Time</Text>
+					{!isPro && (
+						<View style={{ backgroundColor: C.warningStroke, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
+							<Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>PRO</Text>
+						</View>
+					)}
+				</View>
+				<View style={{ flexDirection: "row", flexWrap: "wrap", opacity: isPro ? 1 : 0.45 }}>
 					{MEAL_TIMES.map((m) => {
-						const sel = form.mealTime === m.value;
+						const sel = isPro && form.mealTime === m.value;
 						return (
-							<TouchableOpacity
-								key={m.value}
-								onPress={() => set("mealTime", sel ? "" : m.value)}
-								style={{
-									flexDirection: "row",
-									alignItems: "center",
-									gap: 5,
-									paddingHorizontal: 12,
-									paddingVertical: 8,
-									borderRadius: 999,
-									backgroundColor: sel ? m.color : C.white,
-									borderWidth: 2,
-									borderColor: sel ? m.color : C.borderLight,
-								}}
-								activeOpacity={0.8}>
-								<Text style={{ fontSize: 12, fontWeight: "700", color: sel ? "#ffffff" : C.mutedText }}>
-									{m.value}
-								</Text>
-							</TouchableOpacity>
+							<View key={m.value} style={{ width: "33.33%", padding: 3 }}>
+								<TouchableOpacity
+									onPress={() => isPro && set("mealTime", sel ? "" : m.value)}
+									activeOpacity={isPro ? 0.8 : 1}
+									style={{
+										height: 46,
+										borderRadius: 10,
+										backgroundColor: sel ? m.color : C.white,
+										borderWidth: 2,
+										borderColor: sel ? m.color : C.borderLight,
+										alignItems: "center",
+										justifyContent: "center",
+										paddingHorizontal: 6,
+									}}>
+									<Text
+										style={{
+											fontSize: 11,
+											fontWeight: "700",
+											color: sel ? "#fff" : C.mutedText,
+											textAlign: "center",
+										}}
+										numberOfLines={2}>
+										{m.value}
+									</Text>
+								</TouchableOpacity>
+							</View>
 						);
 					})}
 				</View>
+				{!isPro && (
+					<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 6, textAlign: "center" }}>
+						Upgrade to Pro to track meal times
+					</Text>
+				)}
 			</View>
 
 			<View>
@@ -255,6 +277,59 @@ export function FoodForm({
 									{r.value}
 								</Text>
 							</TouchableOpacity>
+						);
+					})}
+				</View>
+			</View>
+
+			{/* ── Allergens ── */}
+			<View>
+				<Text style={s.label}>Contains Allergens (optional)</Text>
+				<Text style={{ fontSize: 11, color: C.mutedText, marginBottom: 8, marginTop: -4 }}>
+					Tap to mark which allergens this food introduces
+				</Text>
+				<View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+					{ALLERGENS.map((al) => {
+						const sel = (form.allergens || []).includes(al.value);
+						return (
+							<View key={al.value} style={{ width: "33.33%", padding: 3 }}>
+								<TouchableOpacity
+									onPress={() =>
+										setForm((p) => {
+											const prev = p.allergens || [];
+											return {
+												...p,
+												allergens: prev.includes(al.value)
+													? prev.filter((a) => a !== al.value)
+													: [...prev, al.value],
+											};
+										})
+									}
+									activeOpacity={0.8}
+									style={{
+										height: 54,
+										borderRadius: 10,
+										backgroundColor: sel ? al.bg : C.white,
+										borderWidth: 2,
+										borderColor: sel ? al.color : C.borderLight,
+										alignItems: "center",
+										justifyContent: "center",
+										gap: 2,
+										paddingHorizontal: 4,
+									}}>
+									<Text style={{ fontSize: 18, lineHeight: 22 }}>{al.emoji}</Text>
+									<Text
+										style={{
+											fontSize: 10,
+											fontWeight: "700",
+											color: sel ? al.color : C.mutedText,
+											textAlign: "center",
+										}}
+										numberOfLines={1}>
+										{al.value}
+									</Text>
+								</TouchableOpacity>
+							</View>
 						);
 					})}
 				</View>

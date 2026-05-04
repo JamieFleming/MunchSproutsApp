@@ -137,3 +137,16 @@ export const MONTHS = [
 	"Jan", "Feb", "Mar", "Apr", "May", "Jun",
 	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
+
+// Common allergens for baby weaning (UK Top 14)
+export const ALLERGENS = [
+	{ value: "Gluten",     emoji: "🌾", color: "#d4860a", bg: "#fff0cc" },
+	{ value: "Dairy",      emoji: "🥛", color: "#9b7fe8", bg: "#ede8f7" },
+	{ value: "Eggs",       emoji: "🥚", color: "#e05c7a", bg: "#fad4de" },
+	{ value: "Peanuts",    emoji: "🥜", color: "#a85a1a", bg: "#fde8d4" },
+	{ value: "Tree Nuts",  emoji: "🌰", color: "#7a5a1a", bg: "#f5e8d0" },
+	{ value: "Fish",       emoji: "🐟", color: "#2a5f8f", bg: "#d4e8f5" },
+	{ value: "Shellfish",  emoji: "🦐", color: "#c0392b", bg: "#fde8e8" },
+	{ value: "Soy",        emoji: "🫘", color: "#3db87a", bg: "#d4f0e0" },
+	{ value: "Sesame",     emoji: "🌿", color: "#8a7aaa", bg: "#ece8f9" },
+];

@@ -5,6 +5,7 @@ import {
 	TextInput,
 	TouchableOpacity,
 	ScrollView,
+	FlatList,
 	Modal,
 	Image,
 	Alert,
@@ -19,7 +20,7 @@ import {
 	SecondaryBtn,
 	DangerBtn,
 } from "../components/SharedComponents";
-import { CATEGORIES, MEAL_TIMES } from "../constants";
+import { CATEGORIES, MEAL_TIMES, ALLERGENS } from "../constants";
 import { groupByFood, normalize, formatDate } from "../helpers";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -356,9 +357,12 @@ export function LogScreen({
 				{keys.length} food{keys.length !== 1 ? "s" : ""}
 			</Text>
 
-			<ScrollView
+			<FlatList
+				data={keys}
+				keyExtractor={(item) => item}
 				showsVerticalScrollIndicator={false}
 				contentContainerStyle={{ gap: 10, paddingBottom: 20 }}
+				removeClippedSubviews={true}
 				refreshControl={
 					<RefreshControl
 						refreshing={refreshing}
@@ -367,8 +371,8 @@ export function LogScreen({
 						colors={[C.primaryPurple]}
 						progressBackgroundColor={C.white}
 					/>
-				}>
-				{keys.map((key) => {
+				}
+				renderItem={({ item: key }) => {
 					const g = groups[key];
 					const latest = g.attempts.at(-1);
 					const likedCnt = g.attempts.filter(
@@ -381,7 +385,6 @@ export function LogScreen({
 					const isOpen = expanded.has(key);
 					return (
 						<View
-							key={key}
 							style={[
 								s.card,
 								{
@@ -653,6 +656,45 @@ export function LogScreen({
 													) : null}
 													<ReactionBadge reaction={a.reaction} />
 												</View>
+												{a.allergens && a.allergens.length > 0 && (
+													<View
+														style={{
+															flexDirection: "row",
+															flexWrap: "wrap",
+															gap: 4,
+															marginTop: 6,
+														}}>
+														{a.allergens.map((allergen) => {
+															const cfg = ALLERGENS.find((al) => al.value === allergen);
+															if (!cfg) return null;
+															return (
+																<View
+																	key={allergen}
+																	style={{
+																		flexDirection: "row",
+																		alignItems: "center",
+																		gap: 3,
+																		backgroundColor: cfg.bg,
+																		borderRadius: 999,
+																		paddingHorizontal: 8,
+																		paddingVertical: 3,
+																		borderWidth: 1,
+																		borderColor: cfg.color + "55",
+																	}}>
+																	<Text style={{ fontSize: 11 }}>{cfg.emoji}</Text>
+																	<Text
+																		style={{
+																			fontSize: 10,
+																			fontWeight: "700",
+																			color: cfg.color,
+																		}}>
+																		{allergen}
+																	</Text>
+																</View>
+															);
+														})}
+													</View>
+												)}
 												{a.notes ? (
 													<Text
 														style={{
@@ -775,32 +817,33 @@ export function LogScreen({
 							)}
 						</View>
 					);
-				})}
-
-				<TouchableOpacity
-					onPress={() => exportFoodLogAsPDF(foodLog, childName, bottleLog)}
-					style={{
-						flexDirection: "row",
-						alignItems: "center",
-						justifyContent: "center",
-						gap: 10,
-						backgroundColor: C.white,
-						borderRadius: 16,
-						paddingVertical: 14,
-						marginTop: 4,
-						shadowColor: "#000",
-						shadowOpacity: 0.05,
-						shadowRadius: 8,
-						elevation: 2,
-					}}
-					activeOpacity={0.8}>
-					<Icon name="pdf" size={18} color={C.primaryPurple} />
-					<Text
-						style={{ fontWeight: "700", fontSize: 14, color: C.primaryPurple }}>
-						Export as PDF
-					</Text>
-				</TouchableOpacity>
-			</ScrollView>
+				}}
+				ListFooterComponent={() => (
+					<TouchableOpacity
+						onPress={() => exportFoodLogAsPDF(foodLog, childName, bottleLog)}
+						style={{
+							flexDirection: "row",
+							alignItems: "center",
+							justifyContent: "center",
+							gap: 10,
+							backgroundColor: C.white,
+							borderRadius: 16,
+							paddingVertical: 14,
+							marginTop: 4,
+							shadowColor: "#000",
+							shadowOpacity: 0.05,
+							shadowRadius: 8,
+							elevation: 2,
+						}}
+						activeOpacity={0.8}>
+						<Icon name="pdf" size={18} color={C.primaryPurple} />
+						<Text
+							style={{ fontWeight: "700", fontSize: 14, color: C.primaryPurple }}>
+							Export as PDF
+						</Text>
+					</TouchableOpacity>
+				)}
+			/>
 
 			{/* ── Photo Lightbox ── */}
 			<Modal

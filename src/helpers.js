@@ -40,6 +40,46 @@ export function applyWeeklyFeaturedRotation(recipes) {
 	});
 }
 
+/**
+ * For each allergen in allergenList, scan foodLog entries to determine status.
+ * Returns an array of allergen objects extended with:
+ *   status: "Safe" | "In Progress" | "Reaction" | "Not Tried"
+ *   firstDate: string | null
+ *   lastDate: string | null
+ *   count: number (entries containing this allergen)
+ */
+export function computeAllergenStatus(foodLog, allergenList) {
+	return allergenList.map((allergen) => {
+		const entries = foodLog.filter(
+			(e) => Array.isArray(e.allergens) && e.allergens.includes(allergen.value),
+		);
+
+		if (entries.length === 0) {
+			return { ...allergen, status: "Not Tried", firstDate: null, lastDate: null, count: 0 };
+		}
+
+		const hasReaction = entries.some((e) => e.reaction === "Allergic");
+		const hasSafe = entries.some(
+			(e) => e.reaction === "Loved" || e.reaction === "Good",
+		);
+
+		const dates = entries
+			.filter((e) => e.date)
+			.map((e) => e.date)
+			.sort();
+
+		const firstDate = dates[0] || null;
+		const lastDate = dates[dates.length - 1] || null;
+
+		let status;
+		if (hasReaction) status = "Reaction";
+		else if (hasSafe) status = "Safe";
+		else status = "In Progress";
+
+		return { ...allergen, status, firstDate, lastDate, count: entries.length };
+	});
+}
+
 export function calcAgeWeeks(dob) {
 	if (!dob) return null;
 	return Math.floor((Date.now() - new Date(dob)) / (7 * 24 * 60 * 60 * 1000));

@@ -1,30 +1,23 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
 	View,
 	Text,
-	TextInput,
 	TouchableOpacity,
 	ScrollView,
 	FlatList,
 	Modal,
-	KeyboardAvoidingView,
 	Platform,
 	Alert,
 	ActivityIndicator,
 	Image,
 	Dimensions,
-	StatusBar,
 } from "react-native";
-import {
-	updatePassword,
-	EmailAuthProvider,
-	reauthenticateWithCredential,
-} from "firebase/auth";
-import { auth } from "../../firebase";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon } from "../components/Icon";
 import { ZoomableImage } from "../components/ZoomableImage";
-import { PickerModal } from "../components/PickerModal";
+import { PasswordChangeModal } from "../components/PasswordChangeModal";
+import { FamilySharingModal } from "../components/FamilySharingModal";
+import { SupportModal } from "../components/SupportModal";
 import { pickImageAsBase64 } from "../helpers";
 
 const SCREEN_W = Dimensions.get("window").width;
@@ -47,20 +40,9 @@ export function MoreScreen({
 	const { C, theme, setTheme } = useTheme();
 	const s = useStyles();
 	const [showChangePassword, setShowChangePassword] = useState(false);
-	const [currentPw, setCurrentPw] = useState("");
-	const [newPw, setNewPw] = useState("");
-	const [confirmPw, setConfirmPw] = useState("");
-	const [pwLoading, setPwLoading] = useState(false);
 	const [upgradeLoading, setUpgradeLoading] = useState(false);
 	const [showSharing, setShowSharing] = useState(false);
-	const [shareEmail, setShareEmail] = useState("");
-	const [shareLoading, setShareLoading] = useState(false);
-	const [selectedChildId, setSelectedChildId] = useState(null);
 	const [showSupport, setShowSupport] = useState(false);
-	const [supportType, setSupportType] = useState("");
-	const [supportMessage, setSupportMessage] = useState("");
-	const [supportSent, setSupportSent] = useState(false);
-	const [showSupportTypePicker, setShowSupportTypePicker] = useState(false);
 	const [profilePhoto, setProfilePhoto] = useState("");
 	const [showGallery, setShowGallery] = useState(false);
 	const [lightboxPhoto, setLightboxPhoto] = useState(null); // { uri, name, date, reaction }
@@ -105,40 +87,6 @@ export function MoreScreen({
 		} catch (e) {
 			console.warn("Could not remove photo");
 		}
-	};
-
-	const handleChangePassword = async () => {
-		if (!currentPw || !newPw || !confirmPw) {
-			Alert.alert("Missing Fields", "Please fill in all fields.");
-			return;
-		}
-		if (newPw !== confirmPw) {
-			Alert.alert("Mismatch", "New passwords do not match.");
-			return;
-		}
-		if (newPw.length < 6) {
-			Alert.alert("Too Short", "Password must be at least 6 characters.");
-			return;
-		}
-		setPwLoading(true);
-		try {
-			const credential = EmailAuthProvider.credential(user.email, currentPw);
-			await reauthenticateWithCredential(auth.currentUser, credential);
-			await updatePassword(auth.currentUser, newPw);
-			Alert.alert("Success", "Password updated successfully.");
-			setCurrentPw("");
-			setNewPw("");
-			setConfirmPw("");
-			setShowChangePassword(false);
-		} catch (e) {
-			const msgs = {
-				"auth/wrong-password": "Current password is incorrect.",
-				"auth/invalid-credential": "Current password is incorrect.",
-				"auth/too-many-requests": "Too many attempts. Try again later.",
-			};
-			Alert.alert("Error", msgs[e.code] || e.message);
-		}
-		setPwLoading(false);
 	};
 
 	const MoreRow = ({ icon, iconBg, label, sublabel, onPress, color, right }) => (
@@ -590,220 +538,14 @@ export function MoreScreen({
 				</TouchableOpacity>
 			)}
 
-			{/* Family Sharing Modal */}
-			<Modal
+			<FamilySharingModal
 				visible={showSharing}
-				transparent
-				animationType="slide"
-				onRequestClose={() => setShowSharing(false)}>
-				<KeyboardAvoidingView
-					behavior={Platform.OS === "ios" ? "padding" : "height"}
-					style={s.modalOverlay}>
-					<View style={s.modalSheet}>
-						<View
-							style={{
-								flexDirection: "row",
-								justifyContent: "space-between",
-								alignItems: "center",
-								marginBottom: 20,
-							}}>
-							<Text style={s.modalTitle}>Share with Family</Text>
-							<TouchableOpacity
-								onPress={() => {
-									setShowSharing(false);
-									setShareEmail("");
-									setSelectedChildId(null);
-								}}
-								style={{ backgroundColor: C.bgPurple, borderRadius: 10, padding: 8 }}>
-								<Icon name="close" size={16} color={C.mutedText} />
-							</TouchableOpacity>
-						</View>
-
-						{ownedChildren.filter((c) => c.isOwner !== false && c.isOwner !== undefined).length > 1 && (
-							<View style={{ marginBottom: 16 }}>
-								<Text style={s.label}>Select Child to Share</Text>
-								{ownedChildren
-									.filter((c) => c.isOwner !== false && c.isOwner !== undefined)
-									.map((c) => (
-										<TouchableOpacity
-											key={c.id}
-											onPress={() => setSelectedChildId(c.id)}
-											style={{
-												flexDirection: "row",
-												alignItems: "center",
-												gap: 10,
-												padding: 12,
-												backgroundColor: selectedChildId === c.id ? C.bgPurple : C.white,
-												borderRadius: 12,
-												borderWidth: 2,
-												borderColor: selectedChildId === c.id ? C.primaryPurple : C.borderLight,
-												marginBottom: 8,
-											}}>
-											<Icon
-												name="baby"
-												size={16}
-												color={selectedChildId === c.id ? C.primaryPurple : C.mutedText}
-											/>
-											<Text
-												style={{
-													fontWeight: "700",
-													fontSize: 14,
-													color: selectedChildId === c.id ? C.primaryPurple : C.textCharcoal,
-												}}>
-												{c.name}
-											</Text>
-											{selectedChildId === c.id && (
-												<Icon name="check" size={14} color={C.primaryPurple} />
-											)}
-										</TouchableOpacity>
-									))}
-							</View>
-						)}
-
-						<View style={{ backgroundColor: C.bgPurple, borderRadius: 12, padding: 14, marginBottom: 16 }}>
-							<Text style={{ fontSize: 13, color: C.primaryPinkDark, lineHeight: 20 }}>
-								Enter the email address of the person you want to share with. They must already have a
-								Munch Sprouts account. They will be able to view and add food log entries for the
-								selected child.
-							</Text>
-						</View>
-
-						<View style={{ marginBottom: 16 }}>
-							<Text style={s.label}>Their Email Address</Text>
-							<TextInput
-								value={shareEmail}
-								onChangeText={setShareEmail}
-								placeholder="partner@example.com"
-								keyboardType="email-address"
-								autoCapitalize="none"
-								autoCorrect={false}
-								style={[s.input, { backgroundColor: C.white }]}
-								placeholderTextColor={C.mutedText}
-							/>
-						</View>
-
-						<TouchableOpacity
-							onPress={() =>
-								onManageSharing(shareEmail.trim(), selectedChildId || defaultChildId, () => {
-									setShowSharing(false);
-									setShareEmail("");
-									setSelectedChildId(null);
-								})
-							}
-							disabled={shareLoading || !shareEmail.trim()}
-							style={[s.btnPrimary, (shareLoading || !shareEmail.trim()) && { opacity: 0.5 }]}
-							activeOpacity={0.8}>
-							{shareLoading ? (
-								<ActivityIndicator color={C.white} />
-							) : (
-								<Text style={s.btnPrimaryText}>Send Invite</Text>
-							)}
-						</TouchableOpacity>
-
-						{/* Family Group */}
-						{(() => {
-							const targetChild = ownedChildren.find(
-								(c) => c.id === (selectedChildId || defaultChildId),
-							);
-							if (!targetChild) return null;
-							const isOwner = targetChild.isOwner !== false;
-							const sharedWith = targetChild?.sharedWith || [];
-							const sharedWithEmails = (targetChild?.sharedWithEmails || []).slice(0, sharedWith.length);
-
-							const familyRows = isOwner
-								? sharedWith.map((uid, i) => ({
-										uid,
-										email: sharedWithEmails[i] || uid,
-										role: "Shared with",
-										canRemove: true,
-									}))
-								: [
-										{
-											uid: targetChild.userId,
-											email: targetChild.ownerEmail || "Account owner",
-											role: "Owner",
-											canRemove: false,
-										},
-										...sharedWith
-											.filter((uid) => uid !== user.uid)
-											.map((uid) => ({
-												uid,
-												email: sharedWithEmails[sharedWith.indexOf(uid)] || uid,
-												role: "Also shared with",
-												canRemove: false,
-											})),
-									];
-
-							if (familyRows.length === 0) return null;
-
-							return (
-								<View style={{ marginTop: 20 }}>
-									<Text style={[s.smallLabel, { marginBottom: 10 }]}>Family Group</Text>
-									{familyRows.map((row) => (
-										<View
-											key={row.uid}
-											style={{
-												flexDirection: "row",
-												alignItems: "center",
-												justifyContent: "space-between",
-												padding: 12,
-												backgroundColor: row.role === "Owner" ? C.bgPurple : C.bgGreen,
-												borderRadius: 12,
-												marginBottom: 6,
-											}}>
-											<View
-												style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
-												<Icon
-													name={row.role === "Owner" ? "crown" : "user"}
-													size={16}
-													color={row.role === "Owner" ? C.primaryPurple : C.primaryGreen}
-												/>
-												<View style={{ flex: 1 }}>
-													<Text
-														style={{
-															fontSize: 10,
-															fontWeight: "700",
-															color: C.mutedText,
-															textTransform: "uppercase",
-															letterSpacing: 0.5,
-														}}>
-														{row.role}
-													</Text>
-													<Text
-														style={{
-															fontSize: 13,
-															fontWeight: "700",
-															color:
-																row.role === "Owner" ? C.primaryPurple : C.statGreenText,
-														}}
-														numberOfLines={1}>
-														{row.email}
-													</Text>
-												</View>
-											</View>
-											{row.canRemove && (
-												<TouchableOpacity
-													onPress={() =>
-														onManageSharing(
-															row.uid,
-															selectedChildId || defaultChildId,
-															null,
-															true,
-														)
-													}>
-													<Text style={{ fontSize: 12, color: "#c0392b", fontWeight: "700" }}>
-														Remove
-													</Text>
-												</TouchableOpacity>
-											)}
-										</View>
-									))}
-								</View>
-							);
-						})()}
-					</View>
-				</KeyboardAvoidingView>
-			</Modal>
+				onClose={() => setShowSharing(false)}
+				user={user}
+				ownedChildren={ownedChildren}
+				defaultChildId={defaultChildId}
+				onManageSharing={onManageSharing}
+			/>
 
 			{/* Customer Support */}
 			<Text style={[s.smallLabel, { paddingLeft: 4, marginBottom: 10, marginTop: 10 }]}>Support</Text>
@@ -843,189 +585,11 @@ export function MoreScreen({
 				<Icon name="chevRight" size={16} color={C.mutedText} />
 			</TouchableOpacity>
 
-			{/* Support Modal */}
-			<Modal
+			<SupportModal
 				visible={showSupport}
-				transparent
-				animationType="slide"
-				onRequestClose={() => setShowSupport(false)}>
-				<KeyboardAvoidingView
-					behavior={Platform.OS === "ios" ? "padding" : "height"}
-					style={s.modalOverlay}>
-					<View style={[s.modalSheet, { maxHeight: "90%" }]}>
-						<View
-							style={{
-								flexDirection: "row",
-								justifyContent: "space-between",
-								alignItems: "center",
-								marginBottom: 20,
-							}}>
-							<Text style={s.modalTitle}>Contact Support</Text>
-							<TouchableOpacity
-								onPress={() => {
-									setShowSupport(false);
-									setSupportType("");
-									setSupportMessage("");
-									setSupportSent(false);
-								}}
-								style={{ backgroundColor: C.bgPurple, borderRadius: 10, padding: 8 }}>
-								<Icon name="close" size={16} color={C.mutedText} />
-							</TouchableOpacity>
-						</View>
-
-						{supportSent ? (
-							<View style={{ alignItems: "center", paddingVertical: 30 }}>
-								<View
-									style={{
-										width: 64,
-										height: 64,
-										borderRadius: 32,
-										backgroundColor: C.statGreenBg,
-										alignItems: "center",
-										justifyContent: "center",
-										marginBottom: 16,
-									}}>
-									<Icon name="check" size={28} color={C.statGreenText} />
-								</View>
-								<Text
-									style={{
-										fontWeight: "700",
-										fontSize: 18,
-										color: C.primaryPinkDark,
-										marginBottom: 8,
-									}}>
-									Message Sent!
-								</Text>
-								<Text
-									style={{ fontSize: 14, color: C.mutedText, textAlign: "center", lineHeight: 22 }}>
-									{"We'll get back to you at\n"}
-									{user.email}
-								</Text>
-								<TouchableOpacity
-									onPress={() => {
-										setShowSupport(false);
-										setSupportType("");
-										setSupportMessage("");
-										setSupportSent(false);
-									}}
-									style={[s.btnPrimary, { marginTop: 24 }]}>
-									<Text style={s.btnPrimaryText}>Done</Text>
-								</TouchableOpacity>
-							</View>
-						) : (
-							<ScrollView showsVerticalScrollIndicator={false}>
-								<View style={{ gap: 16, paddingBottom: 20 }}>
-									<View>
-										<Text style={s.label}>What can we help with?</Text>
-										<TouchableOpacity
-											onPress={() => setShowSupportTypePicker(true)}
-											style={[
-												s.input,
-												{
-													flexDirection: "row",
-													justifyContent: "space-between",
-													alignItems: "center",
-													backgroundColor: C.white,
-												},
-											]}>
-											<Text
-												style={{
-													color: supportType ? C.textCharcoal : C.mutedText,
-													fontWeight: "600",
-												}}>
-												{supportType || "Select a category…"}
-											</Text>
-											<Icon name="chevDown" size={14} color={C.mutedText} />
-										</TouchableOpacity>
-									</View>
-									<View>
-										<Text style={s.label}>Your Message</Text>
-										<TextInput
-											value={supportMessage}
-											onChangeText={setSupportMessage}
-											placeholder="Describe your issue or request in detail…"
-											multiline
-											numberOfLines={5}
-											style={[s.input, { height: 120, textAlignVertical: "top", backgroundColor: C.white }]}
-											placeholderTextColor={C.mutedText}
-											autoComplete="off"
-										/>
-									</View>
-									<View style={{ backgroundColor: C.bgPurple, borderRadius: 12, padding: 14 }}>
-										<Text style={[s.smallLabel, { marginBottom: 4 }]}>Reply will be sent to</Text>
-										<Text style={{ fontSize: 14, fontWeight: "700", color: C.primaryPinkDark }}>
-											{user.email}
-										</Text>
-									</View>
-									<TouchableOpacity
-										onPress={async () => {
-											if (!supportType) {
-												Alert.alert(
-													"Select a category",
-													"Please choose what you need help with.",
-												);
-												return;
-											}
-											if (!supportMessage.trim()) {
-												Alert.alert("Add a message", "Please describe your issue or request.");
-												return;
-											}
-											try {
-												const {
-													addDoc,
-													collection: col,
-													serverTimestamp: sts,
-												} = await import("firebase/firestore");
-												const { db: firedb } = await import("../../firebase");
-												await addDoc(col(firedb, "supportRequests"), {
-													userId: user.uid,
-													userEmail: user.email,
-													type: supportType,
-													message: supportMessage.trim(),
-													platform: Platform.OS,
-													createdAt: sts(),
-													status: "open",
-												});
-												setSupportSent(true);
-											} catch (e) {
-												Alert.alert(
-													"Failed to send",
-													"Please try again or email munchsprouts@outlook.com directly.",
-												);
-											}
-										}}
-										style={[
-											s.btnPrimary,
-											(!supportType || !supportMessage.trim()) && { opacity: 0.5 },
-										]}
-										disabled={!supportType || !supportMessage.trim()}
-										activeOpacity={0.8}>
-										<Text style={s.btnPrimaryText}>Send Message</Text>
-									</TouchableOpacity>
-									<Text
-										style={{
-											fontSize: 11,
-											color: C.mutedText,
-											textAlign: "center",
-											lineHeight: 18,
-										}}>
-										Or email us directly at munchsprouts@outlook.com
-									</Text>
-								</View>
-							</ScrollView>
-						)}
-
-						<PickerModal
-							visible={showSupportTypePicker}
-							title="What can we help with?"
-							options={["General Help", "Bug / Problem", "Account Help", "Feature Request"]}
-							value={supportType}
-							onSelect={setSupportType}
-							onClose={() => setShowSupportTypePicker(false)}
-						/>
-					</View>
-				</KeyboardAvoidingView>
-			</Modal>
+				onClose={() => setShowSupport(false)}
+				user={user}
+			/>
 
 			{/* Danger Zone */}
 			<Text style={[s.smallLabel, { paddingLeft: 4, marginBottom: 10, marginTop: 10 }]}>Danger Zone</Text>
@@ -1200,82 +764,11 @@ export function MoreScreen({
 				</View>
 			</Modal>
 
-			{/* Change Password Modal */}
-			<Modal
+			<PasswordChangeModal
 				visible={showChangePassword}
-				transparent
-				animationType="slide"
-				onRequestClose={() => setShowChangePassword(false)}>
-				<KeyboardAvoidingView
-					behavior={Platform.OS === "ios" ? "padding" : "height"}
-					style={s.modalOverlay}>
-					<View style={s.modalSheet}>
-						<View
-							style={{
-								flexDirection: "row",
-								justifyContent: "space-between",
-								alignItems: "center",
-								marginBottom: 22,
-							}}>
-							<Text style={s.modalTitle}>Change Password</Text>
-							<TouchableOpacity
-								onPress={() => setShowChangePassword(false)}
-								style={{ backgroundColor: C.bgPurple, borderRadius: 10, padding: 8 }}>
-								<Icon name="close" size={16} color={C.mutedText} />
-							</TouchableOpacity>
-						</View>
-						<View style={{ gap: 14 }}>
-							<View>
-								<Text style={s.label}>Current Password</Text>
-								<TextInput
-									value={currentPw}
-									onChangeText={setCurrentPw}
-									placeholder="Enter current password"
-									secureTextEntry
-									style={[s.input, { backgroundColor: C.white }]}
-									placeholderTextColor={C.mutedText}
-									autoComplete="off"
-								/>
-							</View>
-							<View>
-								<Text style={s.label}>New Password</Text>
-								<TextInput
-									value={newPw}
-									onChangeText={setNewPw}
-									placeholder="At least 6 characters"
-									secureTextEntry
-									style={[s.input, { backgroundColor: C.white }]}
-									placeholderTextColor={C.mutedText}
-									autoComplete="off"
-								/>
-							</View>
-							<View>
-								<Text style={s.label}>Confirm New Password</Text>
-								<TextInput
-									value={confirmPw}
-									onChangeText={setConfirmPw}
-									placeholder="Repeat new password"
-									secureTextEntry
-									style={[s.input, { backgroundColor: C.white }]}
-									placeholderTextColor={C.mutedText}
-									autoComplete="off"
-								/>
-							</View>
-							<TouchableOpacity
-								onPress={handleChangePassword}
-								disabled={pwLoading}
-								style={[s.btnPrimary, pwLoading && { opacity: 0.6 }]}
-								activeOpacity={0.8}>
-								{pwLoading ? (
-									<ActivityIndicator color={C.white} />
-								) : (
-									<Text style={s.btnPrimaryText}>Update Password</Text>
-								)}
-							</TouchableOpacity>
-						</View>
-					</View>
-				</KeyboardAvoidingView>
-			</Modal>
+				onClose={() => setShowChangePassword(false)}
+				user={user}
+			/>
 		</ScrollView>
 	);
 }

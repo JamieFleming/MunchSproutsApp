@@ -13,7 +13,8 @@ import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon, CategoryIcon, ReactionFace } from "../components/Icon";
-import { groupByFood, calcAgeWeeks, calcAgeMonths, formatDate, normalize, reactionCfg, formatTime, toMl } from "../helpers";
+import { groupByFood, calcAgeWeeks, calcAgeMonths, formatDate, normalize, reactionCfg, formatTime, toMl, computeAllergenStatus } from "../helpers";
+import { ALLERGENS } from "../constants";
 
 async function exportFoodLogAsPDF(foodLog, childName) {
 	if (!foodLog.length) {
@@ -133,6 +134,13 @@ export function DashboardScreen({
 	).length;
 	const weeks = child ? calcAgeWeeks(child.dob) : null;
 	const months = child ? calcAgeMonths(child.dob) : null;
+
+	// Allergen summary
+	const allergenStatus = computeAllergenStatus(foodLog, ALLERGENS);
+	const allergenIntroduced = allergenStatus.filter((a) => a.status !== "Not Tried").length;
+	const allergenTotal = ALLERGENS.length;
+	const allergenPct = allergenTotal > 0 ? Math.round((allergenIntroduced / allergenTotal) * 100) : 0;
+	const nextAllergen = allergenStatus.find((a) => a.status === "Not Tried") || null;
 	const recent = [...foodLog].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
 
 	// Pick a featured recipe of the day (rotates daily)
@@ -254,6 +262,58 @@ export function DashboardScreen({
 					<Text style={[s.statLabel, { color: "#c49a10" }]}>Faves</Text>
 				</TouchableOpacity>
 			</View>
+
+			{/* ── Allergen Summary Card ── */}
+			<TouchableOpacity onPress={() => onNavigate("allergens")} activeOpacity={0.88} style={s.card}>
+				<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+					<View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+						<View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#ece8f9", alignItems: "center", justifyContent: "center" }}>
+							<Icon name="shield" size={20} color="#7b5ea7" />
+						</View>
+						<View>
+							<Text style={s.sectionTitle}>Allergen Tracker</Text>
+							<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>
+								{allergenTotal - allergenIntroduced} still to introduce
+							</Text>
+						</View>
+					</View>
+					<View style={{ alignItems: "flex-end" }}>
+						<Text style={{ fontSize: 22, fontWeight: "800", color: C.primaryPurple }}>
+							{allergenIntroduced}/{allergenTotal}
+						</Text>
+						<Text style={{ fontSize: 11, color: C.mutedText }}>introduced</Text>
+					</View>
+				</View>
+
+				{/* Progress bar */}
+				<View style={{ backgroundColor: C.borderLight, borderRadius: 999, height: 8, overflow: "hidden", marginBottom: 12 }}>
+					<View style={{ backgroundColor: "#3db87a", height: "100%", width: `${allergenPct}%`, borderRadius: 999 }} />
+				</View>
+
+				{/* Next allergen suggestion */}
+				{nextAllergen ? (
+					<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+						<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+							<View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: nextAllergen.bg, alignItems: "center", justifyContent: "center" }}>
+								<Text style={{ fontSize: 17 }}>{nextAllergen.emoji}</Text>
+							</View>
+							<View>
+								<Text style={{ fontSize: 10, color: C.mutedText, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.3 }}>Try next</Text>
+								<Text style={{ fontSize: 13, fontWeight: "700", color: C.primaryPinkDark }}>{nextAllergen.value}</Text>
+							</View>
+						</View>
+						<View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+							<Text style={{ fontSize: 12, fontWeight: "700", color: C.primaryPurple }}>View Tracker</Text>
+							<Icon name="chevRight" size={12} color={C.primaryPurple} />
+						</View>
+					</View>
+				) : (
+					<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+						<Text style={{ fontSize: 14 }}>🎉</Text>
+						<Text style={{ fontSize: 13, fontWeight: "700", color: "#2d7a55" }}>All allergens introduced!</Text>
+					</View>
+				)}
+			</TouchableOpacity>
 
 			{/* ── Milk Tracking Card ── */}
 			{showMilkOnDashboard && <TouchableOpacity onPress={() => onNavigate("bottle")} activeOpacity={0.92} style={s.card}>

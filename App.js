@@ -50,6 +50,7 @@ import { DashboardScreen } from "./src/screens/DashboardScreen";
 import { LogScreen } from "./src/screens/LogScreen";
 import { RecipesScreen } from "./src/screens/RecipesScreen";
 import { MoreScreen } from "./src/screens/MoreScreen";
+import { AllergenScreen } from "./src/screens/AllergenScreen";
 import { ChildrenScreen } from "./src/screens/ChildrenScreen";
 import { BottleScreen } from "./src/screens/BottleScreen";
 
@@ -88,11 +89,13 @@ function MainApp({ user, isPro: isPropPro }) {
 	// Load dashboard preferences
 	useEffect(() => {
 		if (!user) return;
+		let isMounted = true;
 		AsyncStorage.getItem(`showMilkDash_${user.uid}`)
 			.then((val) => {
-				if (val === "false") setShowMilkOnDashboard(false);
+				if (isMounted && val === "false") setShowMilkOnDashboard(false);
 			})
 			.catch(() => {});
+		return () => { isMounted = false; };
 	}, [user]);
 
 	const [page, setPage] = useState("dashboard");
@@ -112,6 +115,7 @@ function MainApp({ user, isPro: isPropPro }) {
 	const [refreshing, setRefreshing] = useState(false);
 	const [userMap, setUserMap] = useState({});
 	const [showAddMenu, setShowAddMenu] = useState(false);
+	const [showMoreModal, setShowMoreModal] = useState(false);
 	const [recipes, setRecipes] = useState([]);
 	const [favouriteRecipeIds, setFavouriteRecipeIds] = useState([]);
 	const [bottleLog, setBottleLog] = useState([]);
@@ -138,6 +142,7 @@ function MainApp({ user, isPro: isPropPro }) {
 	// ── Initial data load ──
 	useEffect(() => {
 		if (!user) return;
+		let isMounted = true;
 		Promise.all([
 			fetchFoodLog(user.uid),
 			fetchChildren(user.uid),
@@ -147,6 +152,7 @@ function MainApp({ user, isPro: isPropPro }) {
 			AsyncStorage.getItem(`defaultChildId_${user.uid}`).catch(() => null),
 		])
 			.then(([log, kids, recs, favIds, bottles, savedId]) => {
+				if (!isMounted) return;
 				setFoodLog(log);
 				setChildren(kids);
 				setRecipes(applyWeeklyFeaturedRotation(recs));
@@ -161,8 +167,9 @@ function MainApp({ user, isPro: isPropPro }) {
 			})
 			.catch((err) => {
 				console.error("Error loading data:", err);
-				setDataLoaded(true);
+				if (isMounted) setDataLoaded(true);
 			});
+		return () => { isMounted = false; };
 	}, [user]);
 
 	// ── Derived state ──
@@ -218,6 +225,7 @@ function MainApp({ user, isPro: isPropPro }) {
 				group.attempts?.[0]?.categories ||
 				(group.category ? [group.category] : []),
 			feedType: group.attempts?.[0]?.feedType || "",
+			allergens: group.attempts?.[0]?.allergens || [],
 		});
 		setPage("add");
 	};
@@ -658,7 +666,7 @@ function MainApp({ user, isPro: isPropPro }) {
 		{ id: "log", icon: "list", label: "Foods" },
 		{ id: "bottle", icon: "bottle", label: "Bottles" },
 		{ id: "recipes", icon: "chef", label: "Recipes" },
-		{ id: "more", icon: "more", label: "More" },
+		{ id: "allergens", icon: "shield", label: "Allergens" },
 	];
 	const titles = {
 		dashboard: "Dashboard",
@@ -666,7 +674,7 @@ function MainApp({ user, isPro: isPropPro }) {
 		add: "Log Food",
 		bottle: "Bottle Log",
 		recipes: "Recipes",
-		more: "More",
+		allergens: "Allergens",
 		children: "Children",
 	};
 
@@ -693,42 +701,57 @@ function MainApp({ user, isPro: isPropPro }) {
 					</View>
 				</View>
 
-				<TouchableOpacity
-					onPress={() => setShowChildPicker(true)}
-					style={{
-						backgroundColor: C.bgPurple,
-						borderRadius: 999,
-						paddingHorizontal: 14,
-						paddingVertical: 7,
-						flexDirection: "row",
-						alignItems: "center",
-						gap: 6,
-					}}>
-					<Svg width={16} height={16} viewBox="0 0 32 32">
-						<Circle
-							cx="16"
-							cy="13"
-							r="7"
-							fill={C.primaryPurple}
-							opacity="0.8"
-						/>
-						<Circle cx="11" cy="12" r="1.5" fill={C.white} />
-						<Circle cx="21" cy="12" r="1.5" fill={C.white} />
-						<Path
-							d="M11 16.5 Q16 19.5 21 16.5"
-							stroke={C.white}
-							strokeWidth="1.5"
-							strokeLinecap="round"
-							fill="none"
-						/>
-					</Svg>
-					<Text
-						style={{ fontSize: 13, fontWeight: "700", color: C.primaryPurple }}
-						numberOfLines={1}>
-						{activeChild ? activeChild.name : "Add Baby"}
-					</Text>
-					<Icon name="chevDown" size={12} color={C.primaryPurple} />
-				</TouchableOpacity>
+				<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+					<TouchableOpacity
+						onPress={() => setShowChildPicker(true)}
+						style={{
+							backgroundColor: C.bgPurple,
+							borderRadius: 999,
+							paddingHorizontal: 14,
+							paddingVertical: 7,
+							flexDirection: "row",
+							alignItems: "center",
+							gap: 6,
+						}}>
+						<Svg width={16} height={16} viewBox="0 0 32 32">
+							<Circle
+								cx="16"
+								cy="13"
+								r="7"
+								fill={C.primaryPurple}
+								opacity="0.8"
+							/>
+							<Circle cx="11" cy="12" r="1.5" fill={C.white} />
+							<Circle cx="21" cy="12" r="1.5" fill={C.white} />
+							<Path
+								d="M11 16.5 Q16 19.5 21 16.5"
+								stroke={C.white}
+								strokeWidth="1.5"
+								strokeLinecap="round"
+								fill="none"
+							/>
+						</Svg>
+						<Text
+							style={{ fontSize: 13, fontWeight: "700", color: C.primaryPurple }}
+							numberOfLines={1}>
+							{activeChild ? activeChild.name : "Add Baby"}
+						</Text>
+						<Icon name="chevDown" size={12} color={C.primaryPurple} />
+					</TouchableOpacity>
+					<TouchableOpacity
+						onPress={() => setShowMoreModal(true)}
+						style={{
+							width: 36,
+							height: 36,
+							borderRadius: 18,
+							backgroundColor: C.bgPurple,
+							alignItems: "center",
+							justifyContent: "center",
+						}}
+						activeOpacity={0.75}>
+						<Icon name="more" size={20} color={C.primaryPurple} />
+					</TouchableOpacity>
+				</View>
 			</View>
 
 			{/* ── Child picker modal ── */}
@@ -980,20 +1003,10 @@ function MainApp({ user, isPro: isPropPro }) {
 						onDelete={deleteBottle}
 					/>
 				)}
-				{page === "more" && (
-					<MoreScreen
-						user={user}
-						isPro={isPro}
-						ownedChildren={children}
-						defaultChildId={activeChild?.id || null}
-						showMilkOnDashboard={showMilkOnDashboard}
-						onToggleMilkOnDashboard={toggleMilkOnDashboard}
-						onLogout={handleLogout}
-						onDeleteAccount={handleDeleteAccount}
-						onUpgradePro={handleUpgradePro}
-						onRestorePurchases={handleRestorePurchases}
-						onManageSharing={handleManageSharing}
+				{page === "allergens" && (
+					<AllergenScreen
 						foodLog={childLog}
+						onNavigate={setPage}
 					/>
 				)}
 				{page === "children" && (
@@ -1015,10 +1028,7 @@ function MainApp({ user, isPro: isPropPro }) {
 					{ paddingBottom: insets.bottom > 0 ? insets.bottom : 10 },
 				]}>
 				{nav.map((n) => {
-					const active =
-						page === n.id ||
-						(n.id === "more" && page === "settings") ||
-						(n.id === "more" && page === "children");
+					const active = page === n.id;
 					return (
 						<TouchableOpacity
 							key={n.id}
@@ -1204,6 +1214,39 @@ function MainApp({ user, isPro: isPropPro }) {
 				</TouchableOpacity>
 			</Modal>
 
+			{/* ── More / Profile Modal ── */}
+			<Modal
+				visible={showMoreModal}
+				animationType="slide"
+				presentationStyle="pageSheet"
+				onRequestClose={() => setShowMoreModal(false)}>
+				<SafeAreaView style={{ flex: 1, backgroundColor: C.screen }} edges={["top"]}>
+					<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
+						<Text style={{ fontWeight: "800", fontSize: 18, color: C.primaryPinkDark }}>Profile & Settings</Text>
+						<TouchableOpacity
+							onPress={() => setShowMoreModal(false)}
+							style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center" }}
+							activeOpacity={0.75}>
+							<Icon name="close" size={16} color={C.primaryPurple} />
+						</TouchableOpacity>
+					</View>
+					<MoreScreen
+						user={user}
+						isPro={isPro}
+						ownedChildren={children}
+						defaultChildId={activeChild?.id || null}
+						showMilkOnDashboard={showMilkOnDashboard}
+						onToggleMilkOnDashboard={toggleMilkOnDashboard}
+						onLogout={() => { setShowMoreModal(false); handleLogout(); }}
+						onDeleteAccount={handleDeleteAccount}
+						onUpgradePro={handleUpgradePro}
+						onRestorePurchases={handleRestorePurchases}
+						onManageSharing={handleManageSharing}
+						foodLog={childLog}
+					/>
+				</SafeAreaView>
+			</Modal>
+
 			<EditModal
 				visible={!!editEntry}
 				entry={editEntry}
@@ -1267,13 +1310,15 @@ export default function App() {
 	const C = THEMES[theme] || THEMES.default;
 
 	useEffect(() => {
+		let isMounted = true;
 		import("@react-native-async-storage/async-storage").then(
 			({ default: AsyncStorage }) => {
 				AsyncStorage.getItem("appTheme").then((saved) => {
-					if (saved && THEMES[saved]) setThemeState(saved);
+					if (isMounted && saved && THEMES[saved]) setThemeState(saved);
 				});
 			},
 		);
+		return () => { isMounted = false; };
 	}, []);
 
 	const setTheme = (t) => {
