@@ -13,7 +13,7 @@ import {
 	Platform,
 } from "react-native";
 import { useTheme, useStyles } from "../ThemeContext";
-import { Icon, CategoryIcon } from "../components/Icon";
+import { Icon, CategoryIcon, AllergenIcon } from "../components/Icon";
 import { ZoomableImage } from "../components/ZoomableImage";
 import {
 	ReactionBadge,
@@ -126,6 +126,7 @@ export function LogScreen({
 	bottleLog = [],
 	initialFilter,
 	initialOpenKey,
+	initialAllergenFilter,
 	userMap = {},
 	currentUserId,
 	onEdit,
@@ -141,6 +142,7 @@ export function LogScreen({
 	const [search, setSearch] = useState("");
 	const [sortBy, setSortBy] = useState("date-desc");
 	const [reactionFilter, setReactionFilter] = useState(initialFilter || "");
+	const [allergenFilter, setAllergenFilter] = useState(initialAllergenFilter || "");
 	const [lightboxPhoto, setLightboxPhoto] = useState(null); // { uri, name }
 	const [expanded, setExpanded] = useState(
 		initialOpenKey ? new Set([initialOpenKey]) : new Set(),
@@ -149,6 +151,10 @@ export function LogScreen({
 	useEffect(() => {
 		if (initialOpenKey) setExpanded(new Set([initialOpenKey]));
 	}, [initialOpenKey]);
+
+	useEffect(() => {
+		setAllergenFilter(initialAllergenFilter || "");
+	}, [initialAllergenFilter]);
 
 	const groups = groupByFood(foodLog);
 	let keys = Object.keys(groups);
@@ -163,6 +169,13 @@ export function LogScreen({
 	} else if (reactionFilter) {
 		keys = keys.filter((k) =>
 			groups[k].attempts.some((a) => a.reaction === reactionFilter),
+		);
+	}
+	if (allergenFilter) {
+		keys = keys.filter((k) =>
+			groups[k].attempts.some(
+				(a) => Array.isArray(a.allergens) && a.allergens.includes(allergenFilter),
+			),
 		);
 	}
 	if (sortBy === "date-desc")
@@ -257,6 +270,24 @@ export function LogScreen({
 					</TouchableOpacity>
 				))}
 			</ScrollView>
+
+			{/* Active allergen filter badge */}
+			{allergenFilter ? (() => {
+				const cfg = ALLERGENS.find((a) => a.value === allergenFilter);
+				return (
+					<View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+						<View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: cfg?.bg || "#fff0cc", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1.5, borderColor: (cfg?.color || "#d4860a") + "55", flex: 1 }}>
+							<AllergenIcon allergen={allergenFilter} size={20} />
+							<Text style={{ fontSize: 12, fontWeight: "700", color: cfg?.color || "#a85a1a", flex: 1 }}>
+								Filtered: {allergenFilter}
+							</Text>
+							<TouchableOpacity onPress={() => setAllergenFilter("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+								<Icon name="close" size={14} color={cfg?.color || "#a85a1a"} />
+							</TouchableOpacity>
+						</View>
+					</View>
+				);
+			})() : null}
 
 			<ScrollView
 				horizontal
@@ -673,15 +704,15 @@ export function LogScreen({
 																	style={{
 																		flexDirection: "row",
 																		alignItems: "center",
-																		gap: 3,
+																		gap: 4,
 																		backgroundColor: cfg.bg,
 																		borderRadius: 999,
-																		paddingHorizontal: 8,
-																		paddingVertical: 3,
+																		paddingHorizontal: 6,
+																		paddingVertical: 2,
 																		borderWidth: 1,
 																		borderColor: cfg.color + "55",
 																	}}>
-																	<Text style={{ fontSize: 11 }}>{cfg.emoji}</Text>
+																	<AllergenIcon allergen={allergen} size={16} />
 																	<Text
 																		style={{
 																			fontSize: 10,

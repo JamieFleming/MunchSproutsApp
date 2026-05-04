@@ -49,13 +49,23 @@ export function applyWeeklyFeaturedRotation(recipes) {
  *   count: number (entries containing this allergen)
  */
 export function computeAllergenStatus(foodLog, allergenList) {
+	const todayMs = new Date().setHours(0, 0, 0, 0);
+
 	return allergenList.map((allergen) => {
 		const entries = foodLog.filter(
 			(e) => Array.isArray(e.allergens) && e.allergens.includes(allergen.value),
 		);
 
 		if (entries.length === 0) {
-			return { ...allergen, status: "Not Tried", firstDate: null, lastDate: null, count: 0 };
+			return {
+				...allergen,
+				status: "Not Tried",
+				firstDate: null,
+				lastDate: null,
+				count: 0,
+				daysSinceFirst: null,
+				needsCheckIn: false,
+			};
 		}
 
 		const hasReaction = entries.some((e) => e.reaction === "Allergic");
@@ -76,7 +86,17 @@ export function computeAllergenStatus(foodLog, allergenList) {
 		else if (hasSafe) status = "Safe";
 		else status = "In Progress";
 
-		return { ...allergen, status, firstDate, lastDate, count: entries.length };
+		// How many days since first introduction
+		let daysSinceFirst = null;
+		let needsCheckIn = false;
+		if (firstDate) {
+			const firstMs = new Date(firstDate).setHours(0, 0, 0, 0);
+			daysSinceFirst = Math.floor((todayMs - firstMs) / (1000 * 60 * 60 * 24));
+			// Remind at 2–7 days after first intro if still In Progress
+			needsCheckIn = status === "In Progress" && daysSinceFirst >= 2 && daysSinceFirst <= 7;
+		}
+
+		return { ...allergen, status, firstDate, lastDate, count: entries.length, daysSinceFirst, needsCheckIn };
 	});
 }
 

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, Image } from "react-native";
 import { useTheme, useStyles } from "../ThemeContext";
-import { Icon, CategoryIcon, ReactionFace } from "./Icon";
+import { Icon, CategoryIcon, ReactionFace, AllergenIcon } from "./Icon";
 import { PrimaryBtn } from "./SharedComponents";
 import { PickerModal } from "./PickerModal";
 import { DateField } from "./DatePickerModal";
@@ -317,7 +317,7 @@ export function FoodForm({
 										gap: 2,
 										paddingHorizontal: 4,
 									}}>
-									<Text style={{ fontSize: 18, lineHeight: 22 }}>{al.emoji}</Text>
+									<AllergenIcon allergen={al.value} size={26} />
 									<Text
 										style={{
 											fontSize: 10,

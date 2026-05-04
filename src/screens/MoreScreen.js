@@ -30,6 +30,8 @@ export function MoreScreen({
 	defaultChildId,
 	showMilkOnDashboard = true,
 	onToggleMilkOnDashboard,
+	showAllergenOnDashboard = true,
+	onToggleAllergenOnDashboard,
 	onLogout,
 	onDeleteAccount,
 	onUpgradePro,
@@ -416,6 +418,57 @@ export function MoreScreen({
 								borderRadius: 11,
 								backgroundColor: "#ffffff",
 								alignSelf: showMilkOnDashboard ? "flex-end" : "flex-start",
+								shadowColor: "#000",
+								shadowOpacity: 0.15,
+								shadowRadius: 2,
+								elevation: 2,
+							}}
+						/>
+					</TouchableOpacity>
+				</TouchableOpacity>
+
+				{/* Allergen tracker toggle */}
+				<TouchableOpacity
+					onPress={onToggleAllergenOnDashboard}
+					style={{ flexDirection: "row", alignItems: "center", gap: 14, marginTop: 16 }}
+					activeOpacity={0.8}>
+					<View
+						style={{
+							width: 42,
+							height: 42,
+							borderRadius: 13,
+							backgroundColor: "#ece8f9",
+							alignItems: "center",
+							justifyContent: "center",
+						}}>
+						<Icon name="shield" size={20} color="#7b5ea7" />
+					</View>
+					<View style={{ flex: 1 }}>
+						<Text style={{ fontWeight: "700", fontSize: 14, color: C.textCharcoal }}>
+							Show Allergen Tracker
+						</Text>
+						<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>
+							Display allergen progress and reminders on the home screen
+						</Text>
+					</View>
+					<TouchableOpacity
+						onPress={onToggleAllergenOnDashboard}
+						activeOpacity={0.85}
+						style={{
+							width: 48,
+							height: 28,
+							borderRadius: 14,
+							backgroundColor: showAllergenOnDashboard ? C.primaryPurple : C.borderLight,
+							justifyContent: "center",
+							paddingHorizontal: 3,
+						}}>
+						<View
+							style={{
+								width: 22,
+								height: 22,
+								borderRadius: 11,
+								backgroundColor: "#ffffff",
+								alignSelf: showAllergenOnDashboard ? "flex-end" : "flex-start",
 								shadowColor: "#000",
 								shadowOpacity: 0.15,
 								shadowRadius: 2,

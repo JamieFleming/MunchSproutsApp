@@ -10,7 +10,7 @@ import Svg, {
 	G,
 } from "react-native-svg";
 import { useTheme } from "../ThemeContext";
-import { CATEGORIES, REACTIONS } from "../constants";
+import { CATEGORIES, REACTIONS, ALLERGENS } from "../constants";
 import { reactionCfg } from "../helpers";
 
 export function Icon({ name, size = 18, color }) {
@@ -303,11 +303,24 @@ export function Icon({ name, size = 18, color }) {
 		bottle: (
 			<Svg width={size} height={size} viewBox="0 0 24 24">
 				{/* Nipple tip */}
-				<Rect {...p} x="10.5" y="1" width="3" height="2" rx="1" fill={color} stroke={color} strokeWidth={1} />
+				<Rect
+					{...p}
+					x="10.5"
+					y="1"
+					width="3"
+					height="2"
+					rx="1"
+					fill={color}
+					stroke={color}
+					strokeWidth={1}
+				/>
 				{/* Collar */}
 				<Path {...p} d="M9 3h6v3H9z" />
 				{/* Body */}
-				<Path {...p} d="M8 6h8l1.5 4v9a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-9L8 6z" />
+				<Path
+					{...p}
+					d="M8 6h8l1.5 4v9a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-9L8 6z"
+				/>
 				{/* Measurement lines */}
 				<Line {...p} strokeWidth={1.2} x1="9.5" y1="14" x2="12.5" y2="14" />
 				<Line {...p} strokeWidth={1.2} x1="9.5" y1="17" x2="12.5" y2="17" />
@@ -347,54 +360,180 @@ export function CategoryIcon({ category, size = 32 }) {
 	const icons = {
 		Vegetables: (
 			<Svg width={s2} height={s2} viewBox="0 0 24 24">
-				<Path stroke={cfg.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" d="M2 22c1-5 4-9 8-10 1 3 3 5 5 6-2 1-4 3-5 6" />
-				<Path stroke={cfg.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" d="M22 2s-8 2-10 10C8 16 6 19 2 22c3-1 7-3 10-8 2 1 4 1 6-1-1-3-1-7 4-11z" />
+				<Path
+					stroke={cfg.color}
+					strokeWidth={2}
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					fill="none"
+					d="M2 22c1-5 4-9 8-10 1 3 3 5 5 6-2 1-4 3-5 6"
+				/>
+				<Path
+					stroke={cfg.color}
+					strokeWidth={2}
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					fill="none"
+					d="M22 2s-8 2-10 10C8 16 6 19 2 22c3-1 7-3 10-8 2 1 4 1 6-1-1-3-1-7 4-11z"
+				/>
 			</Svg>
 		),
 		Fruits: (
 			<Svg width={s2} height={s2} viewBox="0 0 24 24">
-				<Path stroke={cfg.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" d="M12 20.94c1.5 0 2.75-.67 4-2 1.5-1.67 2-3.5 2-5.44C18 9 15.87 7 13.5 7c-.87 0-1.5.2-2 .5-.5-.3-1.13-.5-2-.5C7.13 7 5 9 5 13.5c0 1.94.5 3.77 2 5.44 1.25 1.33 2.5 2 4 2z" />
-				<Path stroke={cfg.color} strokeWidth={2} strokeLinecap="round" fill="none" d="M12 7V3" />
+				<Path
+					stroke={cfg.color}
+					strokeWidth={2}
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					fill="none"
+					d="M12 20.94c1.5 0 2.75-.67 4-2 1.5-1.67 2-3.5 2-5.44C18 9 15.87 7 13.5 7c-.87 0-1.5.2-2 .5-.5-.3-1.13-.5-2-.5C7.13 7 5 9 5 13.5c0 1.94.5 3.77 2 5.44 1.25 1.33 2.5 2 4 2z"
+				/>
+				<Path
+					stroke={cfg.color}
+					strokeWidth={2}
+					strokeLinecap="round"
+					fill="none"
+					d="M12 7V3"
+				/>
 			</Svg>
 		),
 		Grains: (
 			<Svg width={s2} height={s2} viewBox="0 0 24 24">
-				<Path stroke={cfg.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" d="M2 22 16 8" />
-				<Path stroke={cfg.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" d="M3.47 12.53 5 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L5 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94z" />
-				<Path stroke={cfg.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" d="M7.47 8.53 9 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L9 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94z" />
+				<Path
+					stroke={cfg.color}
+					strokeWidth={2}
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					fill="none"
+					d="M2 22 16 8"
+				/>
+				<Path
+					stroke={cfg.color}
+					strokeWidth={2}
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					fill="none"
+					d="M3.47 12.53 5 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L5 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94z"
+				/>
+				<Path
+					stroke={cfg.color}
+					strokeWidth={2}
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					fill="none"
+					d="M7.47 8.53 9 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L9 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94z"
+				/>
 			</Svg>
 		),
 		Proteins: (
 			<Svg width={s2} height={s2} viewBox="0 0 24 24">
-				<Path stroke={cfg.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
-				<Path stroke={cfg.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" d="M7 2v20" />
-				<Path stroke={cfg.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7" />
+				<Path
+					stroke={cfg.color}
+					strokeWidth={2}
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					fill="none"
+					d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"
+				/>
+				<Path
+					stroke={cfg.color}
+					strokeWidth={2}
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					fill="none"
+					d="M7 2v20"
+				/>
+				<Path
+					stroke={cfg.color}
+					strokeWidth={2}
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					fill="none"
+					d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"
+				/>
 			</Svg>
 		),
 		Dairy: (
 			<Svg width={s2} height={s2} viewBox="0 0 24 24">
-				<Path stroke={cfg.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" d="M8 2h8" />
-				<Path stroke={cfg.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" d="M9 2v2.789a4 4 0 0 1-.672 2.219l-.656.984A4 4 0 0 0 7 10.212V20a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-9.789a4 4 0 0 0-.672-2.219l-.656-.984A4 4 0 0 1 15 4.788V2" />
+				<Path
+					stroke={cfg.color}
+					strokeWidth={2}
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					fill="none"
+					d="M8 2h8"
+				/>
+				<Path
+					stroke={cfg.color}
+					strokeWidth={2}
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					fill="none"
+					d="M9 2v2.789a4 4 0 0 1-.672 2.219l-.656.984A4 4 0 0 0 7 10.212V20a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-9.789a4 4 0 0 0-.672-2.219l-.656-.984A4 4 0 0 1 15 4.788V2"
+				/>
 			</Svg>
 		),
 		Legumes: (
 			<Svg width={s2} height={s2} viewBox="0 0 24 24">
-				<Path stroke={cfg.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" d="M10.5 22C6.5 22 2 17.52 2 13c0-3 1.9-5.5 5-6.5 1.3-.4 3.1.1 4.3 1.3C13.4 9.9 16 11 18 11c2 0 4-1 4-3-2 0-4-1-4-3 0-1.1.9-2 2-2" />
-				<Path stroke={cfg.color} strokeWidth={2} strokeLinecap="round" fill="none" d="M10.5 22c4 0 8-4 8-9" />
+				<Path
+					stroke={cfg.color}
+					strokeWidth={2}
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					fill="none"
+					d="M10.5 22C6.5 22 2 17.52 2 13c0-3 1.9-5.5 5-6.5 1.3-.4 3.1.1 4.3 1.3C13.4 9.9 16 11 18 11c2 0 4-1 4-3-2 0-4-1-4-3 0-1.1.9-2 2-2"
+				/>
+				<Path
+					stroke={cfg.color}
+					strokeWidth={2}
+					strokeLinecap="round"
+					fill="none"
+					d="M10.5 22c4 0 8-4 8-9"
+				/>
 			</Svg>
 		),
 		Liquids: (
 			<Svg width={s2} height={s2} viewBox="0 0 24 24">
-				<Path stroke={cfg.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill={cfg.color} fillOpacity={0.3} d="M12 2C6 9 4 13 4 16a8 8 0 0 0 16 0c0-3-2-7-8-14z" />
+				<Path
+					stroke={cfg.color}
+					strokeWidth={2}
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					fill={cfg.color}
+					fillOpacity={0.3}
+					d="M12 2C6 9 4 13 4 16a8 8 0 0 0 16 0c0-3-2-7-8-14z"
+				/>
 			</Svg>
 		),
 		Other: (
 			<Svg width={s2} height={s2} viewBox="0 0 24 24">
 				{/* Fork */}
-				<Line x1="5" y1="2" x2="5" y2="22" stroke={cfg.color} strokeWidth={2} strokeLinecap="round" />
-				<Path stroke={cfg.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" d="M3 2v6a2 2 0 0 0 4 0V2" />
+				<Line
+					x1="5"
+					y1="2"
+					x2="5"
+					y2="22"
+					stroke={cfg.color}
+					strokeWidth={2}
+					strokeLinecap="round"
+				/>
+				<Path
+					stroke={cfg.color}
+					strokeWidth={2}
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					fill="none"
+					d="M3 2v6a2 2 0 0 0 4 0V2"
+				/>
 				{/* Knife */}
-				<Path stroke={cfg.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" d="M19 2v7a2 2 0 0 1-2 2v11" />
+				<Path
+					stroke={cfg.color}
+					strokeWidth={2}
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					fill="none"
+					d="M19 2v7a2 2 0 0 1-2 2v11"
+				/>
 			</Svg>
 		),
 	};
@@ -403,6 +542,189 @@ export function CategoryIcon({ category, size = 32 }) {
 			<Circle cx={size / 2} cy={size / 2} r={size / 2} fill={cfg.bg} />
 			<G x={(size - s2) / 2} y={(size - s2) / 2}>
 				{icons[category] || icons.Other}
+			</G>
+		</Svg>
+	);
+}
+
+export function AllergenIcon({ allergen, size = 32 }) {
+	const cfg = ALLERGENS.find((a) => a.value === allergen);
+	if (!cfg) return null;
+	const s2 = size * 0.55;
+	const p = {
+		stroke: cfg.color,
+		strokeWidth: 2,
+		strokeLinecap: "round",
+		strokeLinejoin: "round",
+		fill: "none",
+	};
+	const icons = {
+		// Wheat stalk with alternating grain pods
+		Gluten: (
+			<Svg width={s2} height={s2} viewBox="0 0 24 24">
+				<Path {...p} d="M12 22V3" />
+				<Path {...p} d="M12 11Q8 6 7 6V13Q7 17 12 18" />
+				<Path {...p} d="M12 11Q16 6 17 6V13Q17 17 12 18" />
+				<Path {...p} strokeWidth={1.5} d="M7 5V13" />
+				<Path {...p} strokeWidth={1.5} d="M17 5V13" />
+			</Svg>
+		),
+		// Milk bottle
+		Dairy: (
+			<Svg width={s2} height={s2} viewBox="0 0 24 24">
+				<Path {...p} d="M8 2h8" />
+				<Path
+					{...p}
+					d="M9 2v2.8a4 4 0 0 1-.67 2.2L7 10.2V20a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-9.8l-1.33-3A4 4 0 0 1 15 4.8V2"
+				/>
+				<Line {...p} strokeWidth={1.5} x1="7" y1="14" x2="17" y2="14" />
+			</Svg>
+		),
+		// Oval egg
+		Eggs: (
+			<Svg width={s2} height={s2} viewBox="0 0 24 24">
+				<Path
+					{...p}
+					d="M12 3C8.5 3 5 8 5 13C5 18 8 21 12 21C16 21 19 18 19 13C19 8 15.5 3 12 3Z"
+				/>
+			</Svg>
+		),
+		// Two lobes with pinch texture
+		Peanuts: (
+			<Svg width={s2} height={s2} viewBox="0 0 24 24">
+				<Path
+					{...p}
+					d="M16.5 2.5Q20.5 3.5 21 7.5Q21.5 11 18.5 13.5Q16 15.5 15 18Q13.5 21.5 9.5 21.5Q5.5 21.5 3.8 18.5Q2 15.3 4.2 12.5Q5.5 10.8 7.5 10Q9.5 9.2 10.5 7Q12 3.5 16.5 2.5Z"
+				/>
+
+				<Path {...p} strokeWidth={1.5} d="M16.5 5Q15 6.5 13.8 8.5" />
+				<Path {...p} strokeWidth={1.5} d="M18.5 8Q17 10 14.5 11.5" />
+				<Path {...p} strokeWidth={1.5} d="M14 14Q12 15.5 10 17" />
+				<Path {...p} strokeWidth={1.5} d="M9.5 11.5Q7.5 12.5 6 14.5" />
+				<Path {...p} strokeWidth={1.5} d="M8 18.5Q10.5 19 12.5 17.5" />
+			</Svg>
+		),
+		// Acorn: round body, cap dome, brim line, stem
+		"Tree Nuts": (
+			<Svg width={s2} height={s2} viewBox="0 0 24 24">
+				<Circle {...p} cx="12" cy="16" r="6" />
+				<Path {...p} d="M6 13Q6 9.5 12 9.5Q18 9.5 18 13" />
+				<Line {...p} x1="5" y1="13" x2="19" y2="13" />
+				<Path {...p} d="M12 9.5Q12.5 7 15 5" />
+			</Svg>
+		),
+		// Fish with tail and eye
+		Fish: (
+			<Svg width={s2} height={s2} viewBox="0 0 24 24">
+				<Path {...p} d="M3 12Q8 6 15 9Q19 10 19 12Q19 14 15 15Q8 18 3 12Z" />
+				<Path {...p} d="M19 12L23 8" />
+				<Path {...p} d="M19 12L23 16" />
+				<Circle cx="9" cy="11" r="1.2" fill={cfg.color} stroke="none" />
+			</Svg>
+		),
+		// Curved shrimp body with antennae and tail fan
+		Shellfish: (
+			<Svg width={s2} height={s2} viewBox="0 0 24 24">
+				<Path
+					{...p}
+					d="M17.5 3Q21 5.5 21 9.5Q21 13.5 18 16.5Q15 19.5 10.5 19.5Q6.5 19.5 4.5 17Q2.8 14.8 4.2 12.4Q5.5 10.2 8 10.2Q10.5 10.2 12 12Q13.5 13.8 12.2 16"
+				/>
+
+				<Path {...p} strokeWidth={1.5} d="M17.5 3L15 1.8" />
+				<Path {...p} strokeWidth={1.5} d="M17.5 3L20 1.8" />
+
+				<Path {...p} strokeWidth={1.5} d="M18.5 7Q15.5 8.5 13.5 11" />
+				<Path {...p} strokeWidth={1.5} d="M19 11Q15.5 12 13 14.5" />
+
+				<Path {...p} strokeWidth={1.5} d="M8 19.2L5.5 21.5" />
+				<Path {...p} strokeWidth={1.5} d="M11 19.5L10 22" />
+				<Path {...p} strokeWidth={1.5} d="M14 18.8L15.5 21" />
+
+				<Path {...p} strokeWidth={1.5} d="M7 13.5Q8.5 14.5 10.5 14" />
+			</Svg>
+		),
+		// Oval bean pod with two inner bean bumps
+		Soy: (
+			<Svg width={s2} height={s2} viewBox="0 0 24 24">
+				<Path
+					{...p}
+					d="M20 5V9.197Q20 10.323 18.5 12Q17 13.677 17 14.803V15Q17 16.175 15.06 17.485L14.749 17.563Q13.624 17.844 12 19.5Q10.323 21 9.197 21H5Q6 20 6 18.586V17.803Q6 16.677 7.5 15Q9.155 13.376 9.437 12.251L9.636 11.455Q9.85 10.6 11.5 10Q12.419 10 13.671 8.658L14.106 7.789Q14.654 6.693 17 6H17.586Q19 6 20 5Z"
+				/>
+				<Path
+					{...p}
+					strokeWidth={1.5}
+					d="M8.439 18.561Q8 18.121 8 17.5Q8 16 9.5 16Q10.121 16 10.561 16.439"
+				/>
+				<Path
+					{...p}
+					strokeWidth={1.5}
+					d="M12.086 14.914Q11.5 14.328 11.5 13.5Q11.5 11.5 13.5 11.5Q14.328 11.5 14.914 12.086"
+				/>
+				<Path
+					{...p}
+					strokeWidth={1.5}
+					d="M15.939 10.561Q15.5 10.121 15.5 9.5Q15.5 8 17 8Q17.621 8 18.061 8.439"
+				/>
+				<Path
+					{...p}
+					strokeWidth={1.5}
+					d="M5.5 11Q7 11 7 9.5Q7 8 5.5 8Q4 8 4 9.5Q4 11 5.5 11Z"
+				/>
+				<Path
+					{...p}
+					strokeWidth={1.5}
+					d="M5.5 6Q7 6 7 4.5Q7 3 5.5 3Q4 3 4 4.5Q4 6 5.5 6Z"
+				/>
+				<Path
+					{...p}
+					strokeWidth={1.5}
+					d="M10.5 7Q12 7 12 5.5Q12 4 10.5 4Q9 4 9 5.5Q9 7 10.5 7Z"
+				/>
+			</Svg>
+		),
+		// Three oval seeds in a cluster
+		Sesame: (
+			<Svg width={s2} height={s2} viewBox="0 0 24 24">
+				<Ellipse
+					stroke={cfg.color}
+					strokeWidth={1.8}
+					fill={cfg.color}
+					fillOpacity={0.35}
+					cx="12"
+					cy="7"
+					rx="2.5"
+					ry="4"
+				/>
+				<Ellipse
+					stroke={cfg.color}
+					strokeWidth={1.8}
+					fill={cfg.color}
+					fillOpacity={0.35}
+					cx="7.5"
+					cy="17"
+					rx="2.5"
+					ry="4"
+					transform="rotate(-20 7.5 17)"
+				/>
+				<Ellipse
+					stroke={cfg.color}
+					strokeWidth={1.8}
+					fill={cfg.color}
+					fillOpacity={0.35}
+					cx="16.5"
+					cy="17"
+					rx="2.5"
+					ry="4"
+					transform="rotate(20 16.5 17)"
+				/>
+			</Svg>
+		),
+	};
+	return (
+		<Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+			<Circle cx={size / 2} cy={size / 2} r={size / 2} fill={cfg.bg} />
+			<G x={(size - s2) / 2} y={(size - s2) / 2}>
+				{icons[cfg.value] || null}
 			</G>
 		</Svg>
 	);
@@ -418,9 +740,27 @@ export function ReactionFace({ reaction, size = 40 }) {
 				<Circle cx="20" cy="20" r="18" fill={bg} stroke={c} strokeWidth="1.5" />
 				<Circle cx="14" cy="17" r="2.5" fill={c} />
 				<Circle cx="26" cy="17" r="2.5" fill={c} />
-				<Path d="M12 25 Q20 33 28 25" stroke={c} strokeWidth="2.2" strokeLinecap="round" fill="none" />
-				<Path d="M15 14 Q14 11 11 12" stroke={c} strokeWidth="1.5" strokeLinecap="round" fill="none" />
-				<Path d="M25 14 Q26 11 29 12" stroke={c} strokeWidth="1.5" strokeLinecap="round" fill="none" />
+				<Path
+					d="M12 25 Q20 33 28 25"
+					stroke={c}
+					strokeWidth="2.2"
+					strokeLinecap="round"
+					fill="none"
+				/>
+				<Path
+					d="M15 14 Q14 11 11 12"
+					stroke={c}
+					strokeWidth="1.5"
+					strokeLinecap="round"
+					fill="none"
+				/>
+				<Path
+					d="M25 14 Q26 11 29 12"
+					stroke={c}
+					strokeWidth="1.5"
+					strokeLinecap="round"
+					fill="none"
+				/>
 			</Svg>
 		),
 		Good: (
@@ -428,7 +768,13 @@ export function ReactionFace({ reaction, size = 40 }) {
 				<Circle cx="20" cy="20" r="18" fill={bg} stroke={c} strokeWidth="1.5" />
 				<Circle cx="14" cy="17" r="2.5" fill={c} />
 				<Circle cx="26" cy="17" r="2.5" fill={c} />
-				<Path d="M13 25 Q20 31 27 25" stroke={c} strokeWidth="2.2" strokeLinecap="round" fill="none" />
+				<Path
+					d="M13 25 Q20 31 27 25"
+					stroke={c}
+					strokeWidth="2.2"
+					strokeLinecap="round"
+					fill="none"
+				/>
 			</Svg>
 		),
 		Neutral: (
@@ -436,7 +782,15 @@ export function ReactionFace({ reaction, size = 40 }) {
 				<Circle cx="20" cy="20" r="18" fill={bg} stroke={c} strokeWidth="1.5" />
 				<Circle cx="14" cy="17" r="2.5" fill={c} />
 				<Circle cx="26" cy="17" r="2.5" fill={c} />
-				<Line x1="13" y1="26" x2="27" y2="26" stroke={c} strokeWidth="2.2" strokeLinecap="round" />
+				<Line
+					x1="13"
+					y1="26"
+					x2="27"
+					y2="26"
+					stroke={c}
+					strokeWidth="2.2"
+					strokeLinecap="round"
+				/>
 			</Svg>
 		),
 		Rejected: (
@@ -444,15 +798,45 @@ export function ReactionFace({ reaction, size = 40 }) {
 				<Circle cx="20" cy="20" r="18" fill={bg} stroke={c} strokeWidth="1.5" />
 				<Circle cx="14" cy="17" r="2.5" fill={c} />
 				<Circle cx="26" cy="17" r="2.5" fill={c} />
-				<Path d="M13 28 Q20 22 27 28" stroke={c} strokeWidth="2.2" strokeLinecap="round" fill="none" />
-				<Path d="M15 14 Q14 11 11 13" stroke={c} strokeWidth="1.5" strokeLinecap="round" fill="none" />
-				<Path d="M25 14 Q26 11 29 13" stroke={c} strokeWidth="1.5" strokeLinecap="round" fill="none" />
+				<Path
+					d="M13 28 Q20 22 27 28"
+					stroke={c}
+					strokeWidth="2.2"
+					strokeLinecap="round"
+					fill="none"
+				/>
+				<Path
+					d="M15 14 Q14 11 11 13"
+					stroke={c}
+					strokeWidth="1.5"
+					strokeLinecap="round"
+					fill="none"
+				/>
+				<Path
+					d="M25 14 Q26 11 29 13"
+					stroke={c}
+					strokeWidth="1.5"
+					strokeLinecap="round"
+					fill="none"
+				/>
 			</Svg>
 		),
 		Allergic: (
 			<Svg width={size} height={size} viewBox="0 0 40 40">
-				<Circle cx="20" cy="20" r="18" fill="#fde8e8" stroke="#c0392b" strokeWidth="1.5" />
-				<Path d="M13 12 L27 28 M27 12 L13 28" stroke="#c0392b" strokeWidth="2.5" strokeLinecap="round" />
+				<Circle
+					cx="20"
+					cy="20"
+					r="18"
+					fill="#fde8e8"
+					stroke="#c0392b"
+					strokeWidth="1.5"
+				/>
+				<Path
+					d="M13 12 L27 28 M27 12 L13 28"
+					stroke="#c0392b"
+					strokeWidth="2.5"
+					strokeLinecap="round"
+				/>
 			</Svg>
 		),
 	};

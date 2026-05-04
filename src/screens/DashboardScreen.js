@@ -12,7 +12,7 @@ import Svg, { Circle, Path } from "react-native-svg";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { useTheme, useStyles } from "../ThemeContext";
-import { Icon, CategoryIcon, ReactionFace } from "../components/Icon";
+import { Icon, CategoryIcon, ReactionFace, AllergenIcon } from "../components/Icon";
 import { groupByFood, calcAgeWeeks, calcAgeMonths, formatDate, normalize, reactionCfg, formatTime, toMl, computeAllergenStatus } from "../helpers";
 import { ALLERGENS } from "../constants";
 
@@ -106,6 +106,7 @@ export function DashboardScreen({
 	foodLog,
 	bottleLog = [],
 	showMilkOnDashboard = true,
+	showAllergenOnDashboard = true,
 	recipes = [],
 	onNavigate,
 	onNavigateToRecipe,
@@ -264,7 +265,7 @@ export function DashboardScreen({
 			</View>
 
 			{/* ── Allergen Summary Card ── */}
-			<TouchableOpacity onPress={() => onNavigate("allergens")} activeOpacity={0.88} style={s.card}>
+			{showAllergenOnDashboard && <TouchableOpacity onPress={() => onNavigate("allergens")} activeOpacity={0.88} style={s.card}>
 				<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
 					<View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
 						<View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#ece8f9", alignItems: "center", justifyContent: "center" }}>
@@ -294,9 +295,7 @@ export function DashboardScreen({
 				{nextAllergen ? (
 					<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
 						<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-							<View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: nextAllergen.bg, alignItems: "center", justifyContent: "center" }}>
-								<Text style={{ fontSize: 17 }}>{nextAllergen.emoji}</Text>
-							</View>
+							<AllergenIcon allergen={nextAllergen.value} size={32} />
 							<View>
 								<Text style={{ fontSize: 10, color: C.mutedText, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.3 }}>Try next</Text>
 								<Text style={{ fontSize: 13, fontWeight: "700", color: C.primaryPinkDark }}>{nextAllergen.value}</Text>
@@ -313,9 +312,64 @@ export function DashboardScreen({
 						<Text style={{ fontSize: 13, fontWeight: "700", color: "#2d7a55" }}>All allergens introduced!</Text>
 					</View>
 				)}
-			</TouchableOpacity>
+			</TouchableOpacity>}
+
+			{/* ── Allergen Check-in Reminder ── */}
+			{showAllergenOnDashboard && (() => {
+				const checkIns = allergenStatus.filter((a) => a.needsCheckIn);
+				if (checkIns.length === 0) return null;
+				return (
+					<TouchableOpacity
+						onPress={() => onNavigate("allergens")}
+						activeOpacity={0.88}
+						style={[s.card, { borderWidth: 1.5, borderColor: "#d4860a55" }]}>
+						<View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
+							<View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#fff0cc", alignItems: "center", justifyContent: "center" }}>
+								<Icon name="clock" size={18} color="#d4860a" />
+							</View>
+							<View style={{ flex: 1 }}>
+								<Text style={{ fontWeight: "800", fontSize: 14, color: "#a85a1a" }}>
+									Allergen Check-in Needed
+								</Text>
+								<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>
+									Log whether your baby had any reaction
+								</Text>
+							</View>
+							<Icon name="chevRight" size={14} color="#d4860a" />
+						</View>
+						<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+							{checkIns.map((a) => (
+								<View
+									key={a.value}
+									style={{
+										flexDirection: "row",
+										alignItems: "center",
+										gap: 7,
+										backgroundColor: "#fff8ec",
+										borderRadius: 20,
+										paddingHorizontal: 10,
+										paddingVertical: 6,
+										borderWidth: 1,
+										borderColor: "#d4860a33",
+									}}>
+									<AllergenIcon allergen={a.value} size={22} />
+									<View>
+										<Text style={{ fontSize: 11, fontWeight: "700", color: "#a85a1a" }}>
+											{a.value}
+										</Text>
+										<Text style={{ fontSize: 9, color: "#d4860a", fontWeight: "600" }}>
+											{a.daysSinceFirst}d ago
+										</Text>
+									</View>
+								</View>
+							))}
+						</View>
+					</TouchableOpacity>
+				);
+			})()}
 
 			{/* ── Milk Tracking Card ── */}
+
 			{showMilkOnDashboard && <TouchableOpacity onPress={() => onNavigate("bottle")} activeOpacity={0.92} style={s.card}>
 				<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
 					<View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -436,9 +490,19 @@ export function DashboardScreen({
 								{featuredRecipe.description}
 							</Text>
 						) : null}
-						<View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-							<Text style={{ fontSize: 13, fontWeight: "700", color: C.primaryPurple }}>View Recipe</Text>
-							<Icon name="chevRight" size={13} color={C.primaryPurple} />
+						<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+							<View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+								<Text style={{ fontSize: 13, fontWeight: "700", color: C.primaryPurple }}>View Recipe</Text>
+								<Icon name="chevRight" size={13} color={C.primaryPurple} />
+							</View>
+							<TouchableOpacity
+								onPress={(e) => { e.stopPropagation?.(); onNavigate("recipes"); }}
+								activeOpacity={0.75}
+								hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+								style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 }}>
+								<Icon name="chef" size={13} color={C.primaryPurple} />
+								<Text style={{ fontSize: 12, fontWeight: "700", color: C.primaryPurple }}>More Recipes</Text>
+							</TouchableOpacity>
 						</View>
 					</View>
 				</TouchableOpacity>

@@ -7,7 +7,7 @@ import {
 	Linking,
 } from "react-native";
 import { useTheme, useStyles } from "../ThemeContext";
-import { Icon } from "../components/Icon";
+import { Icon, AllergenIcon } from "../components/Icon";
 import { ALLERGENS } from "../constants";
 import { computeAllergenStatus, formatDate } from "../helpers";
 
@@ -47,7 +47,7 @@ const ADVICE_TIPS = [
 	"If your baby has eczema or an existing food allergy, speak to your GP or allergy specialist before starting",
 ];
 
-export function AllergenScreen({ foodLog = [], onNavigate }) {
+export function AllergenScreen({ foodLog = [], onNavigate, onAddWithPrefill, onViewInLog }) {
 	const { C } = useTheme();
 	const s = useStyles();
 
@@ -64,11 +64,64 @@ export function AllergenScreen({ foodLog = [], onNavigate }) {
 		(a) => a.status === "Reaction",
 	).length;
 	const pct = Math.round((introduced / ALLERGENS.length) * 100);
+	const checkIns = allergenStatus.filter((a) => a.needsCheckIn);
 
 	return (
 		<ScrollView
 			showsVerticalScrollIndicator={false}
 			contentContainerStyle={{ paddingBottom: 30 }}>
+
+			{/* ── Check-in Banner ── */}
+			{checkIns.length > 0 && (
+				<View
+					style={{
+						backgroundColor: "#fff8ec",
+						borderRadius: 16,
+						padding: 16,
+						marginBottom: 18,
+						borderWidth: 1.5,
+						borderColor: "#d4860a44",
+					}}>
+					<View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+						<Icon name="clock" size={16} color="#d4860a" />
+						<Text style={{ fontWeight: "800", fontSize: 14, color: "#a85a1a" }}>
+							Follow-up Needed
+						</Text>
+					</View>
+					<Text style={{ fontSize: 12, color: "#7a5a1a", lineHeight: 18, marginBottom: 12 }}>
+						It's been 2+ days since introducing these allergens. Log whether your baby had any reaction.
+					</Text>
+					{checkIns.map((a) => (
+						<TouchableOpacity
+							key={a.value}
+							onPress={() => onAddWithPrefill && onAddWithPrefill(a.value)}
+							activeOpacity={0.8}
+							style={{
+								flexDirection: "row",
+								alignItems: "center",
+								gap: 12,
+								backgroundColor: "#ffffff",
+								borderRadius: 12,
+								padding: 10,
+								marginBottom: 8,
+								borderWidth: 1,
+								borderColor: "#d4860a33",
+							}}>
+							<AllergenIcon allergen={a.value} size={38} />
+							<View style={{ flex: 1 }}>
+								<Text style={{ fontWeight: "700", fontSize: 14, color: "#a85a1a" }}>
+									{a.value}
+								</Text>
+								<Text style={{ fontSize: 11, color: "#d4860a", marginTop: 2 }}>
+									First introduced {a.daysSinceFirst} day{a.daysSinceFirst !== 1 ? "s" : ""} ago · Tap to log reaction
+								</Text>
+							</View>
+							<Icon name="chevRight" size={14} color="#d4860a" />
+						</TouchableOpacity>
+					))}
+				</View>
+			)}
+
 			{/* ── Stats Row ── */}
 			<View style={{ flexDirection: "row", gap: 8, marginBottom: 18 }}>
 				{[
@@ -194,9 +247,12 @@ export function AllergenScreen({ foodLog = [], onNavigate }) {
 				style={[s.card, { padding: 0, overflow: "hidden", marginBottom: 18 }]}>
 				{allergenStatus.map((al, index) => {
 					const cfg = STATUS_CFG[al.status];
+					const canTap = al.status !== "Not Tried" && onViewInLog;
 					return (
-						<View
+						<TouchableOpacity
 							key={al.value}
+							activeOpacity={canTap ? 0.7 : 1}
+							onPress={() => canTap && onViewInLog(al.value)}
 							style={{
 								flexDirection: "row",
 								alignItems: "center",
@@ -207,19 +263,9 @@ export function AllergenScreen({ foodLog = [], onNavigate }) {
 								backgroundColor:
 									al.status === "Reaction" ? "#fff5f5" : "transparent",
 							}}>
-							{/* Emoji badge */}
-							<View
-								style={{
-									width: 42,
-									height: 42,
-									borderRadius: 12,
-									backgroundColor:
-										al.status !== "Not Tried" ? al.bg : C.bgPurple,
-									alignItems: "center",
-									justifyContent: "center",
-									marginRight: 12,
-								}}>
-								<Text style={{ fontSize: 22 }}>{al.emoji}</Text>
+							{/* Allergen icon badge */}
+							<View style={{ marginRight: 12 }}>
+								<AllergenIcon allergen={al.value} size={42} />
 							</View>
 
 							{/* Name + dates */}
@@ -249,7 +295,14 @@ export function AllergenScreen({ foodLog = [], onNavigate }) {
 								)}
 							</View>
 
-							{/* Status pill */}
+							{/* Status pill (+ check-in clock) */}
+							<View style={{ alignItems: "flex-end", gap: 4, marginLeft: 8 }}>
+							{al.needsCheckIn && (
+								<View style={{ flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#fff0cc", borderRadius: 999, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: "#d4860a44" }}>
+									<Icon name="clock" size={9} color="#d4860a" />
+									<Text style={{ fontSize: 9, fontWeight: "700", color: "#a85a1a" }}>Check in</Text>
+								</View>
+							)}
 							<View
 								style={{
 									backgroundColor: cfg.bg,
@@ -258,7 +311,6 @@ export function AllergenScreen({ foodLog = [], onNavigate }) {
 									paddingVertical: 5,
 									borderWidth: 1,
 									borderColor: cfg.border,
-									marginLeft: 8,
 								}}>
 								<Text
 									style={{
@@ -269,7 +321,11 @@ export function AllergenScreen({ foodLog = [], onNavigate }) {
 									{cfg.label}
 								</Text>
 							</View>
-						</View>
+							</View>
+							{canTap && (
+								<Icon name="chevRight" size={13} color={C.borderLight} style={{ marginLeft: 4 }} />
+							)}
+						</TouchableOpacity>
 					);
 				})}
 			</View>

@@ -80,6 +80,7 @@ function MainApp({ user, isPro: isPropPro }) {
 	const insets = useSafeAreaInsets();
 	const [isPro, setIsPro] = useState(isPropPro);
 	const [showMilkOnDashboard, setShowMilkOnDashboard] = useState(true);
+	const [showAllergenOnDashboard, setShowAllergenOnDashboard] = useState(true);
 
 	// Sync when Firestore finishes loading (isPropPro starts false while auth resolves)
 	useEffect(() => {
@@ -90,11 +91,13 @@ function MainApp({ user, isPro: isPropPro }) {
 	useEffect(() => {
 		if (!user) return;
 		let isMounted = true;
-		AsyncStorage.getItem(`showMilkDash_${user.uid}`)
-			.then((val) => {
-				if (isMounted && val === "false") setShowMilkOnDashboard(false);
-			})
-			.catch(() => {});
+		Promise.all([
+			AsyncStorage.getItem(`showMilkDash_${user.uid}`),
+			AsyncStorage.getItem(`showAllergenDash_${user.uid}`),
+		]).then(([milkVal, allergenVal]) => {
+			if (isMounted && milkVal === "false") setShowMilkOnDashboard(false);
+			if (isMounted && allergenVal === "false") setShowAllergenOnDashboard(false);
+		}).catch(() => {});
 		return () => { isMounted = false; };
 	}, [user]);
 
@@ -111,6 +114,7 @@ function MainApp({ user, isPro: isPropPro }) {
 	const [logRecipeTarget, setLogRecipeTarget] = useState(null);
 	const [logFilter, setLogFilter] = useState("");
 	const [logOpenKey, setLogOpenKey] = useState(null);
+	const [logAllergenFilter, setLogAllergenFilter] = useState("");
 	const [prefillFood, setPrefillFood] = useState(null);
 	const [refreshing, setRefreshing] = useState(false);
 	const [userMap, setUserMap] = useState({});
@@ -466,6 +470,14 @@ function MainApp({ user, isPro: isPropPro }) {
 		setShowMilkOnDashboard(next);
 		try {
 			await AsyncStorage.setItem(`showMilkDash_${user.uid}`, String(next));
+		} catch (_) {}
+	};
+
+	const toggleAllergenOnDashboard = async () => {
+		const next = !showAllergenOnDashboard;
+		setShowAllergenOnDashboard(next);
+		try {
+			await AsyncStorage.setItem(`showAllergenDash_${user.uid}`, String(next));
 		} catch (_) {}
 	};
 
@@ -917,6 +929,7 @@ function MainApp({ user, isPro: isPropPro }) {
 								: bottleLog
 						}
 						showMilkOnDashboard={showMilkOnDashboard}
+						showAllergenOnDashboard={showAllergenOnDashboard}
 						recipes={recipes}
 						onNavigate={setPage}
 						onNavigateToRecipe={(id) => {
@@ -926,6 +939,7 @@ function MainApp({ user, isPro: isPropPro }) {
 						onNavigateFiltered={(pg, filter, openKey) => {
 							setLogFilter(filter);
 							setLogOpenKey(openKey || null);
+							setLogAllergenFilter("");
 							setPage(pg);
 						}}
 						refreshing={refreshing}
@@ -943,6 +957,7 @@ function MainApp({ user, isPro: isPropPro }) {
 						}
 						initialFilter={logFilter}
 						initialOpenKey={logOpenKey}
+						initialAllergenFilter={logAllergenFilter}
 						userMap={userMap}
 						currentUserId={user.uid}
 						onEdit={setEditEntry}
@@ -1007,6 +1022,22 @@ function MainApp({ user, isPro: isPropPro }) {
 					<AllergenScreen
 						foodLog={childLog}
 						onNavigate={setPage}
+						onViewInLog={(allergenValue) => {
+							setLogFilter("");
+							setLogOpenKey(null);
+							setLogAllergenFilter(allergenValue);
+							setPage("log");
+						}}
+						onAddWithPrefill={(allergenValue) => {
+							setPrefillFood({
+								name: "",
+								category: "",
+								categories: [],
+								feedType: "",
+								allergens: [allergenValue],
+							});
+							setPage("add");
+						}}
 					/>
 				)}
 				{page === "children" && (
@@ -1237,6 +1268,8 @@ function MainApp({ user, isPro: isPropPro }) {
 						defaultChildId={activeChild?.id || null}
 						showMilkOnDashboard={showMilkOnDashboard}
 						onToggleMilkOnDashboard={toggleMilkOnDashboard}
+						showAllergenOnDashboard={showAllergenOnDashboard}
+						onToggleAllergenOnDashboard={toggleAllergenOnDashboard}
 						onLogout={() => { setShowMoreModal(false); handleLogout(); }}
 						onDeleteAccount={handleDeleteAccount}
 						onUpgradePro={handleUpgradePro}
