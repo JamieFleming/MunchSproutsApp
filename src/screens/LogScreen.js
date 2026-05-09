@@ -1,30 +1,18 @@
 import React, { useState, useEffect } from "react";
 import {
-	View,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	ScrollView,
-	FlatList,
-	Modal,
-	Image,
-	Alert,
-	RefreshControl,
-	Platform,
+	View, Text, TextInput, TouchableOpacity, ScrollView,
+	FlatList, Modal, Image, Alert, RefreshControl, Platform,
 } from "react-native";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon, CategoryIcon, AllergenIcon } from "../components/Icon";
 import { ZoomableImage } from "../components/ZoomableImage";
-import {
-	ReactionBadge,
-	SecondaryBtn,
-	DangerBtn,
-} from "../components/SharedComponents";
+import { ReactionBadge, SecondaryBtn, DangerBtn } from "../components/SharedComponents";
 import { CATEGORIES, MEAL_TIMES, ALLERGENS } from "../constants";
-import { groupByFood, normalize, formatDate } from "../helpers";
+import { groupByFood, normalize, formatDate, reactionCfg } from "../helpers";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
-import { reactionCfg } from "../helpers";
+
+// ── PDF export ────────────────────────────────────────────────────────────────
 
 async function exportFoodLogAsPDF(foodLog, childName, bottleLog = []) {
 	if (!foodLog.length && !bottleLog.length) {
@@ -32,241 +20,342 @@ async function exportFoodLogAsPDF(foodLog, childName, bottleLog = []) {
 		return;
 	}
 
-	// ── Food section ──
-	const groups = groupByFood(foodLog);
-	const keys = Object.keys(groups);
-	const foodRows = keys
-		.map((key) => {
-			const g = groups[key];
-			const likedCnt = g.attempts.filter(
-				(a) => a.reaction === "Loved" || a.reaction === "Good",
-			).length;
-			const pct = Math.round((likedCnt / g.attempts.length) * 100);
-			const hasAllergy = g.attempts.some((a) => a.reaction === "Allergic");
-			const attemptsHTML = g.attempts
-				.map(
-					(a, i) =>
-						`<tr style="background:${i % 2 === 0 ? "#f9f7fe" : "#ffffff"}"><td style="padding:7px 10px;color:#8a7aaa;font-size:11px;">Attempt ${i + 1}</td><td style="padding:7px 10px;font-size:11px;">${formatDate(a.date)}${a.time ? ` ${a.time}` : ""}</td><td style="padding:7px 10px;font-size:11px;color:#d4860a;font-weight:600;">${a.mealTime || ""}</td><td style="padding:7px 10px;font-size:11px;">${a.form || "—"}</td><td style="padding:7px 10px;font-size:11px;color:${reactionCfg(a.reaction).color};font-weight:700;">${a.reaction || "—"}</td><td style="padding:7px 10px;font-size:11px;color:#8a7aaa;font-style:italic;">${a.notes || ""}</td></tr>`,
-				)
-				.join("");
-			return `<div style="margin-bottom:18px;border-radius:10px;overflow:hidden;border:2px solid ${hasAllergy ? "#e07070" : "#ece8f9"};"><div style="background:${hasAllergy ? "#fde8e8" : "#ede8f7"};padding:10px 14px;display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:700;font-size:14px;color:#5a2d7a;">${g.name}${hasAllergy ? '<span style="margin-left:8px;background:#fee2e2;color:#c0392b;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:700;">ALLERGY</span>' : ""}</span><span style="font-size:11px;color:#3db87a;font-weight:700;">${pct}% liked · ${g.attempts.length} attempt${g.attempts.length !== 1 ? "s" : ""}</span></div><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f3f0fa;"><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">#</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Date</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Meal Time</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Form</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Reaction</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Notes</th></tr></thead><tbody>${attemptsHTML}</tbody></table></div>`;
-		})
-		.join("");
+	const groups   = groupByFood(foodLog);
+	const keys     = Object.keys(groups);
+	const foodRows = keys.map((key) => {
+		const g        = groups[key];
+		const likedCnt = g.attempts.filter((a) => a.reaction === "Loved" || a.reaction === "Good").length;
+		const pct      = Math.round((likedCnt / g.attempts.length) * 100);
+		const hasAllergy   = g.attempts.some((a) => a.reaction === "Allergic");
+		const attemptsHTML = g.attempts.map((a, i) =>
+			`<tr style="background:${i % 2 === 0 ? "#f9f7fe" : "#ffffff"}"><td style="padding:7px 10px;color:#8a7aaa;font-size:11px;">Attempt ${i + 1}</td><td style="padding:7px 10px;font-size:11px;">${formatDate(a.date)}${a.time ? ` ${a.time}` : ""}</td><td style="padding:7px 10px;font-size:11px;color:#d4860a;font-weight:600;">${a.mealTime || ""}</td><td style="padding:7px 10px;font-size:11px;">${a.form || "—"}</td><td style="padding:7px 10px;font-size:11px;color:${reactionCfg(a.reaction).color};font-weight:700;">${a.reaction || "—"}</td><td style="padding:7px 10px;font-size:11px;color:#8a7aaa;font-style:italic;">${a.notes || ""}</td></tr>`
+		).join("");
+		return `<div style="margin-bottom:18px;border-radius:10px;overflow:hidden;border:2px solid ${hasAllergy ? "#e07070" : "#ece8f9"};"><div style="background:${hasAllergy ? "#fde8e8" : "#ede8f7"};padding:10px 14px;display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:700;font-size:14px;color:#5a2d7a;">${g.name}${hasAllergy ? '<span style="margin-left:8px;background:#fee2e2;color:#c0392b;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:700;">ALLERGY</span>' : ""}</span><span style="font-size:11px;color:#3db87a;font-weight:700;">${pct}% liked · ${g.attempts.length} attempt${g.attempts.length !== 1 ? "s" : ""}</span></div><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f3f0fa;"><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">#</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Date</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Meal Time</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Form</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Reaction</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Notes</th></tr></thead><tbody>${attemptsHTML}</tbody></table></div>`;
+	}).join("");
 
-	// ── Bottle section ──
-	const toMlLocal = (amount, unit) => {
-		const n = parseFloat(amount) || 0;
-		return unit === "oz" ? Math.round(n * 29.5735) : Math.round(n);
-	};
-	const milkColor = {
-		formula: "#2a5f8f",
-		breast: "#7a2d6a",
-		specialised: "#a85a1a",
-	};
+	const toMlLocal    = (amount, unit) => { const n = parseFloat(amount) || 0; return unit === "oz" ? Math.round(n * 29.5735) : Math.round(n); };
+	const milkColor    = { formula: "#2a5f8f", breast: "#7a2d6a", specialised: "#a85a1a" };
 	const sortedBottles = [...bottleLog].sort((a, b) => {
 		const da = new Date((a.date || "1970-01-01") + "T" + (a.time || "00:00"));
 		const db = new Date((b.date || "1970-01-01") + "T" + (b.time || "00:00"));
 		return db - da;
 	});
 	const bottleByDate = {};
-	sortedBottles.forEach((b) => {
-		if (!bottleByDate[b.date]) bottleByDate[b.date] = [];
-		bottleByDate[b.date].push(b);
-	});
-	const totalBottleFeeds = bottleLog.length;
-	const totalBottleMl = bottleLog.reduce(
-		(sum, b) => sum + toMlLocal(b.amount, b.unit),
-		0,
-	);
-	const bottleRows = Object.keys(bottleByDate)
-		.map((date) => {
-			const feeds = bottleByDate[date];
-			const dayMl = feeds.reduce(
-				(sum, f) => sum + toMlLocal(f.amount, f.unit),
-				0,
-			);
-			const feedRows = feeds
-				.map((f, i) => {
-					const ml = toMlLocal(f.amount, f.unit);
-					const col = milkColor[f.type] || "#8a7aaa";
-					return `<tr style="background:${i % 2 === 0 ? "#f0f6fc" : "#ffffff"}"><td style="padding:7px 10px;font-size:11px;">${f.time || "—"}</td><td style="padding:7px 10px;font-size:11px;color:${col};font-weight:700;text-transform:capitalize;">${f.type || "—"}</td><td style="padding:7px 10px;font-size:11px;">${f.amount || "—"} ${f.unit || ""} (${ml} ml)</td><td style="padding:7px 10px;font-size:11px;color:#8a7aaa;font-style:italic;">${f.notes || ""}</td></tr>`;
-				})
-				.join("");
-			return `<div style="margin-bottom:18px;border-radius:10px;overflow:hidden;border:2px solid #d4e8f5;"><div style="background:#d4e8f5;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:700;font-size:14px;color:#2a5f8f;">${formatDate(date)}</span><span style="font-size:11px;color:#2a5f8f;font-weight:700;">${feeds.length} feed${feeds.length !== 1 ? "s" : ""} · ${dayMl} ml total</span></div><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#eaf3fa;"><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Time</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Type</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Amount</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Notes</th></tr></thead><tbody>${feedRows}</tbody></table></div>`;
-		})
-		.join("");
+	sortedBottles.forEach((b) => { if (!bottleByDate[b.date]) bottleByDate[b.date] = []; bottleByDate[b.date].push(b); });
 
-	// ── Stats ──
-	const totalFoods = keys.length;
+	const totalBottleFeeds = bottleLog.length;
+	const totalBottleMl    = bottleLog.reduce((sum, b) => sum + toMlLocal(b.amount, b.unit), 0);
+	const bottleRows = Object.keys(bottleByDate).map((date) => {
+		const feeds    = bottleByDate[date];
+		const dayMl    = feeds.reduce((sum, f) => sum + toMlLocal(f.amount, f.unit), 0);
+		const feedRows = feeds.map((f, i) => {
+			const ml  = toMlLocal(f.amount, f.unit);
+			const col = milkColor[f.type] || "#8a7aaa";
+			return `<tr style="background:${i % 2 === 0 ? "#f0f6fc" : "#ffffff"}"><td style="padding:7px 10px;font-size:11px;">${f.time || "—"}</td><td style="padding:7px 10px;font-size:11px;color:${col};font-weight:700;text-transform:capitalize;">${f.type || "—"}</td><td style="padding:7px 10px;font-size:11px;">${f.amount || "—"} ${f.unit || ""} (${ml} ml)</td><td style="padding:7px 10px;font-size:11px;color:#8a7aaa;font-style:italic;">${f.notes || ""}</td></tr>`;
+		}).join("");
+		return `<div style="margin-bottom:18px;border-radius:10px;overflow:hidden;border:2px solid #d4e8f5;"><div style="background:#d4e8f5;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:700;font-size:14px;color:#2a5f8f;">${formatDate(date)}</span><span style="font-size:11px;color:#2a5f8f;font-weight:700;">${feeds.length} feed${feeds.length !== 1 ? "s" : ""} · ${dayMl} ml total</span></div><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#eaf3fa;"><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Time</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Type</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Amount</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Notes</th></tr></thead><tbody>${feedRows}</tbody></table></div>`;
+	}).join("");
+
+	const totalFoods    = keys.length;
 	const totalAttempts = foodLog.length;
-	const liked = keys.filter((k) =>
-		groups[k].attempts.some(
-			(a) => a.reaction === "Loved" || a.reaction === "Good",
-		),
-	).length;
-	const allergic = foodLog.filter((f) => f.reaction === "Allergic").length;
+	const liked         = keys.filter((k) => groups[k].attempts.some((a) => a.reaction === "Loved" || a.reaction === "Good")).length;
+	const allergic      = foodLog.filter((f) => f.reaction === "Allergic").length;
 
 	const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><style>body{font-family:-apple-system,Helvetica,Arial,sans-serif;margin:0;padding:28px;background:#fff;color:#3d3d3d;}.subtitle{color:#8a7aaa;font-size:13px;margin:12px 0 20px;border-bottom:2px solid #ece8f9;padding-bottom:12px;}.stats{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;}.stat{background:#ede8f7;border-radius:10px;padding:10px 16px;text-align:center;min-width:80px;}.stat-val{font-size:22px;font-weight:700;color:#9b7fe8;}.stat-lbl{font-size:10px;color:#8a7aaa;text-transform:uppercase;}.section-title{font-size:12px;font-weight:700;color:#5a2d7a;text-transform:uppercase;letter-spacing:1px;margin:20px 0 10px;padding:8px 12px;background:#ede8f7;border-radius:8px;}.footer{margin-top:36px;padding-top:14px;border-top:2px solid #ece8f9;font-size:10px;color:#8a7aaa;text-align:center;}</style></head><body><div style="display:flex;align-items:center;gap:14px;background:#f5f2ff;border-radius:16px;padding:14px 20px;margin-bottom:6px;"><div style="font-size:52px;line-height:1;">&#127793;</div><div><div style="font-size:28px;font-weight:900;line-height:1.1;letter-spacing:-0.5px;"><span style="color:#2d1b5e;">Munch</span><br/><span style="color:#3db87a;">Sprouts</span><span style="color:#3db87a;font-size:20px;"> &#127793;</span></div><div style="font-size:11px;color:#8a7aaa;font-weight:500;margin-top:3px;letter-spacing:0.3px;">Baby Weaning Tracker</div></div></div><p class="subtitle">Report${childName ? ` — ${childName}` : ""} &nbsp;·&nbsp; Generated ${formatDate(new Date().toISOString().split("T")[0])}</p>${foodLog.length > 0 ? `<div class="stats"><div class="stat"><div class="stat-val">${totalFoods}</div><div class="stat-lbl">Foods tried</div></div><div class="stat"><div class="stat-val">${totalAttempts}</div><div class="stat-lbl">Attempts</div></div><div class="stat"><div class="stat-val">${liked}</div><div class="stat-lbl">Liked</div></div>${allergic > 0 ? `<div class="stat" style="background:#fde8e8;"><div class="stat-val" style="color:#c0392b;">${allergic}</div><div class="stat-lbl" style="color:#c0392b;">Allergic</div></div>` : ""}</div>` : ""}${bottleLog.length > 0 ? `<div class="stats"><div class="stat" style="background:#d4e8f5;"><div class="stat-val" style="color:#2a5f8f;">${totalBottleFeeds}</div><div class="stat-lbl" style="color:#2a5f8f;">Total Feeds</div></div><div class="stat" style="background:#d4e8f5;"><div class="stat-val" style="color:#2a5f8f;">${totalBottleMl}</div><div class="stat-lbl" style="color:#2a5f8f;">Total ml</div></div></div>` : ""}${foodLog.length > 0 ? `<div class="section-title">Food Log (${totalFoods} foods · ${totalAttempts} attempts)</div>${foodRows}` : ""}${bottleLog.length > 0 ? `<div class="section-title">Milk &amp; Bottle Feeds (${totalBottleFeeds} feeds · ${totalBottleMl} ml)</div>${bottleRows}` : ""}<div class="footer">Generated by Munch Sprouts &nbsp;·&nbsp; For informational purposes only.<br/>Always consult your GP or Health Visitor before starting weaning.</div></body></html>`;
 
 	try {
 		const { uri } = await Print.printToFileAsync({ html, base64: false });
-		await Sharing.shareAsync(uri, {
-			mimeType: "application/pdf",
-			dialogTitle: `${childName || "MunchSprouts"} Report`,
-			UTI: "com.adobe.pdf",
-		});
-	} catch (e) {
+		await Sharing.shareAsync(uri, { mimeType: "application/pdf", dialogTitle: `${childName || "MunchSprouts"} Report`, UTI: "com.adobe.pdf" });
+	} catch {
 		Alert.alert("Export failed", "Could not generate PDF. Please try again.");
 	}
 }
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const SORT_OPTS = [
+	{ id: "date-desc", label: "Newest" },
+	{ id: "alpha",     label: "A–Z" },
+	{ id: "attempts",  label: "Attempts" },
+	{ id: "reaction",  label: "Reaction" },
+];
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function AttemptRow({ attempt: a, attemptNum, milestones, hasMultipleUsers, currentUserId, userMap, onToggleFavourite, onEdit, onDelete, setLightboxPhoto, isEven }) {
+	const { C } = useTheme();
+	const s = useStyles();
+	return (
+		<View style={{ padding: 14, backgroundColor: isEven ? C.bgPurple : C.white, borderTopWidth: 1, borderTopColor: C.borderLight }}>
+			<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+				<View style={{ flex: 1 }}>
+					<Text style={[s.smallLabel, { marginBottom: 6 }]}>
+						Attempt {attemptNum} · {formatDate(a.date)}{a.time ? ` at ${a.time}` : ""}{a.favourite ? " ★" : ""}
+					</Text>
+
+					{/* Badges row */}
+					<View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+						{a.mealTime && (() => {
+							const mt = MEAL_TIMES.find((m) => m.value === a.mealTime);
+							return mt ? (
+								<View style={{ backgroundColor: mt.bg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+									<Text style={{ fontSize: 11, fontWeight: "700", color: mt.color }}>{mt.value}</Text>
+								</View>
+							) : null;
+						})()}
+						{a.form && (
+							<View style={{ backgroundColor: C.white, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 }}>
+								<Text style={{ fontSize: 11, fontWeight: "600", color: C.mutedText }}>{a.form}</Text>
+							</View>
+						)}
+						{a.ml ? (
+							<View style={{ backgroundColor: C.statBlueBg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+								<Text style={{ fontSize: 11, fontWeight: "700", color: C.statBlueText }}>{a.ml}ml</Text>
+							</View>
+						) : null}
+						<ReactionBadge reaction={a.reaction} />
+					</View>
+
+					{/* Allergen badges */}
+					{a.allergens?.length > 0 && (
+						<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+							{a.allergens.map((allergen) => {
+								const cfg = ALLERGENS.find((al) => al.value === allergen);
+								if (!cfg) return null;
+								return (
+									<View key={allergen} style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: cfg.bg, borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: cfg.color + "55" }}>
+										<AllergenIcon allergen={allergen} size={16} />
+										<Text style={{ fontSize: 10, fontWeight: "700", color: cfg.color }}>{allergen}</Text>
+									</View>
+								);
+							})}
+						</View>
+					)}
+
+					{/* Milestone badges */}
+					{milestones[a.id] && (
+						<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+							{milestones[a.id].map((m) => (
+								<View key={m.type} style={{ flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: m.bg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1.5, borderColor: m.color + "55" }}>
+									<Icon name={m.icon} size={12} color={m.color} />
+									<Text style={{ fontSize: 11, fontWeight: "800", color: m.color }}>{m.label}</Text>
+								</View>
+							))}
+						</View>
+					)}
+
+					{/* Notes */}
+					{a.notes ? <Text style={{ fontSize: 12, color: C.mutedText, marginTop: 6, fontStyle: "italic" }}>"{a.notes}"</Text> : null}
+
+					{/* Multi-user indicator */}
+					{hasMultipleUsers && a.userId && (
+						<View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 6 }}>
+							<Icon name="user" size={11} color={C.mutedText} />
+							<Text style={{ fontSize: 11, color: C.mutedText, fontStyle: "italic" }}>
+								{a.userId === currentUserId ? "Added by you" : `Added by ${userMap[a.userId]?.split("@")[0] || "partner"}`}
+							</Text>
+						</View>
+					)}
+
+					{/* Photo */}
+					{a.photoUri?.startsWith("http") && (
+						<TouchableOpacity onPress={() => setLightboxPhoto({ uri: a.photoUri, name: "" })} activeOpacity={0.9} style={{ marginTop: 10 }}>
+							<Image source={{ uri: a.photoUri }} style={{ width: "100%", height: 180, borderRadius: 12 }} resizeMode="cover" />
+							<View style={{ position: "absolute", bottom: 8, right: 8, backgroundColor: "rgba(0,0,0,0.45)", borderRadius: 8, padding: 5 }}>
+								<Icon name="search" size={14} color="#fff" />
+							</View>
+						</TouchableOpacity>
+					)}
+				</View>
+
+				{/* Action buttons */}
+				<View style={{ flexDirection: "row", gap: 6 }}>
+					<SecondaryBtn onPress={() => onToggleFavourite(a.id)} style={{ padding: 8 }}>
+						<Icon name={a.favourite ? "starFill" : "star"} size={14} color="#d4a017" />
+					</SecondaryBtn>
+					<SecondaryBtn onPress={() => onEdit(a)} style={{ padding: 8 }}>
+						<Icon name="edit" size={14} color={C.primaryPurple} />
+					</SecondaryBtn>
+					<DangerBtn onPress={() => Alert.alert("Delete", "Delete this entry?", [{ text: "Cancel" }, { text: "Delete", style: "destructive", onPress: () => onDelete(a.id) }])} style={{ padding: 8 }}>
+						<Icon name="trash" size={14} color="#c0392b" />
+					</DangerBtn>
+				</View>
+			</View>
+		</View>
+	);
+}
+
+function FoodCard({ foodKey: key, group: g, isOpen, toggle, milestones, hasMultipleUsers, currentUserId, userMap, onEdit, onDelete, onToggleFavourite, onAddAttempt, setLightboxPhoto }) {
+	const { C } = useTheme();
+	const s = useStyles();
+
+	const latest         = g.attempts.at(-1);
+	const likedCnt       = g.attempts.filter((a) => a.reaction === "Loved" || a.reaction === "Good").length;
+	const pct            = Math.round((likedCnt / g.attempts.length) * 100);
+	const hasAllergy     = g.attempts.some((a) => a.reaction === "Allergic");
+	const hasFav         = g.attempts.some((a) => a.favourite);
+	const hasPhoto       = g.attempts.some((a) => a.photoUri?.startsWith("http"));
+	const groupMilestones = g.attempts.flatMap((a) => milestones[a.id] || []);
+
+	const cats = g.attempts[0]?.categories?.length ? g.attempts[0].categories : g.category ? [g.category] : [];
+
+	return (
+		<View style={[s.card, { padding: 0, overflow: "hidden", borderWidth: hasAllergy ? 2 : 0, borderColor: hasAllergy ? "#e07070" : "transparent", backgroundColor: hasAllergy ? C.statRedBg : C.white }]}>
+			{/* Header */}
+			<TouchableOpacity onPress={() => toggle(key)} style={{ flexDirection: "row", alignItems: "center", padding: 16, gap: 14 }} activeOpacity={0.8}>
+				<CategoryIcon category={g.category} size={48} />
+				<View style={{ flex: 1 }}>
+					{/* Name + badges */}
+					<View style={{ flexDirection: "row", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+						<Text style={{ fontWeight: "700", fontSize: 15, color: C.primaryPinkDark }}>{g.name}</Text>
+						{hasFav    && <Icon name="starFill" size={13} color="#d4a017" />}
+						{hasPhoto  && <Icon name="image"    size={13} color={C.mutedText} />}
+						{hasAllergy && (
+							<View style={{ backgroundColor: C.statRedBg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
+								<Text style={{ fontSize: 9, fontWeight: "700", color: "#c0392b", textTransform: "uppercase" }}>Allergy</Text>
+							</View>
+						)}
+						<View style={{ backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
+							<Text style={{ fontSize: 10, fontWeight: "700", color: C.primaryPurple }}>{g.attempts.length}×</Text>
+						</View>
+						{groupMilestones.length > 0 && (
+							<View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#fef6d4", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1.5, borderColor: "#c49a1055" }}>
+								<Icon name="star" size={10} color="#c49a10" />
+								<Text style={{ fontSize: 10, fontWeight: "800", color: "#c49a10" }}>
+									{groupMilestones.length === 1 ? "Milestone" : `${groupMilestones.length} Milestones`}
+								</Text>
+							</View>
+						)}
+					</View>
+
+					{/* Latest reaction + date */}
+					<View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 }}>
+						<ReactionBadge reaction={latest.reaction} />
+						<Text style={{ fontSize: 11, color: C.mutedText }}>Latest · {formatDate(latest.date)}{latest.time ? ` at ${latest.time}` : ""}</Text>
+					</View>
+
+					{/* Category pills */}
+					{cats.length > 0 && (
+						<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 5, marginTop: 5 }}>
+							{cats.map((cat) => {
+								const cfg = CATEGORIES.find((c) => c.value === cat) || CATEGORIES[7];
+								return (
+									<View key={cat} style={{ backgroundColor: cfg.bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
+										<Text style={{ fontSize: 10, fontWeight: "700", color: cfg.color }}>{cat}</Text>
+									</View>
+								);
+							})}
+						</View>
+					)}
+
+					{/* Like bar */}
+					<View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 }}>
+						<View style={{ flex: 1, backgroundColor: C.borderLight, borderRadius: 999, height: 6, overflow: "hidden", maxWidth: 100 }}>
+							<View style={{ backgroundColor: C.primaryGreen, height: "100%", width: `${pct}%`, borderRadius: 999 }} />
+						</View>
+						<Text style={{ fontSize: 11, color: C.mutedText, fontWeight: "600" }}>{pct}% liked</Text>
+					</View>
+				</View>
+				<Icon name={isOpen ? "chevUp" : "chevDown"} size={16} color={C.mutedText} />
+			</TouchableOpacity>
+
+			{/* Expanded attempts */}
+			{isOpen && [...g.attempts].reverse().map((a, i) => (
+				<AttemptRow
+					key={a.id}
+					attempt={a}
+					attemptNum={g.attempts.length - i}
+					isEven={i % 2 === 0}
+					milestones={milestones}
+					hasMultipleUsers={hasMultipleUsers}
+					currentUserId={currentUserId}
+					userMap={userMap}
+					onToggleFavourite={onToggleFavourite}
+					onEdit={onEdit}
+					onDelete={onDelete}
+					setLightboxPhoto={setLightboxPhoto}
+				/>
+			))}
+
+			{/* Add another attempt */}
+			{isOpen && onAddAttempt && (
+				<TouchableOpacity
+					onPress={() => onAddAttempt(g)}
+					style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, padding: 14, borderTopWidth: 1, borderTopColor: C.borderLight, backgroundColor: C.bgPurple, borderBottomLeftRadius: 16, borderBottomRightRadius: 16 }}
+					activeOpacity={0.8}>
+					<Icon name="plus" size={14} color={C.primaryPurple} />
+					<Text style={{ fontSize: 13, fontWeight: "700", color: C.primaryPurple }}>Add Another Attempt</Text>
+				</TouchableOpacity>
+			)}
+		</View>
+	);
+}
+
+// ── Screen ────────────────────────────────────────────────────────────────────
+
 export function LogScreen({
-	foodLog,
-	childName,
-	bottleLog = [],
-	initialFilter,
-	initialOpenKey,
-	initialAllergenFilter,
-	userMap = {},
-	currentUserId,
-	onEdit,
-	onDelete,
-	onToggleFavourite,
-	onAddAttempt,
-	refreshing,
-	onRefresh,
+	foodLog, childName, bottleLog = [], initialFilter, initialOpenKey, initialAllergenFilter,
+	milestones = {}, userMap = {}, currentUserId,
+	onEdit, onDelete, onToggleFavourite, onAddAttempt, refreshing, onRefresh,
 }) {
 	const hasMultipleUsers = Object.keys(userMap).length > 1;
 	const { C } = useTheme();
 	const s = useStyles();
-	const [search, setSearch] = useState("");
-	const [sortBy, setSortBy] = useState("date-desc");
+
+	const [search,         setSearch]         = useState("");
+	const [sortBy,         setSortBy]         = useState("date-desc");
 	const [reactionFilter, setReactionFilter] = useState(initialFilter || "");
 	const [allergenFilter, setAllergenFilter] = useState(initialAllergenFilter || "");
-	const [lightboxPhoto, setLightboxPhoto] = useState(null); // { uri, name }
-	const [expanded, setExpanded] = useState(
-		initialOpenKey ? new Set([initialOpenKey]) : new Set(),
-	);
+	const [lightboxPhoto,  setLightboxPhoto]  = useState(null);
+	const [expanded,       setExpanded]       = useState(initialOpenKey ? new Set([initialOpenKey]) : new Set());
 
-	useEffect(() => {
-		if (initialOpenKey) setExpanded(new Set([initialOpenKey]));
-	}, [initialOpenKey]);
+	useEffect(() => { if (initialOpenKey)        setExpanded(new Set([initialOpenKey])); }, [initialOpenKey]);
+	useEffect(() => { setAllergenFilter(initialAllergenFilter || ""); }, [initialAllergenFilter]);
 
-	useEffect(() => {
-		setAllergenFilter(initialAllergenFilter || "");
-	}, [initialAllergenFilter]);
-
+	// Build filtered + sorted key list
 	const groups = groupByFood(foodLog);
 	let keys = Object.keys(groups);
-	if (search)
-		keys = keys.filter((k) =>
-			normalize(groups[k].name).includes(normalize(search)),
-		);
-	if (reactionFilter === "Liquids") {
-		keys = keys.filter((k) => groups[k].category === "Liquids");
-	} else if (reactionFilter === "Favourites") {
-		keys = keys.filter((k) => groups[k].attempts.some((a) => a.favourite));
-	} else if (reactionFilter) {
-		keys = keys.filter((k) =>
-			groups[k].attempts.some((a) => a.reaction === reactionFilter),
-		);
-	}
-	if (allergenFilter) {
-		keys = keys.filter((k) =>
-			groups[k].attempts.some(
-				(a) => Array.isArray(a.allergens) && a.allergens.includes(allergenFilter),
-			),
-		);
-	}
-	if (sortBy === "date-desc")
-		keys.sort(
-			(a, b) =>
-				new Date(groups[b].attempts.at(-1).date) -
-				new Date(groups[a].attempts.at(-1).date),
-		);
-	else if (sortBy === "alpha") keys.sort((a, b) => a.localeCompare(b));
-	else if (sortBy === "attempts")
-		keys.sort((a, b) => groups[b].attempts.length - groups[a].attempts.length);
-	else if (sortBy === "reaction")
-		keys.sort((a, b) => {
-			const order = ["Loved", "Good", "Neutral", "Rejected", "Allergic", ""];
-			const ra = groups[a].attempts.at(-1).reaction || "";
-			const rb = groups[b].attempts.at(-1).reaction || "";
-			return order.indexOf(ra) - order.indexOf(rb);
-		});
+	if (search)          keys = keys.filter((k) => normalize(groups[k].name).includes(normalize(search)));
+	if (reactionFilter === "Liquids")    keys = keys.filter((k) => groups[k].category === "Liquids");
+	else if (reactionFilter === "Favourites") keys = keys.filter((k) => groups[k].attempts.some((a) => a.favourite));
+	else if (reactionFilter)             keys = keys.filter((k) => groups[k].attempts.some((a) => a.reaction === reactionFilter));
+	if (allergenFilter)  keys = keys.filter((k) => groups[k].attempts.some((a) => Array.isArray(a.allergens) && a.allergens.includes(allergenFilter)));
 
-	const toggle = (k) =>
-		setExpanded((p) => {
-			const n = new Set(p);
-			n.has(k) ? n.delete(k) : n.add(k);
-			return n;
-		});
+	if (sortBy === "date-desc") keys.sort((a, b) => new Date(groups[b].attempts.at(-1).date) - new Date(groups[a].attempts.at(-1).date));
+	else if (sortBy === "alpha")    keys.sort((a, b) => a.localeCompare(b));
+	else if (sortBy === "attempts") keys.sort((a, b) => groups[b].attempts.length - groups[a].attempts.length);
+	else if (sortBy === "reaction") {
+		const order = ["Loved", "Good", "Neutral", "Rejected", "Allergic", ""];
+		keys.sort((a, b) => order.indexOf(groups[a].attempts.at(-1).reaction || "") - order.indexOf(groups[b].attempts.at(-1).reaction || ""));
+	}
+
+	const toggle = (k) => setExpanded((p) => { const n = new Set(p); n.has(k) ? n.delete(k) : n.add(k); return n; });
+
+	const REACTION_FILTERS = [
+		{ id: "",           label: "All",       color: C.primaryPurple,  bg: C.bgPurple      },
+		{ id: "Loved",      label: "Loved",     color: C.statGreenText,  bg: C.statGreenBg   },
+		{ id: "Good",       label: "Good",      color: "#3a7a3a",        bg: "#ddf0dd"        },
+		{ id: "Neutral",    label: "Neutral",   color: C.statNeutralText,bg: C.statNeutralBg },
+		{ id: "Rejected",   label: "Rejected",  color: C.statRedText,    bg: C.statRedBg     },
+		{ id: "Allergic",   label: "Allergic",  color: "#c0392b",        bg: "#fde8e8"        },
+		{ id: "Liquids",    label: "Liquids",   color: C.statBlueText,   bg: C.statBlueBg    },
+		{ id: "Favourites", label: "Favourites",color: "#c49a10",        bg: "#fef6d4"        },
+	];
 
 	return (
 		<View style={{ flex: 1 }}>
-			<View
-				style={[
-					s.input,
-					{
-						flexDirection: "row",
-						alignItems: "center",
-						gap: 8,
-						marginBottom: 12,
-						backgroundColor: C.white,
-					},
-				]}>
+			{/* Search bar */}
+			<View style={[s.input, { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, backgroundColor: C.white }]}>
 				<Icon name="search" size={16} color={C.mutedText} />
-				<TextInput
-					value={search}
-					onChangeText={setSearch}
-					placeholder="Search foods…"
-					style={{
-						flex: 1,
-						color: C.textCharcoal,
-						fontWeight: "600",
-						fontSize: 15,
-					}}
-					placeholderTextColor={C.mutedText}
-				/>
+				<TextInput value={search} onChangeText={setSearch} placeholder="Search foods…" style={{ flex: 1, color: C.textCharcoal, fontWeight: "600", fontSize: 15 }} placeholderTextColor={C.mutedText} />
 			</View>
 
-			<ScrollView
-				horizontal
-				showsHorizontalScrollIndicator={false}
-				style={{ flexGrow: 0, flexShrink: 0 }}
-				contentContainerStyle={{
-					gap: 8,
-					paddingBottom: 10,
-					paddingHorizontal: 2,
-				}}>
-				{[
-					{ id: "date-desc", label: "Newest" },
-					{ id: "alpha", label: "A–Z" },
-					{ id: "attempts", label: "Attempts" },
-					{ id: "reaction", label: "Reaction" },
-				].map((opt) => (
-					<TouchableOpacity
-						key={opt.id}
-						onPress={() => setSortBy(opt.id)}
-						style={{
-							backgroundColor: sortBy === opt.id ? C.primaryPurple : C.white,
-							borderRadius: 999,
-							paddingHorizontal: 14,
-							paddingVertical: 7,
-							borderWidth: 1.5,
-							borderColor: sortBy === opt.id ? C.primaryPurple : C.borderLight,
-							height: 34,
-							justifyContent: "center",
-							alignItems: "center",
-						}}>
-						<Text
-							style={{
-								fontSize: 12,
-								fontWeight: "700",
-								color: sortBy === opt.id ? C.white : C.mutedText,
-							}}>
-							{opt.label}
-						</Text>
+			{/* Sort chips */}
+			<ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ gap: 8, paddingBottom: 10, paddingHorizontal: 2 }}>
+				{SORT_OPTS.map((opt) => (
+					<TouchableOpacity key={opt.id} onPress={() => setSortBy(opt.id)}
+						style={{ backgroundColor: sortBy === opt.id ? C.primaryPurple : C.white, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7, borderWidth: 1.5, borderColor: sortBy === opt.id ? C.primaryPurple : C.borderLight, height: 34, justifyContent: "center", alignItems: "center" }}>
+						<Text style={{ fontSize: 12, fontWeight: "700", color: sortBy === opt.id ? C.white : C.mutedText }}>{opt.label}</Text>
 					</TouchableOpacity>
 				))}
 			</ScrollView>
@@ -278,9 +367,7 @@ export function LogScreen({
 					<View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
 						<View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: cfg?.bg || "#fff0cc", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1.5, borderColor: (cfg?.color || "#d4860a") + "55", flex: 1 }}>
 							<AllergenIcon allergen={allergenFilter} size={20} />
-							<Text style={{ fontSize: 12, fontWeight: "700", color: cfg?.color || "#a85a1a", flex: 1 }}>
-								Filtered: {allergenFilter}
-							</Text>
+							<Text style={{ fontSize: 12, fontWeight: "700", color: cfg?.color || "#a85a1a", flex: 1 }}>Filtered: {allergenFilter}</Text>
 							<TouchableOpacity onPress={() => setAllergenFilter("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
 								<Icon name="close" size={14} color={cfg?.color || "#a85a1a"} />
 							</TouchableOpacity>
@@ -289,632 +376,78 @@ export function LogScreen({
 				);
 			})() : null}
 
-			<ScrollView
-				horizontal
-				showsHorizontalScrollIndicator={false}
-				style={{ flexGrow: 0, flexShrink: 0 }}
-				contentContainerStyle={{
-					gap: 8,
-					paddingBottom: 10,
-					paddingHorizontal: 2,
-				}}>
-				{[
-					{ id: "", label: "All", color: C.primaryPurple, bg: C.bgPurple },
-					{
-						id: "Loved",
-						label: "Loved",
-						color: C.statGreenText,
-						bg: C.statGreenBg,
-					},
-					{ id: "Good", label: "Good", color: "#3a7a3a", bg: "#ddf0dd" },
-					{
-						id: "Neutral",
-						label: "Neutral",
-						color: C.statNeutralText,
-						bg: C.statNeutralBg,
-					},
-					{
-						id: "Rejected",
-						label: "Rejected",
-						color: C.statRedText,
-						bg: C.statRedBg,
-					},
-					{
-						id: "Allergic",
-						label: "Allergic",
-						color: "#c0392b",
-						bg: "#fde8e8",
-					},
-					{
-						id: "Liquids",
-						label: "Liquids",
-						color: C.statBlueText,
-						bg: C.statBlueBg,
-					},
-					{
-						id: "Favourites",
-						label: "Favourites",
-						color: "#c49a10",
-						bg: "#fef6d4",
-					},
-				].map((f) => {
+			{/* Reaction filter chips */}
+			<ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ gap: 8, paddingBottom: 10, paddingHorizontal: 2 }}>
+				{REACTION_FILTERS.map((f) => {
 					const active = reactionFilter === f.id;
 					return (
-						<TouchableOpacity
-							key={f.id || "all"}
-							onPress={() => setReactionFilter(f.id)}
-							style={{
-								backgroundColor: active ? f.bg : C.white,
-								borderRadius: 999,
-								paddingHorizontal: 14,
-								paddingVertical: 7,
-								borderWidth: 1.5,
-								borderColor: active ? f.color : C.borderLight,
-								height: 34,
-								justifyContent: "center",
-								alignItems: "center",
-							}}>
-							<Text
-								style={{
-									fontSize: 12,
-									fontWeight: "700",
-									color: active ? f.color : C.mutedText,
-								}}>
-								{f.label}
-							</Text>
+						<TouchableOpacity key={f.id || "all"} onPress={() => setReactionFilter(f.id)}
+							style={{ backgroundColor: active ? f.bg : C.white, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7, borderWidth: 1.5, borderColor: active ? f.color : C.borderLight, height: 34, justifyContent: "center", alignItems: "center" }}>
+							<Text style={{ fontSize: 12, fontWeight: "700", color: active ? f.color : C.mutedText }}>{f.label}</Text>
 						</TouchableOpacity>
 					);
 				})}
 			</ScrollView>
 
+			{/* Clear filter */}
 			{reactionFilter !== "" && (
-				<TouchableOpacity
-					onPress={() => setReactionFilter("")}
-					style={{
-						flexDirection: "row",
-						alignItems: "center",
-						gap: 8,
-						marginBottom: 10,
-					}}>
-					<Text
-						style={{ fontSize: 12, color: C.primaryPurple, fontWeight: "700" }}>
-						Filtered: {reactionFilter} · Tap to clear
-					</Text>
+				<TouchableOpacity onPress={() => setReactionFilter("")} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
+					<Text style={{ fontSize: 12, color: C.primaryPurple, fontWeight: "700" }}>Filtered: {reactionFilter} · Tap to clear</Text>
 					<Icon name="close" size={13} color={C.primaryPurple} />
 				</TouchableOpacity>
 			)}
 
-			<Text style={[s.smallLabel, { marginBottom: 10 }]}>
-				{keys.length} food{keys.length !== 1 ? "s" : ""}
-			</Text>
+			<Text style={[s.smallLabel, { marginBottom: 10 }]}>{keys.length} food{keys.length !== 1 ? "s" : ""}</Text>
 
+			{/* Food list */}
 			<FlatList
 				data={keys}
 				keyExtractor={(item) => item}
 				showsVerticalScrollIndicator={false}
 				contentContainerStyle={{ gap: 10, paddingBottom: 20 }}
-				removeClippedSubviews={true}
-				refreshControl={
-					<RefreshControl
-						refreshing={refreshing}
-						onRefresh={onRefresh}
-						tintColor={C.primaryPurple}
-						colors={[C.primaryPurple]}
-						progressBackgroundColor={C.white}
+				removeClippedSubviews
+				refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primaryPurple} colors={[C.primaryPurple]} progressBackgroundColor={C.white} />}
+				renderItem={({ item: key }) => (
+					<FoodCard
+						foodKey={key}
+						group={groups[key]}
+						isOpen={expanded.has(key)}
+						toggle={toggle}
+						milestones={milestones}
+						hasMultipleUsers={hasMultipleUsers}
+						currentUserId={currentUserId}
+						userMap={userMap}
+						onEdit={onEdit}
+						onDelete={onDelete}
+						onToggleFavourite={onToggleFavourite}
+						onAddAttempt={onAddAttempt}
+						setLightboxPhoto={setLightboxPhoto}
 					/>
-				}
-				renderItem={({ item: key }) => {
-					const g = groups[key];
-					const latest = g.attempts.at(-1);
-					const likedCnt = g.attempts.filter(
-						(a) => a.reaction === "Loved" || a.reaction === "Good",
-					).length;
-					const pct = Math.round((likedCnt / g.attempts.length) * 100);
-					const hasAllergy = g.attempts.some((a) => a.reaction === "Allergic");
-					const hasFav = g.attempts.some((a) => a.favourite);
-					const hasPhoto = g.attempts.some((a) => a.photoUri);
-					const isOpen = expanded.has(key);
-					return (
-						<View
-							style={[
-								s.card,
-								{
-									padding: 0,
-									overflow: "hidden",
-									borderWidth: hasAllergy ? 2 : 0,
-									borderColor: hasAllergy ? "#e07070" : "transparent",
-									backgroundColor: hasAllergy ? C.statRedBg : C.white,
-								},
-							]}>
-							<TouchableOpacity
-								onPress={() => toggle(key)}
-								style={{
-									flexDirection: "row",
-									alignItems: "center",
-									padding: 16,
-									gap: 14,
-								}}
-								activeOpacity={0.8}>
-								<CategoryIcon category={g.category} size={48} />
-								<View style={{ flex: 1 }}>
-									<View
-										style={{
-											flexDirection: "row",
-											alignItems: "center",
-											gap: 7,
-											flexWrap: "wrap",
-										}}>
-										<Text
-											style={{
-												fontWeight: "700",
-												fontSize: 15,
-												color: C.primaryPinkDark,
-											}}>
-											{g.name}
-										</Text>
-										{hasFav && (
-											<Icon name="starFill" size={13} color="#d4a017" />
-										)}
-										{hasPhoto && (
-											<Icon name="image" size={13} color={C.mutedText} />
-										)}
-										{hasAllergy && (
-											<View
-												style={{
-													backgroundColor: C.statRedBg,
-													borderRadius: 999,
-													paddingHorizontal: 8,
-													paddingVertical: 2,
-												}}>
-												<Text
-													style={{
-														fontSize: 9,
-														fontWeight: "700",
-														color: "#c0392b",
-														textTransform: "uppercase",
-													}}>
-													Allergy
-												</Text>
-											</View>
-										)}
-										<View
-											style={{
-												backgroundColor: C.bgPurple,
-												borderRadius: 999,
-												paddingHorizontal: 8,
-												paddingVertical: 2,
-											}}>
-											<Text
-												style={{
-													fontSize: 10,
-													fontWeight: "700",
-													color: C.primaryPurple,
-												}}>
-												{g.attempts.length}×
-											</Text>
-										</View>
-									</View>
-									<View
-										style={{
-											flexDirection: "row",
-											alignItems: "center",
-											gap: 8,
-											marginTop: 6,
-										}}>
-										<ReactionBadge reaction={latest.reaction} />
-										<Text style={{ fontSize: 11, color: C.mutedText }}>
-											Latest · {formatDate(latest.date)}
-											{latest.time ? ` at ${latest.time}` : ""}
-										</Text>
-									</View>
-									{(() => {
-										const cats = g.attempts[0]?.categories?.length
-											? g.attempts[0].categories
-											: g.category
-												? [g.category]
-												: [];
-										if (cats.length === 0) return null;
-										const catCfg = (cat) =>
-											CATEGORIES.find((c) => c.value === cat) || CATEGORIES[7];
-										return (
-											<View
-												style={{
-													flexDirection: "row",
-													flexWrap: "wrap",
-													gap: 5,
-													marginTop: 5,
-												}}>
-												{cats.map((cat) => {
-													const cfg = catCfg(cat);
-													return (
-														<View
-															key={cat}
-															style={{
-																backgroundColor: cfg.bg,
-																borderRadius: 999,
-																paddingHorizontal: 8,
-																paddingVertical: 3,
-															}}>
-															<Text
-																style={{
-																	fontSize: 10,
-																	fontWeight: "700",
-																	color: cfg.color,
-																}}>
-																{cat}
-															</Text>
-														</View>
-													);
-												})}
-											</View>
-										);
-									})()}
-									<View
-										style={{
-											flexDirection: "row",
-											alignItems: "center",
-											gap: 8,
-											marginTop: 6,
-										}}>
-										<View
-											style={{
-												flex: 1,
-												backgroundColor: C.borderLight,
-												borderRadius: 999,
-												height: 6,
-												overflow: "hidden",
-												maxWidth: 100,
-											}}>
-											<View
-												style={{
-													backgroundColor: C.primaryGreen,
-													height: "100%",
-													width: `${pct}%`,
-													borderRadius: 999,
-												}}
-											/>
-										</View>
-										<Text
-											style={{
-												fontSize: 11,
-												color: C.mutedText,
-												fontWeight: "600",
-											}}>
-											{pct}% liked
-										</Text>
-									</View>
-								</View>
-								<Icon
-									name={isOpen ? "chevUp" : "chevDown"}
-									size={16}
-									color={C.mutedText}
-								/>
-							</TouchableOpacity>
-
-							{isOpen &&
-								[...g.attempts].reverse().map((a, i) => (
-									<View
-										key={a.id}
-										style={{
-											padding: 14,
-											backgroundColor: i % 2 === 0 ? C.bgPurple : C.white,
-											borderTopWidth: 1,
-											borderTopColor: C.borderLight,
-										}}>
-										<View
-											style={{
-												flexDirection: "row",
-												justifyContent: "space-between",
-												alignItems: "flex-start",
-												gap: 8,
-											}}>
-											<View style={{ flex: 1 }}>
-												<Text style={[s.smallLabel, { marginBottom: 6 }]}>
-													Attempt {g.attempts.length - i} · {formatDate(a.date)}
-													{a.time ? ` at ${a.time}` : ""}
-													{a.favourite ? " ★" : ""}
-												</Text>
-												<View
-													style={{
-														flexDirection: "row",
-														gap: 6,
-														flexWrap: "wrap",
-														alignItems: "center",
-													}}>
-													{a.mealTime &&
-														(() => {
-															const mt = MEAL_TIMES.find(
-																(m) => m.value === a.mealTime,
-															);
-															return mt ? (
-																<View
-																	style={{
-																		backgroundColor: mt.bg,
-																		borderRadius: 999,
-																		paddingHorizontal: 10,
-																		paddingVertical: 4,
-																	}}>
-																	<Text
-																		style={{
-																			fontSize: 11,
-																			fontWeight: "700",
-																			color: mt.color,
-																		}}>
-																		{mt.value}
-																	</Text>
-																</View>
-															) : null;
-														})()}
-													{a.form && (
-														<View
-															style={{
-																backgroundColor: C.white,
-																borderRadius: 999,
-																paddingHorizontal: 10,
-																paddingVertical: 4,
-																shadowColor: "#000",
-																shadowOpacity: 0.05,
-																shadowRadius: 4,
-																elevation: 1,
-															}}>
-															<Text
-																style={{
-																	fontSize: 11,
-																	fontWeight: "600",
-																	color: C.mutedText,
-																}}>
-																{a.form}
-															</Text>
-														</View>
-													)}
-													{a.ml ? (
-														<View
-															style={{
-																backgroundColor: C.statBlueBg,
-																borderRadius: 999,
-																paddingHorizontal: 10,
-																paddingVertical: 4,
-															}}>
-															<Text
-																style={{
-																	fontSize: 11,
-																	fontWeight: "700",
-																	color: C.statBlueText,
-																}}>
-																{a.ml}ml
-															</Text>
-														</View>
-													) : null}
-													<ReactionBadge reaction={a.reaction} />
-												</View>
-												{a.allergens && a.allergens.length > 0 && (
-													<View
-														style={{
-															flexDirection: "row",
-															flexWrap: "wrap",
-															gap: 4,
-															marginTop: 6,
-														}}>
-														{a.allergens.map((allergen) => {
-															const cfg = ALLERGENS.find((al) => al.value === allergen);
-															if (!cfg) return null;
-															return (
-																<View
-																	key={allergen}
-																	style={{
-																		flexDirection: "row",
-																		alignItems: "center",
-																		gap: 4,
-																		backgroundColor: cfg.bg,
-																		borderRadius: 999,
-																		paddingHorizontal: 6,
-																		paddingVertical: 2,
-																		borderWidth: 1,
-																		borderColor: cfg.color + "55",
-																	}}>
-																	<AllergenIcon allergen={allergen} size={16} />
-																	<Text
-																		style={{
-																			fontSize: 10,
-																			fontWeight: "700",
-																			color: cfg.color,
-																		}}>
-																		{allergen}
-																	</Text>
-																</View>
-															);
-														})}
-													</View>
-												)}
-												{a.notes ? (
-													<Text
-														style={{
-															fontSize: 12,
-															color: C.mutedText,
-															marginTop: 6,
-															fontStyle: "italic",
-														}}>
-														"{a.notes}"
-													</Text>
-												) : null}
-												{hasMultipleUsers && a.userId && (
-													<View
-														style={{
-															flexDirection: "row",
-															alignItems: "center",
-															gap: 5,
-															marginTop: 6,
-														}}>
-														<Icon name="user" size={11} color={C.mutedText} />
-														<Text
-															style={{
-																fontSize: 11,
-																color: C.mutedText,
-																fontStyle: "italic",
-															}}>
-															{a.userId === currentUserId
-																? "Added by you"
-																: `Added by ${userMap[a.userId]?.split("@")[0] || "partner"}`}
-														</Text>
-													</View>
-												)}
-												{a.photoUri ? (
-													<TouchableOpacity
-														onPress={() => setLightboxPhoto({ uri: a.photoUri, name: g.name })}
-														activeOpacity={0.9}
-														style={{ marginTop: 10 }}>
-														<Image
-															source={{ uri: a.photoUri }}
-															style={{
-																width: "100%",
-																height: 180,
-																borderRadius: 12,
-															}}
-															resizeMode="cover"
-														/>
-														<View style={{
-															position: "absolute",
-															bottom: 8,
-															right: 8,
-															backgroundColor: "rgba(0,0,0,0.45)",
-															borderRadius: 8,
-															padding: 5,
-														}}>
-															<Icon name="search" size={14} color="#fff" />
-														</View>
-													</TouchableOpacity>
-												) : null}
-											</View>
-											<View style={{ flexDirection: "row", gap: 6 }}>
-												<SecondaryBtn
-													onPress={() => onToggleFavourite(a.id)}
-													style={{ padding: 8 }}>
-													<Icon
-														name={a.favourite ? "starFill" : "star"}
-														size={14}
-														color="#d4a017"
-													/>
-												</SecondaryBtn>
-												<SecondaryBtn
-													onPress={() => onEdit(a)}
-													style={{ padding: 8 }}>
-													<Icon name="edit" size={14} color={C.primaryPurple} />
-												</SecondaryBtn>
-												<DangerBtn
-													onPress={() =>
-														Alert.alert("Delete", "Delete this entry?", [
-															{ text: "Cancel" },
-															{
-																text: "Delete",
-																style: "destructive",
-																onPress: () => onDelete(a.id),
-															},
-														])
-													}
-													style={{ padding: 8 }}>
-													<Icon name="trash" size={14} color="#c0392b" />
-												</DangerBtn>
-											</View>
-										</View>
-									</View>
-								))}
-
-							{isOpen && onAddAttempt && (
-								<TouchableOpacity
-									onPress={() => onAddAttempt(g)}
-									style={{
-										flexDirection: "row",
-										alignItems: "center",
-										justifyContent: "center",
-										gap: 8,
-										padding: 14,
-										borderTopWidth: 1,
-										borderTopColor: C.borderLight,
-										backgroundColor: C.bgPurple,
-										borderBottomLeftRadius: 16,
-										borderBottomRightRadius: 16,
-									}}
-									activeOpacity={0.8}>
-									<Icon name="plus" size={14} color={C.primaryPurple} />
-									<Text
-										style={{
-											fontSize: 13,
-											fontWeight: "700",
-											color: C.primaryPurple,
-										}}>
-										Add Another Attempt
-									</Text>
-								</TouchableOpacity>
-							)}
-						</View>
-					);
-				}}
+				)}
 				ListFooterComponent={() => (
 					<TouchableOpacity
 						onPress={() => exportFoodLogAsPDF(foodLog, childName, bottleLog)}
-						style={{
-							flexDirection: "row",
-							alignItems: "center",
-							justifyContent: "center",
-							gap: 10,
-							backgroundColor: C.white,
-							borderRadius: 16,
-							paddingVertical: 14,
-							marginTop: 4,
-							shadowColor: "#000",
-							shadowOpacity: 0.05,
-							shadowRadius: 8,
-							elevation: 2,
-						}}
+						style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: C.white, borderRadius: 16, paddingVertical: 14, marginTop: 4, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}
 						activeOpacity={0.8}>
 						<Icon name="pdf" size={18} color={C.primaryPurple} />
-						<Text
-							style={{ fontWeight: "700", fontSize: 14, color: C.primaryPurple }}>
-							Export as PDF
-						</Text>
+						<Text style={{ fontWeight: "700", fontSize: 14, color: C.primaryPurple }}>Export as PDF</Text>
 					</TouchableOpacity>
 				)}
 			/>
 
-			{/* ── Photo Lightbox ── */}
-			<Modal
-				visible={!!lightboxPhoto}
-				animationType="fade"
-				statusBarTranslucent
-				onRequestClose={() => setLightboxPhoto(null)}>
+			{/* Photo lightbox */}
+			<Modal visible={!!lightboxPhoto} animationType="fade" statusBarTranslucent onRequestClose={() => setLightboxPhoto(null)}>
 				<View style={{ flex: 1, backgroundColor: "#000" }}>
-					{/* Close */}
 					<TouchableOpacity
 						onPress={() => setLightboxPhoto(null)}
-						style={{
-							position: "absolute",
-							top: Platform.OS === "ios" ? 56 : 20,
-							right: 20,
-							zIndex: 10,
-							backgroundColor: "rgba(0,0,0,0.5)",
-							borderRadius: 20,
-							padding: 10,
-						}}>
+						style={{ position: "absolute", top: Platform.OS === "ios" ? 56 : 20, right: 20, zIndex: 10, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 20, padding: 10 }}>
 						<Icon name="close" size={20} color="#fff" />
 					</TouchableOpacity>
-
 					{lightboxPhoto && <ZoomableImage uri={lightboxPhoto.uri} />}
-
-					<Text style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, textAlign: "center", paddingBottom: 6 }}>
-						Pinch to zoom · Double-tap to reset
-					</Text>
-
-					{/* Food name strip */}
+					<Text style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, textAlign: "center", paddingBottom: 6 }}>Pinch to zoom · Double-tap to reset</Text>
 					{lightboxPhoto?.name && (
-						<View style={{
-							backgroundColor: "rgba(0,0,0,0.7)",
-							paddingHorizontal: 24,
-							paddingVertical: 16,
-							paddingBottom: Platform.OS === "ios" ? 36 : 16,
-						}}>
-							<Text style={{ fontSize: 18, fontWeight: "800", color: "#fff" }}>
-								{lightboxPhoto.name}
-							</Text>
+						<View style={{ backgroundColor: "rgba(0,0,0,0.7)", paddingHorizontal: 24, paddingVertical: 16, paddingBottom: Platform.OS === "ios" ? 36 : 16 }}>
+							<Text style={{ fontSize: 18, fontWeight: "800", color: "#fff" }}>{lightboxPhoto.name}</Text>
 						</View>
 					)}
 				</View>

@@ -1,41 +1,16 @@
 import React, { useState, useEffect } from "react";
 import {
-	View,
-	Text,
-	TouchableOpacity,
-	ScrollView,
-	Modal,
-	Alert,
-	StatusBar,
-	Platform,
-	KeyboardAvoidingView,
-	Image,
+	View, Text, TouchableOpacity, ScrollView, Modal,
+	Alert, StatusBar, Platform, KeyboardAvoidingView, Image,
 } from "react-native";
-import {
-	SafeAreaView,
-	useSafeAreaInsets,
-	SafeAreaProvider,
-} from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets, SafeAreaProvider } from "react-native-safe-area-context";
 import Svg, { Circle, Path } from "react-native-svg";
 import {
-	useAuth,
-	logOut,
-	fetchChildren,
-	fetchFoodLog,
-	fetchBottleLog,
-	fetchRecipes,
-	fetchFavouriteRecipes,
-	toggleRecipeFavourite,
-	addFoodEntry,
-	updateFoodEntry,
-	deleteFoodEntry,
-	addBottleEntry,
-	updateBottleEntry,
-	deleteBottleEntry,
-	addChild as fbAddChild,
-	updateChild as fbUpdateChild,
-	deleteChild as fbDeleteChild,
-	deleteAccount,
+	useAuth, logOut, fetchChildren, fetchFoodLog, fetchBottleLog, fetchRecipes,
+	fetchFavouriteRecipes, toggleRecipeFavourite, addFoodEntry, updateFoodEntry,
+	deleteFoodEntry, addBottleEntry, updateBottleEntry, deleteBottleEntry,
+	addChild as fbAddChild, updateChild as fbUpdateChild,
+	deleteChild as fbDeleteChild, deleteAccount,
 } from "./firebaseHooks";
 import AuthScreen from "./AuthScreen";
 import Purchases, { LOG_LEVEL } from "react-native-purchases";
@@ -43,23 +18,24 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { ThemeContext, useTheme, useStyles } from "./src/ThemeContext";
 import { THEMES } from "./src/constants";
-import { normalize, groupByFood, applyWeeklyFeaturedRotation } from "./src/helpers";
+import { normalize, groupByFood, applyWeeklyFeaturedRotation, computeMilestones } from "./src/helpers";
 
-import { LoadingScreen } from "./src/screens/LoadingScreen";
-import { DashboardScreen } from "./src/screens/DashboardScreen";
-import { LogScreen } from "./src/screens/LogScreen";
-import { RecipesScreen } from "./src/screens/RecipesScreen";
-import { MoreScreen } from "./src/screens/MoreScreen";
-import { AllergenScreen } from "./src/screens/AllergenScreen";
-import { ChildrenScreen } from "./src/screens/ChildrenScreen";
-import { BottleScreen } from "./src/screens/BottleScreen";
+import { LoadingScreen }    from "./src/screens/LoadingScreen";
+import { DashboardScreen }  from "./src/screens/DashboardScreen";
+import { LogScreen }        from "./src/screens/LogScreen";
+import { RecipesScreen }    from "./src/screens/RecipesScreen";
+import { MoreScreen }       from "./src/screens/MoreScreen";
+import { AllergenScreen }   from "./src/screens/AllergenScreen";
+import { ChildrenScreen }   from "./src/screens/ChildrenScreen";
+import { BottleScreen }     from "./src/screens/BottleScreen";
 
-import { Icon } from "./src/components/Icon";
-import { FoodForm } from "./src/components/FoodForm";
-import { EditModal } from "./src/components/EditModal";
+import { Icon }           from "./src/components/Icon";
+import { FoodForm }       from "./src/components/FoodForm";
+import { EditModal }      from "./src/components/EditModal";
 import { LogRecipeModal } from "./src/components/LogRecipeModal";
 
-// ─── HELPER ───────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 function buildUserMap(userId, userEmail, kids) {
 	const map = { [userId]: userEmail };
 	for (const child of kids) {
@@ -73,146 +49,249 @@ function buildUserMap(userId, userEmail, kids) {
 	return map;
 }
 
-// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function ChildPickerModal({ visible, children, activeChildId, onSelect, onClose, onManage, toast }) {
+	const { C } = useTheme();
+	const s = useStyles();
+	return (
+		<Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+			<TouchableOpacity style={s.pickerOverlay} onPress={onClose} activeOpacity={1}>
+				<View style={[s.pickerSheet, { maxHeight: "70%" }]} onStartShouldSetResponder={() => true}>
+					<Text style={s.pickerTitle}>Select Child</Text>
+					<Text style={{ fontSize: 11, color: C.mutedText, textAlign: "center", marginTop: -8, marginBottom: 10 }}>
+						Tap ★ to set a default child
+					</Text>
+					<ScrollView>
+						{children.map((c) => (
+							<TouchableOpacity
+								key={c.id}
+								onPress={() => { onSelect(c.id); onClose(); }}
+								style={[s.pickerItem, c.id === activeChildId && { backgroundColor: C.bgPurple }]}>
+								<View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
+									{c.photoUri ? (
+										<Image source={{ uri: c.photoUri }} style={{ width: 34, height: 34, borderRadius: 17 }} resizeMode="cover" />
+									) : (
+										<View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.primaryPurple + "22", alignItems: "center", justifyContent: "center" }}>
+											<Icon name="baby" size={16} color={C.primaryPurple} />
+										</View>
+									)}
+									<Text style={[s.pickerItemText, c.id === activeChildId && { color: C.primaryPurple, fontWeight: "700" }]}>
+										{c.name}
+									</Text>
+								</View>
+								<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+									<TouchableOpacity
+										hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+										onPress={(e) => { e.stopPropagation(); onSelect(c.id); onClose(); toast(`${c.name} set as default`); }}>
+										<Text style={{ fontSize: 18, color: c.id === activeChildId ? "#d4a017" : C.borderLight }}>★</Text>
+									</TouchableOpacity>
+									{c.id === activeChildId && <Icon name="check" size={16} color={C.primaryPurple} />}
+								</View>
+							</TouchableOpacity>
+						))}
+						<TouchableOpacity
+							onPress={() => { onClose(); onManage(); }}
+							style={[s.pickerItem, { borderWidth: 1.5, borderColor: C.borderLight, borderRadius: 14, marginTop: 8 }]}>
+							<View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+								<View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center" }}>
+									<Icon name="plus" size={16} color={C.primaryPurple} />
+								</View>
+								<Text style={[s.pickerItemText, { color: C.primaryPurple }]}>Manage Children</Text>
+							</View>
+						</TouchableOpacity>
+					</ScrollView>
+				</View>
+			</TouchableOpacity>
+		</Modal>
+	);
+}
+
+function AddMenuSheet({ visible, onClose, onFood, onBottle, insets }) {
+	const { C } = useTheme();
+	const pb = (insets.bottom > 0 ? insets.bottom : 16) + 8;
+	return (
+		<Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+			<TouchableOpacity style={{ flex: 1, backgroundColor: "rgba(90,45,122,0.35)", justifyContent: "flex-end" }} onPress={onClose} activeOpacity={1}>
+				<View style={{ backgroundColor: C.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: pb }} onStartShouldSetResponder={() => true}>
+					<Text style={{ fontWeight: "800", fontSize: 18, color: C.primaryPinkDark, marginBottom: 20 }}>What would you like to log?</Text>
+					<TouchableOpacity onPress={onFood} activeOpacity={0.85}
+						style={{ flexDirection: "row", alignItems: "center", gap: 16, backgroundColor: C.bgPurple, borderRadius: 18, padding: 18, marginBottom: 12 }}>
+						<View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: C.primaryPurple, alignItems: "center", justifyContent: "center" }}>
+							<Icon name="utensils" size={22} color="#fff" />
+						</View>
+						<View style={{ flex: 1 }}>
+							<Text style={{ fontWeight: "700", fontSize: 16, color: C.primaryPinkDark }}>Food or Drink</Text>
+							<Text style={{ fontSize: 13, color: C.mutedText, marginTop: 2 }}>Log a meal, snack or liquid</Text>
+						</View>
+						<Icon name="chevRight" size={16} color={C.mutedText} />
+					</TouchableOpacity>
+					<TouchableOpacity onPress={onBottle} activeOpacity={0.85}
+						style={{ flexDirection: "row", alignItems: "center", gap: 16, backgroundColor: "#d4e8f5", borderRadius: 18, padding: 18 }}>
+						<View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: "#2a5f8f", alignItems: "center", justifyContent: "center" }}>
+							<Icon name="bottle" size={22} color="#fff" />
+						</View>
+						<View style={{ flex: 1 }}>
+							<Text style={{ fontWeight: "700", fontSize: 16, color: "#1a3f5f" }}>Bottle Feed</Text>
+							<Text style={{ fontSize: 13, color: "#2a5f8f99", marginTop: 2 }}>Log formula, breast or specialised milk</Text>
+						</View>
+						<Icon name="chevRight" size={16} color="#2a5f8f" />
+					</TouchableOpacity>
+				</View>
+			</TouchableOpacity>
+		</Modal>
+	);
+}
+
+function MilestoneModal({ milestones, onClose }) {
+	const { C } = useTheme();
+	return (
+		<Modal visible={!!milestones} transparent animationType="fade" onRequestClose={onClose}>
+			<View style={{ flex: 1, backgroundColor: "rgba(90,45,122,0.5)", justifyContent: "center", alignItems: "center", padding: 32 }}>
+				<View style={{ backgroundColor: C.white, borderRadius: 28, padding: 28, width: "100%", alignItems: "center", shadowColor: "#5a2d7a", shadowOpacity: 0.25, shadowRadius: 24, elevation: 12 }}>
+					<View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+						<Text style={{ fontSize: 36 }}>🎉</Text>
+					</View>
+					<Text style={{ fontSize: 20, fontWeight: "900", color: C.primaryPinkDark, marginBottom: 6, textAlign: "center" }}>Milestone Unlocked!</Text>
+					<Text style={{ fontSize: 13, color: C.mutedText, marginBottom: 20, textAlign: "center" }}>You're doing amazing — keep exploring new foods!</Text>
+					<View style={{ width: "100%", gap: 10, marginBottom: 24 }}>
+						{(milestones || []).map((m) => (
+							<View key={m.type} style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: m.bg, borderRadius: 16, padding: 14 }}>
+								<View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: `${m.color}22`, alignItems: "center", justifyContent: "center" }}>
+									<Icon name={m.icon} size={20} color={m.color} />
+								</View>
+								<Text style={{ fontWeight: "800", fontSize: 15, color: m.color, flex: 1 }}>{m.label}</Text>
+							</View>
+						))}
+					</View>
+					<TouchableOpacity onPress={onClose}
+						style={{ backgroundColor: C.primaryPurple, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 40, alignSelf: "stretch", alignItems: "center" }}
+						activeOpacity={0.85}>
+						<Text style={{ color: C.white, fontWeight: "800", fontSize: 15 }}>Woohoo! 🌟</Text>
+					</TouchableOpacity>
+				</View>
+			</View>
+		</Modal>
+	);
+}
+
+// ── Main App ──────────────────────────────────────────────────────────────────
+
+const NAV = [
+	{ id: "dashboard", icon: "home",   label: "Home" },
+	{ id: "log",       icon: "list",   label: "Foods" },
+	{ id: "bottle",    icon: "bottle", label: "Bottles" },
+	{ id: "recipes",   icon: "chef",   label: "Recipes" },
+	{ id: "allergens", icon: "shield", label: "Allergens" },
+];
+
+const PAGE_TITLES = {
+	dashboard: "Dashboard", log: "Food Log", add: "Log Food",
+	bottle: "Bottle Log", recipes: "Recipes", allergens: "Allergens", children: "Children",
+};
+
 function MainApp({ user, isPro: isPropPro }) {
 	const { C, theme } = useTheme();
 	const s = useStyles();
 	const insets = useSafeAreaInsets();
 	const [isPro, setIsPro] = useState(isPropPro);
-	const [showMilkOnDashboard, setShowMilkOnDashboard] = useState(true);
+	const [showMilkOnDashboard, setShowMilkOnDashboard]       = useState(true);
 	const [showAllergenOnDashboard, setShowAllergenOnDashboard] = useState(true);
 
-	// Sync when Firestore finishes loading (isPropPro starts false while auth resolves)
-	useEffect(() => {
-		if (isPropPro) setIsPro(true);
-	}, [isPropPro]);
+	useEffect(() => { if (isPropPro) setIsPro(true); }, [isPropPro]);
 
-	// Load dashboard preferences
 	useEffect(() => {
 		if (!user) return;
-		let isMounted = true;
+		let alive = true;
 		Promise.all([
 			AsyncStorage.getItem(`showMilkDash_${user.uid}`),
 			AsyncStorage.getItem(`showAllergenDash_${user.uid}`),
-		]).then(([milkVal, allergenVal]) => {
-			if (isMounted && milkVal === "false") setShowMilkOnDashboard(false);
-			if (isMounted && allergenVal === "false") setShowAllergenOnDashboard(false);
+		]).then(([milk, allergen]) => {
+			if (!alive) return;
+			if (milk === "false") setShowMilkOnDashboard(false);
+			if (allergen === "false") setShowAllergenOnDashboard(false);
 		}).catch(() => {});
-		return () => { isMounted = false; };
+		return () => { alive = false; };
 	}, [user]);
 
-	const [page, setPage] = useState("dashboard");
-	const [jumpToRecipeId, setJumpToRecipeId] = useState(null);
-	const [foodLog, setFoodLog] = useState([]);
-	const [children, setChildren] = useState([]);
-	const [activeChildId, setActiveChildId] = useState(null);
-	const [dataLoaded, setDataLoaded] = useState(false);
-	const [editEntry, setEditEntry] = useState(null);
-	const [toasts, setToasts] = useState([]);
-	const [showChildPicker, setShowChildPicker] = useState(false);
+	const [page, setPage]                         = useState("dashboard");
+	const [jumpToRecipeId, setJumpToRecipeId]     = useState(null);
+	const [foodLog, setFoodLog]                   = useState([]);
+	const [children, setChildren]                 = useState([]);
+	const [activeChildId, setActiveChildId]       = useState(null);
+	const [dataLoaded, setDataLoaded]             = useState(false);
+	const [editEntry, setEditEntry]               = useState(null);
+	const [toasts, setToasts]                     = useState([]);
+	const [showChildPicker, setShowChildPicker]   = useState(false);
 	const [showLogRecipeModal, setShowLogRecipeModal] = useState(false);
-	const [logRecipeTarget, setLogRecipeTarget] = useState(null);
-	const [logFilter, setLogFilter] = useState("");
-	const [logOpenKey, setLogOpenKey] = useState(null);
+	const [logRecipeTarget, setLogRecipeTarget]   = useState(null);
+	const [logFilter, setLogFilter]               = useState("");
+	const [logOpenKey, setLogOpenKey]             = useState(null);
 	const [logAllergenFilter, setLogAllergenFilter] = useState("");
-	const [prefillFood, setPrefillFood] = useState(null);
-	const [refreshing, setRefreshing] = useState(false);
-	const [userMap, setUserMap] = useState({});
-	const [showAddMenu, setShowAddMenu] = useState(false);
-	const [showMoreModal, setShowMoreModal] = useState(false);
-	const [recipes, setRecipes] = useState([]);
+	const [prefillFood, setPrefillFood]           = useState(null);
+	const [refreshing, setRefreshing]             = useState(false);
+	const [userMap, setUserMap]                   = useState({});
+	const [showAddMenu, setShowAddMenu]           = useState(false);
+	const [showMoreModal, setShowMoreModal]       = useState(false);
+	const [bottleQuickAdd, setBottleQuickAdd]     = useState(false);
+	const [milestoneAlert, setMilestoneAlert]     = useState(null);
+	const [recipes, setRecipes]                   = useState([]);
 	const [favouriteRecipeIds, setFavouriteRecipeIds] = useState([]);
-	const [bottleLog, setBottleLog] = useState([]);
+	const [bottleLog, setBottleLog]               = useState([]);
 
-	// ── RevenueCat init ──
+	const STORAGE_KEY = `defaultChildId_${user?.uid}`;
+	const saveDefaultChild = (id) => AsyncStorage.setItem(STORAGE_KEY, id).catch(() => {});
+
 	useEffect(() => {
 		if (!user) return;
 		Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-		const apiKey =
-			Platform.OS === "ios"
-				? "appl_xNGjmEgufsXuWySnKebRetuKCGj"
-				: "goog_rcHUTFIPkKdXdEAQHcexulBdpOj";
-		Purchases.configure({ apiKey, appUserID: user.uid });
+		Purchases.configure({
+			apiKey: Platform.OS === "ios" ? "appl_xNGjmEgufsXuWySnKebRetuKCGj" : "goog_rcHUTFIPkKdXdEAQHcexulBdpOj",
+			appUserID: user.uid,
+		});
 	}, [user]);
 
-	// ── Default child helpers ──
-	const STORAGE_KEY = `defaultChildId_${user?.uid}`;
-	const saveDefaultChild = async (id) => {
-		try {
-			await AsyncStorage.setItem(STORAGE_KEY, id);
-		} catch (_) {}
+	const loadData = async () => {
+		const [log, kids, recs, favIds, bottles, savedId] = await Promise.all([
+			fetchFoodLog(user.uid), fetchChildren(user.uid), fetchRecipes(),
+			fetchFavouriteRecipes(user.uid), fetchBottleLog(user.uid),
+			AsyncStorage.getItem(STORAGE_KEY).catch(() => null),
+		]);
+		setFoodLog(log);
+		setChildren(kids);
+		setRecipes(applyWeeklyFeaturedRotation(recs));
+		setFavouriteRecipeIds(favIds);
+		setBottleLog(bottles);
+		if (kids.length > 0) {
+			const preferred = savedId && kids.find((k) => k.id === savedId);
+			setActiveChildId(preferred ? savedId : kids[0].id);
+		}
+		setUserMap(buildUserMap(user.uid, user.email, kids));
 	};
 
-	// ── Initial data load ──
 	useEffect(() => {
 		if (!user) return;
-		let isMounted = true;
-		Promise.all([
-			fetchFoodLog(user.uid),
-			fetchChildren(user.uid),
-			fetchRecipes(),
-			fetchFavouriteRecipes(user.uid),
-			fetchBottleLog(user.uid),
-			AsyncStorage.getItem(`defaultChildId_${user.uid}`).catch(() => null),
-		])
-			.then(([log, kids, recs, favIds, bottles, savedId]) => {
-				if (!isMounted) return;
-				setFoodLog(log);
-				setChildren(kids);
-				setRecipes(applyWeeklyFeaturedRotation(recs));
-				setFavouriteRecipeIds(favIds);
-				setBottleLog(bottles);
-				if (kids.length > 0) {
-					const restoredChild = savedId && kids.find((k) => k.id === savedId);
-					setActiveChildId(restoredChild ? savedId : kids[0].id);
-				}
-				setDataLoaded(true);
-				setUserMap(buildUserMap(user.uid, user.email, kids));
-			})
-			.catch((err) => {
-				console.error("Error loading data:", err);
-				if (isMounted) setDataLoaded(true);
-			});
-		return () => { isMounted = false; };
+		let alive = true;
+		loadData()
+			.then(() => { if (alive) setDataLoaded(true); })
+			.catch((e) => { console.error("Error loading data:", e); if (alive) setDataLoaded(true); });
+		return () => { alive = false; };
 	}, [user]);
 
-	// ── Derived state ──
-	const activeChild =
-		children.find((c) => c.id === activeChildId) || children[0] || null;
-	const childLog = activeChild
-		? foodLog.filter((f) => f.childId === activeChild.id)
-		: foodLog;
+	const activeChild = children.find((c) => c.id === activeChildId) || children[0] || null;
+	const childLog    = activeChild ? foodLog.filter((f) => f.childId === activeChild.id) : foodLog;
+	const childBottleLog = activeChild ? bottleLog.filter((b) => b.childId === activeChild.id) : bottleLog;
 
-	// ── Toast helper ──
 	const toast = (msg, type = "success") => {
 		const id = Date.now();
 		setToasts((p) => [...p, { id, msg, type }]);
 		setTimeout(() => setToasts((p) => p.filter((t) => t.id !== id)), 3000);
 	};
 
-	// ── Pull-to-refresh ──
 	const onRefresh = async () => {
 		setRefreshing(true);
 		try {
-			const [log, kids, recs, favIds, bottles, savedId] = await Promise.all([
-				fetchFoodLog(user.uid),
-				fetchChildren(user.uid),
-				fetchRecipes(),
-				fetchFavouriteRecipes(user.uid),
-				fetchBottleLog(user.uid),
-				AsyncStorage.getItem(STORAGE_KEY).catch(() => null),
-			]);
-			setFoodLog(log);
-			setChildren(kids);
-			setRecipes(applyWeeklyFeaturedRotation(recs));
-			setFavouriteRecipeIds(favIds);
-			setBottleLog(bottles);
-			if (kids.length > 0) {
-				const preferred = savedId && kids.find((k) => k.id === savedId);
-				const stillExists = kids.find((k) => k.id === activeChildId);
-				if (!stillExists) setActiveChildId(preferred ? savedId : kids[0].id);
-			}
-			setUserMap(buildUserMap(user.uid, user.email, kids));
+			await loadData();
 			toast("Updated");
 		} catch (e) {
 			console.error("Refresh failed:", e);
@@ -220,76 +299,81 @@ function MainApp({ user, isPro: isPropPro }) {
 		setRefreshing(false);
 	};
 
-	// ── Food log handlers ──
+	// ── Food log ──
+
 	const handleAddAttempt = (group) => {
 		setPrefillFood({
-			name: group.name,
-			category: group.category,
-			categories:
-				group.attempts?.[0]?.categories ||
-				(group.category ? [group.category] : []),
+			name: group.name, category: group.category,
+			categories: group.attempts?.[0]?.categories || (group.category ? [group.category] : []),
 			feedType: group.attempts?.[0]?.feedType || "",
 			allergens: group.attempts?.[0]?.allergens || [],
 		});
 		setPage("add");
 	};
 
-	const addFood = async (form, err) => {
-		if (!form) {
-			Alert.alert("Missing Info", err || "Please fill in required fields.");
-			return;
-		}
-		if (!activeChild) {
-			Alert.alert(
-				"No child selected",
-				"You need to add a child before logging food. Would you like to add one now?",
-				[
-					{ text: "Not now", style: "cancel" },
-					{ text: "Add child", onPress: () => setPage("children") },
-				],
-			);
-			return;
-		}
-		const existing = childLog.filter(
-			(f) => normalize(f.name) === normalize(form.name),
-		);
+	const handleAllergenCheckIn = async (allergenValue, result) => {
+		if (!activeChild) return;
+		const today = new Date().toISOString().split("T")[0];
+		const now   = new Date();
+		const time  = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+		const isSafe = result === "safe";
 		const entry = {
 			childId: activeChild.id,
-			attemptNum: existing.length + 1,
-			...form,
+			name: isSafe ? `${allergenValue} – no reaction` : `${allergenValue} – reaction observed`,
+			category: "", categories: [], allergens: [allergenValue],
+			reaction: isSafe ? "Good" : "Allergic", isAllergenCheckin: true,
+			date: today, time, form: "", ml: "", photoUri: "",
+			notes: isSafe
+				? `No reaction observed to ${allergenValue} after 48 hours`
+				: `Reaction observed to ${allergenValue} — logged via allergen check-in`,
+		};
+		try {
+			const newId = await addFoodEntry(user.uid, entry);
+			setFoodLog((p) => [...p, { id: newId, ...entry }]);
+			toast(isSafe ? `✅ ${allergenValue} marked as safely introduced` : `⚠️ Reaction to ${allergenValue} logged`);
+		} catch {
+			Alert.alert("Error", "Could not save check-in result. Please try again.");
+		}
+	};
+
+	const addFood = async (form, err) => {
+		if (!form) { Alert.alert("Missing Info", err || "Please fill in required fields."); return; }
+		if (!activeChild) {
+			Alert.alert("No child selected", "You need to add a child before logging food. Would you like to add one now?", [
+				{ text: "Not now", style: "cancel" },
+				{ text: "Add child", onPress: () => setPage("children") },
+			]);
+			return;
+		}
+		const existing = childLog.filter((f) => normalize(f.name) === normalize(form.name));
+		const entry = {
+			childId: activeChild.id, attemptNum: existing.length + 1, ...form,
 			categories: form.categories || (form.category ? [form.category] : []),
 			category: form.category || (form.categories?.[0] ?? ""),
 			ml: (form.categories || []).includes("Liquids") ? form.ml || "" : "",
 		};
 		try {
-			const newId = await addFoodEntry(user.uid, entry);
-			setFoodLog((p) => [...p, { id: newId, ...entry }]);
-			toast(
-				existing.length === 0
-					? `Added "${form.name}"`
-					: `"${form.name}" attempt #${existing.length + 1}`,
-			);
+			const newId   = await addFoodEntry(user.uid, entry);
+			const newEntry = { id: newId, ...entry };
+			setFoodLog((p) => [...p, newEntry]);
+			toast(existing.length === 0 ? `Added "${form.name}"` : `"${form.name}" attempt #${existing.length + 1}`);
+			if (existing.length === 0) {
+				const ms = computeMilestones([...childLog, newEntry]);
+				const triggered = ms[newId] || [];
+				if (triggered.length > 0) setMilestoneAlert(triggered);
+			}
 			setPage("log");
-		} catch (e) {
-			Alert.alert("Error", "Could not save entry.");
-		}
+		} catch { Alert.alert("Error", "Could not save entry."); }
 	};
 
 	const editFood = async (updated, err) => {
-		if (!updated) {
-			Alert.alert("Missing Info", err || "Please fill required fields.");
-			return;
-		}
+		if (!updated) { Alert.alert("Missing Info", err || "Please fill required fields."); return; }
 		try {
 			await updateFoodEntry(updated.id, updated);
-			setFoodLog((p) =>
-				p.map((f) => (f.id === updated.id ? { ...f, ...updated } : f)),
-			);
+			setFoodLog((p) => p.map((f) => f.id === updated.id ? { ...f, ...updated } : f));
 			setEditEntry(null);
 			toast("Entry updated");
-		} catch (e) {
-			Alert.alert("Error", "Could not update entry.");
-		}
+		} catch { Alert.alert("Error", "Could not update entry."); }
 	};
 
 	const deleteFood = async (id) => {
@@ -297,54 +381,36 @@ function MainApp({ user, isPro: isPropPro }) {
 			await deleteFoodEntry(id);
 			setFoodLog((p) => p.filter((f) => f.id !== id));
 			toast("Entry deleted");
-		} catch (e) {
-			Alert.alert("Error", "Could not delete entry.");
-		}
+		} catch { Alert.alert("Error", "Could not delete entry."); }
 	};
 
 	const toggleFav = async (id) => {
-		const entry = foodLog.find((f) => f.id === id);
+		const entry  = foodLog.find((f) => f.id === id);
 		if (!entry) return;
 		const newVal = !entry.favourite;
 		try {
 			await updateFoodEntry(id, { favourite: newVal });
-			setFoodLog((p) =>
-				p.map((f) => (f.id === id ? { ...f, favourite: newVal } : f)),
-			);
-		} catch (e) {}
+			setFoodLog((p) => p.map((f) => f.id === id ? { ...f, favourite: newVal } : f));
+		} catch {}
 	};
 
-	// ── Bottle log handlers ──
+	// ── Bottle log ──
+
 	const addBottle = async (entry) => {
-		if (!activeChild) {
-			Alert.alert("No child selected", "Please select a child first.");
-			return;
-		}
+		if (!activeChild) { Alert.alert("No child selected", "Please select a child first."); return; }
 		try {
-			const newId = await addBottleEntry(user.uid, {
-				...entry,
-				childId: activeChild.id,
-			});
-			setBottleLog((p) => [
-				...p,
-				{ id: newId, ...entry, childId: activeChild.id },
-			]);
+			const newId = await addBottleEntry(user.uid, { ...entry, childId: activeChild.id });
+			setBottleLog((p) => [...p, { id: newId, ...entry, childId: activeChild.id }]);
 			toast("Bottle logged");
-		} catch (e) {
-			Alert.alert("Error", "Could not save bottle entry.");
-		}
+		} catch { Alert.alert("Error", "Could not save bottle entry."); }
 	};
 
 	const editBottle = async (updated) => {
 		try {
 			await updateBottleEntry(updated.id, updated);
-			setBottleLog((p) =>
-				p.map((b) => (b.id === updated.id ? { ...b, ...updated } : b)),
-			);
+			setBottleLog((p) => p.map((b) => b.id === updated.id ? { ...b, ...updated } : b));
 			toast("Updated");
-		} catch (e) {
-			Alert.alert("Error", "Could not update entry.");
-		}
+		} catch { Alert.alert("Error", "Could not update entry."); }
 	};
 
 	const deleteBottle = async (id) => {
@@ -352,43 +418,32 @@ function MainApp({ user, isPro: isPropPro }) {
 			await deleteBottleEntry(id);
 			setBottleLog((p) => p.filter((b) => b.id !== id));
 			toast("Entry deleted");
-		} catch (e) {
-			Alert.alert("Error", "Could not delete entry.");
-		}
+		} catch { Alert.alert("Error", "Could not delete entry."); }
 	};
 
-	// ── Child handlers ──
+	// ── Children ──
+
 	const addChild = async (child) => {
 		try {
-			const newId = await fbAddChild(user.uid, child);
+			const newId   = await fbAddChild(user.uid, child);
 			const newChild = { id: newId, ...child };
 			setChildren((p) => [...p, newChild]);
-			if (!activeChildId) {
-				setActiveChildId(newId);
-				saveDefaultChild(newId);
-			}
+			if (!activeChildId) { setActiveChildId(newId); saveDefaultChild(newId); }
 			toast(`${child.name} added`);
-		} catch (e) {
-			Alert.alert("Error", "Could not add child.");
-		}
+		} catch { Alert.alert("Error", "Could not add child."); }
 	};
 
 	const editChild = async (updated) => {
 		try {
 			await fbUpdateChild(updated.id, updated);
-			setChildren((p) => p.map((c) => (c.id === updated.id ? updated : c)));
+			setChildren((p) => p.map((c) => c.id === updated.id ? updated : c));
 			toast("Updated");
-		} catch (e) {
-			Alert.alert("Error", "Could not update child.");
-		}
+		} catch { Alert.alert("Error", "Could not update child."); }
 	};
 
 	const deleteChild = async (id) => {
-		try {
-			await fbDeleteChild(id, user.uid);
-		} catch (e) {
-			console.warn("deleteChild error:", e.message);
-		} finally {
+		try { await fbDeleteChild(id, user.uid); } catch (e) { console.warn("deleteChild:", e.message); }
+		finally {
 			setChildren((p) => p.filter((c) => c.id !== id));
 			setFoodLog((p) => p.filter((f) => f.childId !== id));
 			if (activeChildId === id) {
@@ -400,57 +455,34 @@ function MainApp({ user, isPro: isPropPro }) {
 	};
 
 	// ── Recipes ──
+
 	const handleToggleRecipeFav = async (recipeId) => {
 		const isFav = favouriteRecipeIds.includes(recipeId);
-		setFavouriteRecipeIds((prev) =>
-			isFav ? prev.filter((id) => id !== recipeId) : [...prev, recipeId],
-		);
+		setFavouriteRecipeIds((p) => isFav ? p.filter((id) => id !== recipeId) : [...p, recipeId]);
 		try {
 			await toggleRecipeFavourite(user.uid, recipeId, isFav);
 		} catch (e) {
-			setFavouriteRecipeIds((prev) =>
-				isFav ? [...prev, recipeId] : prev.filter((id) => id !== recipeId),
-			);
+			setFavouriteRecipeIds((p) => isFav ? [...p, recipeId] : p.filter((id) => id !== recipeId));
 			Alert.alert("Error", e.message || "Could not update favourite.");
 		}
 	};
 
 	const handleLogRecipe = (recipe) => {
-		if (!activeChild) {
-			Alert.alert("No child selected", "Please select a child first.");
-			return;
-		}
+		if (!activeChild) { Alert.alert("No child selected", "Please select a child first."); return; }
 		setLogRecipeTarget(recipe);
 		setShowLogRecipeModal(true);
 	};
 
 	const handleLogRecipeConfirm = async (reaction, notes) => {
 		if (!logRecipeTarget || !activeChild) return;
-		const categoryMap = {
-			Breakfast: "Grains",
-			"Finger Foods": "Other",
-			Mains: "Proteins",
-			Snacks: "Fruits",
-			Lunch: "Vegetables",
-			Dinner: "Proteins",
-			Desserts: "Fruits",
-		};
-		const existing = childLog.filter(
-			(f) => normalize(f.name) === normalize(logRecipeTarget.title),
-		);
+		const categoryMap = { Breakfast:"Grains","Finger Foods":"Other", Mains:"Proteins", Snacks:"Fruits", Lunch:"Vegetables", Dinner:"Proteins", Desserts:"Fruits" };
+		const existing = childLog.filter((f) => normalize(f.name) === normalize(logRecipeTarget.title));
 		const entry = {
-			childId: activeChild.id,
-			date: new Date().toISOString().split("T")[0],
+			childId: activeChild.id, date: new Date().toISOString().split("T")[0],
 			name: logRecipeTarget.title,
-			category:
-				categoryMap[logRecipeTarget.category] ||
-				logRecipeTarget.category ||
-				"Other",
-			form: "Mixed Texture",
-			reaction: reaction || "",
-			notes: notes || "",
-			favourite: false,
-			attemptNum: existing.length + 1,
+			category: categoryMap[logRecipeTarget.category] || logRecipeTarget.category || "Other",
+			form: "Mixed Texture", reaction: reaction || "", notes: notes || "",
+			favourite: false, attemptNum: existing.length + 1,
 		};
 		try {
 			const newId = await addFoodEntry(user.uid, entry);
@@ -459,29 +491,23 @@ function MainApp({ user, isPro: isPropPro }) {
 			setLogRecipeTarget(null);
 			toast(`"${logRecipeTarget.title}" added to food log`);
 			setPage("log");
-		} catch (e) {
-			Alert.alert("Error", "Could not add to food log.");
-		}
+		} catch { Alert.alert("Error", "Could not add to food log."); }
 	};
 
-	// ── Dashboard preferences ──
+	// ── Settings ──
+
 	const toggleMilkOnDashboard = async () => {
 		const next = !showMilkOnDashboard;
 		setShowMilkOnDashboard(next);
-		try {
-			await AsyncStorage.setItem(`showMilkDash_${user.uid}`, String(next));
-		} catch (_) {}
+		AsyncStorage.setItem(`showMilkDash_${user.uid}`, String(next)).catch(() => {});
 	};
 
 	const toggleAllergenOnDashboard = async () => {
 		const next = !showAllergenOnDashboard;
 		setShowAllergenOnDashboard(next);
-		try {
-			await AsyncStorage.setItem(`showAllergenDash_${user.uid}`, String(next));
-		} catch (_) {}
+		AsyncStorage.setItem(`showAllergenDash_${user.uid}`, String(next)).catch(() => {});
 	};
 
-	// ── Account handlers ──
 	const handleLogout = () =>
 		Alert.alert("Sign Out", "Are you sure?", [
 			{ text: "Cancel" },
@@ -492,48 +518,33 @@ function MainApp({ user, isPro: isPropPro }) {
 		try {
 			await deleteAccount(user.uid);
 		} catch (e) {
-			if (e.code === "auth/requires-recent-login") {
-				Alert.alert(
-					"Please sign in again",
-					"Sign out and back in before deleting your account.",
-				);
-			} else {
-				Alert.alert("Error", e.message || "Could not delete account.");
-			}
+			Alert.alert(
+				e.code === "auth/requires-recent-login" ? "Please sign in again" : "Error",
+				e.code === "auth/requires-recent-login"
+					? "Sign out and back in before deleting your account."
+					: e.message || "Could not delete account.",
+			);
 		}
 	};
 
 	const handleUpgradePro = async () => {
 		try {
 			const offerings = await Purchases.getOfferings();
-			if (
-				!offerings.current ||
-				offerings.current.availablePackages.length === 0
-			) {
-				Alert.alert(
-					"Not available",
-					"Purchase not available right now. Make sure you have set up a product in App Store Connect and linked it in RevenueCat.",
-				);
+			if (!offerings.current || offerings.current.availablePackages.length === 0) {
+				Alert.alert("Not available", "Purchase not available right now. Make sure you have set up a product in App Store Connect and linked it in RevenueCat.");
 				return;
 			}
-			const proPackage = offerings.current.availablePackages[0];
-			const { customerInfo } = await Purchases.purchasePackage(proPackage);
+			const { customerInfo } = await Purchases.purchasePackage(offerings.current.availablePackages[0]);
 			if (customerInfo.entitlements.active["pro"]) {
 				const { doc, updateDoc } = await import("firebase/firestore");
-				const { db: firedb } = await import("./firebase");
+				const { db: firedb }     = await import("./firebase");
 				await updateDoc(doc(firedb, "users", user.uid), { plan: "pro" });
 				setIsPro(true);
-				Alert.alert(
-					"Welcome to Pro! 🎉",
-					"You now have access to all recipes and premium features.",
-				);
+				Alert.alert("Welcome to Pro! 🎉", "You now have access to all recipes and premium features.");
 			}
 		} catch (e) {
 			if (e.userCancelled) return;
-			Alert.alert(
-				"Purchase failed",
-				e.message || "Something went wrong. Please try again.",
-			);
+			Alert.alert("Purchase failed", e.message || "Something went wrong. Please try again.");
 		}
 	};
 
@@ -542,450 +553,130 @@ function MainApp({ user, isPro: isPropPro }) {
 			const customerInfo = await Purchases.restorePurchases();
 			if (customerInfo.entitlements.active["pro"]) {
 				const { doc, updateDoc } = await import("firebase/firestore");
-				const { db: firedb } = await import("./firebase");
+				const { db: firedb }     = await import("./firebase");
 				await updateDoc(doc(firedb, "users", user.uid), { plan: "pro" });
 				setIsPro(true);
 				Alert.alert("Restored ✓", "Your Pro purchase has been restored.");
 			} else {
-				Alert.alert(
-					"Nothing to restore",
-					"No previous Pro purchase found on this Apple/Google account.",
-				);
+				Alert.alert("Nothing to restore", "No previous Pro purchase found on this Apple/Google account.");
 			}
 		} catch (e) {
 			Alert.alert("Error", e.message || "Could not restore purchases.");
 		}
 	};
 
-	// ── Family sharing ──
-	const handleManageSharing = async (
-		emailOrUid,
-		childId,
-		onSuccess,
-		isRemove = false,
-	) => {
-		if (!childId) {
-			Alert.alert("No child selected", "Please select a child to share.");
-			return;
-		}
+	const handleManageSharing = async (emailOrUid, childId, onSuccess, isRemove = false) => {
+		if (!childId) { Alert.alert("No child selected", "Please select a child to share."); return; }
 		try {
-			const {
-				doc,
-				updateDoc,
-				arrayUnion,
-				arrayRemove,
-				collection,
-				query,
-				where,
-				getDocs: fsGetDocs,
-			} = await import("firebase/firestore");
+			const { doc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs: fsGetDocs } = await import("firebase/firestore");
 			const { db: firedb } = await import("./firebase");
 
 			if (isRemove) {
-				await updateDoc(doc(firedb, "children", childId), {
-					sharedWith: arrayRemove(emailOrUid),
-				});
-				const child = children.find((c) => c.id === childId);
-				const uidIndex = (child?.sharedWith || []).indexOf(emailOrUid);
-				const matchingEmail =
-					uidIndex !== -1 ? (child?.sharedWithEmails || [])[uidIndex] : null;
-				if (matchingEmail) {
-					await updateDoc(doc(firedb, "children", childId), {
-						sharedWithEmails: arrayRemove(matchingEmail),
-					});
-				}
-				setChildren((prev) =>
-					prev.map((c) =>
-						c.id === childId
-							? {
-									...c,
-									sharedWith: (c.sharedWith || []).filter(
-										(u) => u !== emailOrUid,
-									),
-									sharedWithEmails: matchingEmail
-										? (c.sharedWithEmails || []).filter(
-												(e) => e !== matchingEmail,
-											)
-										: c.sharedWithEmails || [],
-								}
-							: c,
-					),
-				);
+				await updateDoc(doc(firedb, "children", childId), { sharedWith: arrayRemove(emailOrUid) });
+				const child      = children.find((c) => c.id === childId);
+				const uidIndex   = (child?.sharedWith || []).indexOf(emailOrUid);
+				const matchEmail = uidIndex !== -1 ? (child?.sharedWithEmails || [])[uidIndex] : null;
+				if (matchEmail) await updateDoc(doc(firedb, "children", childId), { sharedWithEmails: arrayRemove(matchEmail) });
+				setChildren((p) => p.map((c) => c.id !== childId ? c : {
+					...c,
+					sharedWith: (c.sharedWith || []).filter((u) => u !== emailOrUid),
+					sharedWithEmails: matchEmail ? (c.sharedWithEmails || []).filter((e) => e !== matchEmail) : c.sharedWithEmails || [],
+				}));
 				Alert.alert("Removed", "Access has been removed.");
 				return;
 			}
 
-			const usersQuery = query(
-				collection(firedb, "users"),
-				where("email", "==", emailOrUid.toLowerCase().trim()),
-			);
-			const snap = await fsGetDocs(usersQuery);
-			if (snap.empty) {
-				Alert.alert(
-					"Account not found",
-					`No Munch Sprouts account found for ${emailOrUid}. They need to create an account first.`,
-				);
-				return;
-			}
+			const snap = await fsGetDocs(query(collection(firedb, "users"), where("email", "==", emailOrUid.toLowerCase().trim())));
+			if (snap.empty) { Alert.alert("Account not found", `No Munch Sprouts account found for ${emailOrUid}. They need to create an account first.`); return; }
 			const theirUid = snap.docs[0].id;
-			if (theirUid === user.uid) {
-				Alert.alert("That's you", "You can't share a child with yourself.");
-				return;
-			}
+			if (theirUid === user.uid) { Alert.alert("That's you", "You can't share a child with yourself."); return; }
 			const child = children.find((c) => c.id === childId);
-			if (child?.sharedWith?.includes(theirUid)) {
-				Alert.alert(
-					"Already shared",
-					`${emailOrUid} already has access to ${child.name}.`,
-				);
-				return;
-			}
+			if (child?.sharedWith?.includes(theirUid)) { Alert.alert("Already shared", `${emailOrUid} already has access to ${child.name}.`); return; }
 			const theirEmail = emailOrUid.toLowerCase().trim();
-			await updateDoc(doc(firedb, "children", childId), {
-				sharedWith: arrayUnion(theirUid),
-				sharedWithEmails: arrayUnion(theirEmail),
-			});
-			setChildren((prev) =>
-				prev.map((c) =>
-					c.id === childId
-						? {
-								...c,
-								sharedWith: [...(c.sharedWith || []), theirUid],
-								sharedWithEmails: [...(c.sharedWithEmails || []), theirEmail],
-							}
-						: c,
-				),
-			);
-			const childName = child?.name || "your child";
-			Alert.alert(
-				"Shared! ✓",
-				`${emailOrUid} now has access to ${childName}. They will see the data next time they open the app.`,
-			);
-			if (onSuccess) onSuccess();
+			await updateDoc(doc(firedb, "children", childId), { sharedWith: arrayUnion(theirUid), sharedWithEmails: arrayUnion(theirEmail) });
+			setChildren((p) => p.map((c) => c.id !== childId ? c : {
+				...c,
+				sharedWith: [...(c.sharedWith || []), theirUid],
+				sharedWithEmails: [...(c.sharedWithEmails || []), theirEmail],
+			}));
+			Alert.alert("Shared! ✓", `${emailOrUid} now has access to ${child?.name || "your child"}. They will see the data next time they open the app.`);
+			onSuccess?.();
 		} catch (e) {
 			console.error("Sharing error:", e);
-			Alert.alert(
-				"Error",
-				e.message || "Could not update sharing. Please try again.",
-			);
+			Alert.alert("Error", e.message || "Could not update sharing. Please try again.");
 		}
 	};
 
 	if (!dataLoaded) return <LoadingScreen />;
 
-	const nav = [
-		{ id: "dashboard", icon: "home", label: "Home" },
-		{ id: "log", icon: "list", label: "Foods" },
-		{ id: "bottle", icon: "bottle", label: "Bottles" },
-		{ id: "recipes", icon: "chef", label: "Recipes" },
-		{ id: "allergens", icon: "shield", label: "Allergens" },
-	];
-	const titles = {
-		dashboard: "Dashboard",
-		log: "Food Log",
-		add: "Log Food",
-		bottle: "Bottle Log",
-		recipes: "Recipes",
-		allergens: "Allergens",
-		children: "Children",
-	};
+	const fabBottom = (insets.bottom > 0 ? insets.bottom : 10) + 64;
 
 	return (
-		<SafeAreaView
-			style={{ flex: 1, backgroundColor: C.screen }}
-			edges={["top"]}>
-			<StatusBar
-				barStyle={theme === "dark" ? "light-content" : "dark-content"}
-				backgroundColor={C.navBg}
-			/>
+		<SafeAreaView style={{ flex: 1, backgroundColor: C.screen }} edges={["top"]}>
+			<StatusBar barStyle={theme === "dark" ? "light-content" : "dark-content"} backgroundColor={C.navBg} />
 
-			{/* ── Header ── */}
+			{/* Header */}
 			<View style={s.header}>
 				<View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-					<Image
-						source={require("./assets/logo.png")}
-						style={{ width: 36, height: 36, borderRadius: 10 }}
-						resizeMode="contain"
-					/>
+					<Image source={require("./assets/logo.png")} style={{ width: 36, height: 36, borderRadius: 10 }} resizeMode="contain" />
 					<View>
 						<Text style={s.appName}>Munch Sprouts</Text>
-						<Text style={s.pageSubtitle}>{titles[page] || "Dashboard"}</Text>
+						<Text style={s.pageSubtitle}>{PAGE_TITLES[page] || "Dashboard"}</Text>
 					</View>
 				</View>
-
 				<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
 					<TouchableOpacity
 						onPress={() => setShowChildPicker(true)}
-						style={{
-							backgroundColor: C.bgPurple,
-							borderRadius: 999,
-							paddingHorizontal: 14,
-							paddingVertical: 7,
-							flexDirection: "row",
-							alignItems: "center",
-							gap: 6,
-						}}>
+						style={{ backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7, flexDirection: "row", alignItems: "center", gap: 6 }}>
 						<Svg width={16} height={16} viewBox="0 0 32 32">
-							<Circle
-								cx="16"
-								cy="13"
-								r="7"
-								fill={C.primaryPurple}
-								opacity="0.8"
-							/>
+							<Circle cx="16" cy="13" r="7" fill={C.primaryPurple} opacity="0.8" />
 							<Circle cx="11" cy="12" r="1.5" fill={C.white} />
 							<Circle cx="21" cy="12" r="1.5" fill={C.white} />
-							<Path
-								d="M11 16.5 Q16 19.5 21 16.5"
-								stroke={C.white}
-								strokeWidth="1.5"
-								strokeLinecap="round"
-								fill="none"
-							/>
+							<Path d="M11 16.5 Q16 19.5 21 16.5" stroke={C.white} strokeWidth="1.5" strokeLinecap="round" fill="none" />
 						</Svg>
-						<Text
-							style={{ fontSize: 13, fontWeight: "700", color: C.primaryPurple }}
-							numberOfLines={1}>
+						<Text style={{ fontSize: 13, fontWeight: "700", color: C.primaryPurple }} numberOfLines={1}>
 							{activeChild ? activeChild.name : "Add Baby"}
 						</Text>
 						<Icon name="chevDown" size={12} color={C.primaryPurple} />
 					</TouchableOpacity>
 					<TouchableOpacity
 						onPress={() => setShowMoreModal(true)}
-						style={{
-							width: 36,
-							height: 36,
-							borderRadius: 18,
-							backgroundColor: C.bgPurple,
-							alignItems: "center",
-							justifyContent: "center",
-						}}
+						style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center" }}
 						activeOpacity={0.75}>
 						<Icon name="more" size={20} color={C.primaryPurple} />
 					</TouchableOpacity>
 				</View>
 			</View>
 
-			{/* ── Child picker modal ── */}
-			<Modal
-				visible={showChildPicker}
-				transparent
-				animationType="slide"
-				onRequestClose={() => setShowChildPicker(false)}>
-				<TouchableOpacity
-					style={s.pickerOverlay}
-					onPress={() => setShowChildPicker(false)}
-					activeOpacity={1}>
-					<View
-						style={[s.pickerSheet, { maxHeight: "70%" }]}
-						onStartShouldSetResponder={() => true}>
-						<Text style={s.pickerTitle}>Select Child</Text>
-						<Text
-							style={{
-								fontSize: 11,
-								color: C.mutedText,
-								textAlign: "center",
-								marginTop: -8,
-								marginBottom: 10,
-							}}>
-							Tap ★ to set a default child
-						</Text>
-						<ScrollView>
-							{children.map((c) => (
-								<TouchableOpacity
-									key={c.id}
-									onPress={() => {
-										setActiveChildId(c.id);
-										saveDefaultChild(c.id);
-										setShowChildPicker(false);
-									}}
-									style={[
-										s.pickerItem,
-										c.id === activeChildId && { backgroundColor: C.bgPurple },
-									]}>
-									<View
-										style={{
-											flexDirection: "row",
-											alignItems: "center",
-											gap: 12,
-											flex: 1,
-										}}>
-										{c.photoUri ? (
-											<Image
-												source={{ uri: c.photoUri }}
-												style={{ width: 34, height: 34, borderRadius: 17 }}
-												resizeMode="cover"
-											/>
-										) : (
-											<View
-												style={{
-													width: 34,
-													height: 34,
-													borderRadius: 17,
-													backgroundColor: C.primaryPurple + "22",
-													alignItems: "center",
-													justifyContent: "center",
-												}}>
-												<Icon name="baby" size={16} color={C.primaryPurple} />
-											</View>
-										)}
-										<Text
-											style={[
-												s.pickerItemText,
-												c.id === activeChildId && {
-													color: C.primaryPurple,
-													fontWeight: "700",
-												},
-											]}>
-											{c.name}
-										</Text>
-									</View>
-									<View
-										style={{
-											flexDirection: "row",
-											alignItems: "center",
-											gap: 8,
-										}}>
-										<TouchableOpacity
-											hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-											onPress={async (e) => {
-												e.stopPropagation();
-												await saveDefaultChild(c.id);
-												setActiveChildId(c.id);
-												setShowChildPicker(false);
-												toast(`${c.name} set as default`);
-											}}>
-											<Text
-												style={{
-													fontSize: 18,
-													color:
-														c.id === activeChildId ? "#d4a017" : C.borderLight,
-												}}>
-												★
-											</Text>
-										</TouchableOpacity>
-										{c.id === activeChildId && (
-											<Icon name="check" size={16} color={C.primaryPurple} />
-										)}
-									</View>
-								</TouchableOpacity>
-							))}
-							<TouchableOpacity
-								onPress={() => {
-									setShowChildPicker(false);
-									setPage("children");
-								}}
-								style={[
-									s.pickerItem,
-									{
-										borderWidth: 1.5,
-										borderColor: C.borderLight,
-										borderRadius: 14,
-										marginTop: 8,
-									},
-								]}>
-								<View
-									style={{
-										flexDirection: "row",
-										alignItems: "center",
-										gap: 12,
-									}}>
-									<View
-										style={{
-											width: 34,
-											height: 34,
-											borderRadius: 17,
-											backgroundColor: C.bgPurple,
-											alignItems: "center",
-											justifyContent: "center",
-										}}>
-										<Icon name="plus" size={16} color={C.primaryPurple} />
-									</View>
-									<Text style={[s.pickerItemText, { color: C.primaryPurple }]}>
-										Manage Children
-									</Text>
-								</View>
-							</TouchableOpacity>
-						</ScrollView>
-					</View>
-				</TouchableOpacity>
-			</Modal>
-
-			{/* ── Page content ── */}
-			<View
-				style={{
-					flex: 1,
-					paddingHorizontal: 16,
-					paddingTop: 16,
-					backgroundColor: C.screen,
-				}}>
+			{/* Page content */}
+			<View style={{ flex: 1, paddingHorizontal: 16, paddingTop: 16, backgroundColor: C.screen }}>
 				{page === "dashboard" && (
 					<DashboardScreen
-						child={activeChild}
-						foodLog={childLog}
-						bottleLog={
-							activeChild
-								? bottleLog.filter((b) => b.childId === activeChild.id)
-								: bottleLog
-						}
-						showMilkOnDashboard={showMilkOnDashboard}
-						showAllergenOnDashboard={showAllergenOnDashboard}
-						recipes={recipes}
-						onNavigate={setPage}
-						onNavigateToRecipe={(id) => {
-							setJumpToRecipeId(id);
-							setPage("recipes");
-						}}
-						onNavigateFiltered={(pg, filter, openKey) => {
-							setLogFilter(filter);
-							setLogOpenKey(openKey || null);
-							setLogAllergenFilter("");
-							setPage(pg);
-						}}
-						refreshing={refreshing}
-						onRefresh={onRefresh}
+						child={activeChild} foodLog={childLog} bottleLog={childBottleLog}
+						showMilkOnDashboard={showMilkOnDashboard} showAllergenOnDashboard={showAllergenOnDashboard}
+						recipes={recipes} onNavigate={setPage}
+						onNavigateToRecipe={(id) => { setJumpToRecipeId(id); setPage("recipes"); }}
+						onNavigateFiltered={(pg, filter, openKey) => { setLogFilter(filter); setLogOpenKey(openKey || null); setLogAllergenFilter(""); setPage(pg); }}
+						refreshing={refreshing} onRefresh={onRefresh}
 					/>
 				)}
 				{page === "log" && (
 					<LogScreen
-						foodLog={childLog}
-						childName={activeChild?.name || null}
-						bottleLog={
-							activeChild
-								? bottleLog.filter((b) => b.childId === activeChild.id)
-								: bottleLog
-						}
-						initialFilter={logFilter}
-						initialOpenKey={logOpenKey}
-						initialAllergenFilter={logAllergenFilter}
-						userMap={userMap}
-						currentUserId={user.uid}
-						onEdit={setEditEntry}
-						onDelete={deleteFood}
-						onToggleFavourite={toggleFav}
-						onAddAttempt={handleAddAttempt}
-						refreshing={refreshing}
-						onRefresh={onRefresh}
+						foodLog={childLog} childName={activeChild?.name || null} bottleLog={childBottleLog}
+						initialFilter={logFilter} initialOpenKey={logOpenKey} initialAllergenFilter={logAllergenFilter}
+						milestones={computeMilestones(childLog)} userMap={userMap} currentUserId={user.uid}
+						onEdit={setEditEntry} onDelete={deleteFood} onToggleFavourite={toggleFav}
+						onAddAttempt={handleAddAttempt} refreshing={refreshing} onRefresh={onRefresh}
 					/>
 				)}
 				{page === "add" && (
-					<KeyboardAvoidingView
-						behavior={Platform.OS === "ios" ? "padding" : "height"}
-						style={{ flex: 1 }}>
-						<ScrollView
-							showsVerticalScrollIndicator={false}
-							contentContainerStyle={{ paddingBottom: 40 }}>
-							<Text style={[s.pageTitle, { marginBottom: 20 }]}>
-								Log Food or Drink
-							</Text>
+					<KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+						<ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+							<Text style={[s.pageTitle, { marginBottom: 20 }]}>Log Food or Drink</Text>
 							<View style={s.card}>
 								<FoodForm
-									onSubmit={(form, err) => {
-										addFood(form, err);
-										if (!err) setPrefillFood(null);
-									}}
-									isPro={isPro}
-									initial={prefillFood || {}}
+									onSubmit={(form, err) => { addFood(form, err); if (!err) setPrefillFood(null); }}
+									isPro={isPro} initial={prefillFood || {}}
 									existingFoods={Object.values(groupByFood(childLog))}
 								/>
 							</View>
@@ -994,334 +685,115 @@ function MainApp({ user, isPro: isPropPro }) {
 				)}
 				{page === "recipes" && (
 					<RecipesScreen
-						isPro={isPro}
-						recipes={recipes}
-						favouriteRecipeIds={favouriteRecipeIds}
-						onUpgradePro={handleUpgradePro}
-						onToggleFav={handleToggleRecipeFav}
-						onLogRecipe={handleLogRecipe}
-						user={user}
-						jumpToRecipeId={jumpToRecipeId}
-						onJumpHandled={() => setJumpToRecipeId(null)}
+						isPro={isPro} recipes={recipes} favouriteRecipeIds={favouriteRecipeIds}
+						onUpgradePro={handleUpgradePro} onToggleFav={handleToggleRecipeFav}
+						onLogRecipe={handleLogRecipe} user={user}
+						jumpToRecipeId={jumpToRecipeId} onJumpHandled={() => setJumpToRecipeId(null)}
 					/>
 				)}
 				{page === "bottle" && (
 					<BottleScreen
-						bottleLog={
-							activeChild
-								? bottleLog.filter((b) => b.childId === activeChild.id)
-								: bottleLog
-						}
-						childName={activeChild?.name || null}
-						onAdd={addBottle}
-						onEdit={editBottle}
-						onDelete={deleteBottle}
+						bottleLog={childBottleLog} childName={activeChild?.name || null}
+						onAdd={addBottle} onEdit={editBottle} onDelete={deleteBottle}
+						quickAdd={bottleQuickAdd} onQuickAddConsumed={() => setBottleQuickAdd(false)}
+						isPro={isPro} onUpgradePro={handleUpgradePro}
 					/>
 				)}
 				{page === "allergens" && (
 					<AllergenScreen
-						foodLog={childLog}
-						onNavigate={setPage}
-						onViewInLog={(allergenValue) => {
-							setLogFilter("");
-							setLogOpenKey(null);
-							setLogAllergenFilter(allergenValue);
-							setPage("log");
-						}}
-						onAddWithPrefill={(allergenValue) => {
-							setPrefillFood({
-								name: "",
-								category: "",
-								categories: [],
-								feedType: "",
-								allergens: [allergenValue],
-							});
-							setPage("add");
-						}}
+						foodLog={childLog} onNavigate={setPage}
+						onViewInLog={(allergenValue) => { setLogFilter(""); setLogOpenKey(null); setLogAllergenFilter(allergenValue); setPage("log"); }}
+						onAddWithPrefill={(allergenValue) => { setPrefillFood({ name: "", category: "", categories: [], feedType: "", allergens: allergenValue ? [allergenValue] : [] }); setPage("add"); }}
+						onAllergenCheckIn={handleAllergenCheckIn}
 					/>
 				)}
 				{page === "children" && (
 					<ChildrenScreen
-						children={children}
-						activeChildId={activeChild?.id}
-						onSetActive={setActiveChildId}
-						onAdd={addChild}
-						onEdit={editChild}
-						onDelete={deleteChild}
+						children={children} activeChildId={activeChild?.id}
+						onSetActive={setActiveChildId} onAdd={addChild} onEdit={editChild} onDelete={deleteChild}
 					/>
 				)}
 			</View>
 
-			{/* ── Bottom Nav ── */}
-			<View
-				style={[
-					s.bottomNav,
-					{ paddingBottom: insets.bottom > 0 ? insets.bottom : 10 },
-				]}>
-				{nav.map((n) => {
+			{/* Bottom Nav */}
+			<View style={[s.bottomNav, { paddingBottom: insets.bottom > 0 ? insets.bottom : 10 }]}>
+				{NAV.map((n) => {
 					const active = page === n.id;
 					return (
-						<TouchableOpacity
-							key={n.id}
-							onPress={() => setPage(n.id)}
-							style={s.navItem}
-							activeOpacity={0.8}>
-							<View
-								style={{
-									width: 28,
-									height: 28,
-									borderRadius: 10,
-									backgroundColor: active
-										? C.primaryPurple + "18"
-										: "transparent",
-									alignItems: "center",
-									justifyContent: "center",
-								}}>
-								<Icon
-									name={n.icon}
-									size={20}
-									color={active ? C.primaryPurple : C.mutedText}
-								/>
+						<TouchableOpacity key={n.id} onPress={() => setPage(n.id)} style={s.navItem} activeOpacity={0.8}>
+							<View style={{ width: 28, height: 28, borderRadius: 10, backgroundColor: active ? C.primaryPurple + "18" : "transparent", alignItems: "center", justifyContent: "center" }}>
+								<Icon name={n.icon} size={20} color={active ? C.primaryPurple : C.mutedText} />
 							</View>
-							<Text
-								style={[
-									s.navLabel,
-									active && { color: C.primaryPurple, fontWeight: "700" },
-								]}>
-								{n.label}
-							</Text>
+							<Text style={[s.navLabel, active && { color: C.primaryPurple, fontWeight: "700" }]}>{n.label}</Text>
 						</TouchableOpacity>
 					);
 				})}
 			</View>
 
-			{/* ── Floating Add Button ── */}
+			{/* Floating Add Button */}
 			{page !== "add" && (
 				<TouchableOpacity
-					onPress={() => setShowAddMenu(true)}
+					onPress={() => page === "bottle" ? setBottleQuickAdd(true) : setShowAddMenu(true)}
 					activeOpacity={0.85}
-					style={{
-						position: "absolute",
-						bottom: (insets.bottom > 0 ? insets.bottom : 10) + 64,
-						right: 20,
-						width: 58,
-						height: 58,
-						borderRadius: 29,
-						backgroundColor: C.primaryPurple,
-						alignItems: "center",
-						justifyContent: "center",
-						shadowColor: C.primaryPurple,
-						shadowOpacity: 0.55,
-						shadowRadius: 14,
-						shadowOffset: { width: 0, height: 6 },
-						elevation: 12,
-					}}>
-					<Icon name="plus" size={26} color="#ffffff" />
+					style={{ position: "absolute", bottom: fabBottom, right: 20, width: 58, height: 58, borderRadius: 29, backgroundColor: C.primaryPurple, alignItems: "center", justifyContent: "center", shadowColor: C.primaryPurple, shadowOpacity: 0.55, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 12 }}>
+					<Icon name="plus" size={26} color="#fff" />
 				</TouchableOpacity>
 			)}
 
-			{/* ── Add Menu Sheet ── */}
-			<Modal
-				visible={showAddMenu}
-				transparent
-				animationType="slide"
-				onRequestClose={() => setShowAddMenu(false)}>
-				<TouchableOpacity
-					style={{
-						flex: 1,
-						backgroundColor: "rgba(90,45,122,0.35)",
-						justifyContent: "flex-end",
-					}}
-					onPress={() => setShowAddMenu(false)}
-					activeOpacity={1}>
-					<View
-						style={{
-							backgroundColor: C.white,
-							borderTopLeftRadius: 28,
-							borderTopRightRadius: 28,
-							padding: 24,
-							paddingBottom: (insets.bottom > 0 ? insets.bottom : 16) + 8,
-						}}
-						onStartShouldSetResponder={() => true}>
-						<Text
-							style={{
-								fontWeight: "800",
-								fontSize: 18,
-								color: C.primaryPinkDark,
-								marginBottom: 20,
-							}}>
-							What would you like to log?
-						</Text>
-						<TouchableOpacity
-							onPress={() => {
-								setShowAddMenu(false);
-								setPage("add");
-							}}
-							activeOpacity={0.85}
-							style={{
-								flexDirection: "row",
-								alignItems: "center",
-								gap: 16,
-								backgroundColor: C.bgPurple,
-								borderRadius: 18,
-								padding: 18,
-								marginBottom: 12,
-							}}>
-							<View
-								style={{
-									width: 48,
-									height: 48,
-									borderRadius: 14,
-									backgroundColor: C.primaryPurple,
-									alignItems: "center",
-									justifyContent: "center",
-								}}>
-								<Icon name="utensils" size={22} color="#ffffff" />
-							</View>
-							<View>
-								<Text
-									style={{
-										fontWeight: "700",
-										fontSize: 16,
-										color: C.primaryPinkDark,
-									}}>
-									Food or Drink
-								</Text>
-								<Text
-									style={{ fontSize: 13, color: C.mutedText, marginTop: 2 }}>
-									Log a meal, snack or liquid
-								</Text>
-							</View>
-							<Icon
-								name="chevRight"
-								size={16}
-								color={C.mutedText}
-								style={{ marginLeft: "auto" }}
-							/>
-						</TouchableOpacity>
-						<TouchableOpacity
-							onPress={() => {
-								setShowAddMenu(false);
-								setPage("bottle");
-							}}
-							activeOpacity={0.85}
-							style={{
-								flexDirection: "row",
-								alignItems: "center",
-								gap: 16,
-								backgroundColor: "#d4e8f5",
-								borderRadius: 18,
-								padding: 18,
-							}}>
-							<View
-								style={{
-									width: 48,
-									height: 48,
-									borderRadius: 14,
-									backgroundColor: "#2a5f8f",
-									alignItems: "center",
-									justifyContent: "center",
-								}}>
-								<Icon name="bottle" size={22} color="#ffffff" />
-							</View>
-							<View>
-								<Text
-									style={{ fontWeight: "700", fontSize: 16, color: "#1a3f5f" }}>
-									Bottle Feed
-								</Text>
-								<Text
-									style={{ fontSize: 13, color: "#2a5f8f99", marginTop: 2 }}>
-									Log formula, breast or specialised milk
-								</Text>
-							</View>
-							<Icon
-								name="chevRight"
-								size={16}
-								color="#2a5f8f"
-								style={{ marginLeft: "auto" }}
-							/>
-						</TouchableOpacity>
-					</View>
-				</TouchableOpacity>
-			</Modal>
+			{/* Modals */}
+			<ChildPickerModal
+				visible={showChildPicker}
+				children={children}
+				activeChildId={activeChildId}
+				onSelect={(id) => { setActiveChildId(id); saveDefaultChild(id); }}
+				onClose={() => setShowChildPicker(false)}
+				onManage={() => setPage("children")}
+				toast={toast}
+			/>
 
-			{/* ── More / Profile Modal ── */}
-			<Modal
-				visible={showMoreModal}
-				animationType="slide"
-				presentationStyle="pageSheet"
-				onRequestClose={() => setShowMoreModal(false)}>
+			<AddMenuSheet
+				visible={showAddMenu}
+				onClose={() => setShowAddMenu(false)}
+				onFood={() => { setShowAddMenu(false); setPage("add"); }}
+				onBottle={() => { setShowAddMenu(false); setBottleQuickAdd(true); setPage("bottle"); }}
+				insets={insets}
+			/>
+
+			<Modal visible={showMoreModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowMoreModal(false)}>
 				<SafeAreaView style={{ flex: 1, backgroundColor: C.screen }} edges={["top"]}>
 					<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
 						<Text style={{ fontWeight: "800", fontSize: 18, color: C.primaryPinkDark }}>Profile & Settings</Text>
-						<TouchableOpacity
-							onPress={() => setShowMoreModal(false)}
-							style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center" }}
-							activeOpacity={0.75}>
+						<TouchableOpacity onPress={() => setShowMoreModal(false)} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center" }} activeOpacity={0.75}>
 							<Icon name="close" size={16} color={C.primaryPurple} />
 						</TouchableOpacity>
 					</View>
 					<MoreScreen
-						user={user}
-						isPro={isPro}
-						ownedChildren={children}
-						defaultChildId={activeChild?.id || null}
-						showMilkOnDashboard={showMilkOnDashboard}
-						onToggleMilkOnDashboard={toggleMilkOnDashboard}
-						showAllergenOnDashboard={showAllergenOnDashboard}
-						onToggleAllergenOnDashboard={toggleAllergenOnDashboard}
+						user={user} isPro={isPro} ownedChildren={children} defaultChildId={activeChild?.id || null}
+						showMilkOnDashboard={showMilkOnDashboard} onToggleMilkOnDashboard={toggleMilkOnDashboard}
+						showAllergenOnDashboard={showAllergenOnDashboard} onToggleAllergenOnDashboard={toggleAllergenOnDashboard}
 						onLogout={() => { setShowMoreModal(false); handleLogout(); }}
-						onDeleteAccount={handleDeleteAccount}
-						onUpgradePro={handleUpgradePro}
-						onRestorePurchases={handleRestorePurchases}
-						onManageSharing={handleManageSharing}
+						onDeleteAccount={handleDeleteAccount} onUpgradePro={handleUpgradePro}
+						onRestorePurchases={handleRestorePurchases} onManageSharing={handleManageSharing}
 						foodLog={childLog}
 					/>
 				</SafeAreaView>
 			</Modal>
 
-			<EditModal
-				visible={!!editEntry}
-				entry={editEntry}
-				onSubmit={editFood}
-				onClose={() => setEditEntry(null)}
-				isPro={isPro}
-			/>
+			<EditModal visible={!!editEntry} entry={editEntry} onSubmit={editFood} onClose={() => setEditEntry(null)} isPro={isPro} />
 
 			<LogRecipeModal
-				visible={showLogRecipeModal}
-				recipe={logRecipeTarget}
-				childName={activeChild?.name}
+				visible={showLogRecipeModal} recipe={logRecipeTarget} childName={activeChild?.name}
 				onConfirm={handleLogRecipeConfirm}
-				onClose={() => {
-					setShowLogRecipeModal(false);
-					setLogRecipeTarget(null);
-				}}
+				onClose={() => { setShowLogRecipeModal(false); setLogRecipeTarget(null); }}
 			/>
+
+			<MilestoneModal milestones={milestoneAlert} onClose={() => setMilestoneAlert(null)} />
 
 			{/* Toasts */}
 			<View style={s.toastContainer} pointerEvents="none">
 				{toasts.map((t) => (
-					<View
-						key={t.id}
-						style={[
-							s.toast,
-							{
-								backgroundColor:
-									t.type === "warning" ? C.bgWarning : C.statGreenBg,
-								borderWidth: 1.5,
-								borderColor:
-									t.type === "warning" ? C.warningStroke : C.primaryGreenLight,
-							},
-						]}>
-						<Text
-							style={{
-								color: t.type === "warning" ? C.warningStroke : C.statGreenText,
-								fontWeight: "700",
-								fontSize: 13,
-							}}>
-							{t.msg}
-						</Text>
+					<View key={t.id} style={[s.toast, { backgroundColor: t.type === "warning" ? C.bgWarning : C.statGreenBg, borderWidth: 1.5, borderColor: t.type === "warning" ? C.warningStroke : C.primaryGreenLight }]}>
+						<Text style={{ color: t.type === "warning" ? C.warningStroke : C.statGreenText, fontWeight: "700", fontSize: 13 }}>{t.msg}</Text>
 					</View>
 				))}
 			</View>
@@ -1329,38 +801,30 @@ function MainApp({ user, isPro: isPropPro }) {
 	);
 }
 
-// ─── ROOT ─────────────────────────────────────────────────────────────────────
+// ── Root ──────────────────────────────────────────────────────────────────────
+
 function Root() {
 	const { user, loading, isPro } = useAuth();
 	if (loading) return <LoadingScreen />;
-	if (!user) return <AuthScreen />;
+	if (!user)   return <AuthScreen />;
 	return <MainApp user={user} isPro={isPro} />;
 }
 
-// ─── APP ──────────────────────────────────────────────────────────────────────
 export default function App() {
 	const [theme, setThemeState] = useState("default");
 	const C = THEMES[theme] || THEMES.default;
 
 	useEffect(() => {
-		let isMounted = true;
-		import("@react-native-async-storage/async-storage").then(
-			({ default: AsyncStorage }) => {
-				AsyncStorage.getItem("appTheme").then((saved) => {
-					if (isMounted && saved && THEMES[saved]) setThemeState(saved);
-				});
-			},
+		let alive = true;
+		import("@react-native-async-storage/async-storage").then(({ default: AS }) =>
+			AS.getItem("appTheme").then((saved) => { if (alive && saved && THEMES[saved]) setThemeState(saved); }),
 		);
-		return () => { isMounted = false; };
+		return () => { alive = false; };
 	}, []);
 
 	const setTheme = (t) => {
 		setThemeState(t);
-		import("@react-native-async-storage/async-storage").then(
-			({ default: AsyncStorage }) => {
-				AsyncStorage.setItem("appTheme", t);
-			},
-		);
+		import("@react-native-async-storage/async-storage").then(({ default: AS }) => AS.setItem("appTheme", t));
 	};
 
 	return (

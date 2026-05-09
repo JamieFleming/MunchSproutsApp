@@ -1,99 +1,36 @@
 import React from "react";
-import {
-	View,
-	Text,
-	TouchableOpacity,
-	ScrollView,
-	Image,
-	Alert,
-	RefreshControl,
-} from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Image, RefreshControl } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
-import * as Print from "expo-print";
-import * as Sharing from "expo-sharing";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon, CategoryIcon, ReactionFace, AllergenIcon } from "../components/Icon";
-import { groupByFood, calcAgeWeeks, calcAgeMonths, formatDate, normalize, reactionCfg, formatTime, toMl, computeAllergenStatus } from "../helpers";
+import { groupByFood, calcAgeWeeks, calcAgeMonths, formatDate, normalize, formatTime, toMl, computeAllergenStatus } from "../helpers";
 import { ALLERGENS } from "../constants";
 
-async function exportFoodLogAsPDF(foodLog, childName) {
-	if (!foodLog.length) {
-		Alert.alert("Nothing to export", "Add some food entries first.");
-		return;
-	}
-	const groups = groupByFood(foodLog);
-	const keys = Object.keys(groups);
-	const rows = keys
-		.map((key) => {
-			const g = groups[key];
-			const likedCnt = g.attempts.filter(
-				(a) => a.reaction === "Loved" || a.reaction === "Good",
-			).length;
-			const pct = Math.round((likedCnt / g.attempts.length) * 100);
-			const hasAllergy = g.attempts.some((a) => a.reaction === "Allergic");
-			const attemptsHTML = g.attempts
-				.map(
-					(a, i) =>
-						`<tr style="background:${i % 2 === 0 ? "#f9f7fe" : "#ffffff"}"><td style="padding:8px 12px;color:#8a7aaa;font-size:12px;">Attempt ${i + 1}</td><td style="padding:8px 12px;font-size:12px;">${formatDate(a.date)}</td><td style="padding:8px 12px;font-size:12px;">${a.form || "—"}</td><td style="padding:8px 12px;font-size:12px;color:${reactionCfg(a.reaction).color};font-weight:700;">${a.reaction || "—"}</td><td style="padding:8px 12px;font-size:12px;color:#8a7aaa;font-style:italic;">${a.notes || ""}</td></tr>`,
-				)
-				.join("");
-			return `<div style="margin-bottom:20px;border-radius:12px;overflow:hidden;border:2px solid ${hasAllergy ? "#e07070" : "#ece8f9"};"><div style="background:${hasAllergy ? "#fde8e8" : "#ede8f7"};padding:12px 16px;display:flex;justify-content:space-between;"><span style="font-weight:700;font-size:15px;color:#5a2d7a;">${g.name}${hasAllergy ? '<span style="margin-left:10px;background:#fee2e2;color:#c0392b;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;">⚠ ALLERGY</span>' : ""}</span><span style="font-size:12px;color:#3db87a;font-weight:700;">${pct}% liked</span></div><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f3f0fa;"><th style="padding:8px 12px;text-align:left;font-size:11px;color:#8a7aaa;">#</th><th style="padding:8px 12px;text-align:left;font-size:11px;color:#8a7aaa;">Date</th><th style="padding:8px 12px;text-align:left;font-size:11px;color:#8a7aaa;">Form</th><th style="padding:8px 12px;text-align:left;font-size:11px;color:#8a7aaa;">Reaction</th><th style="padding:8px 12px;text-align:left;font-size:11px;color:#8a7aaa;">Notes</th></tr></thead><tbody>${attemptsHTML}</tbody></table></div>`;
-		})
-		.join("");
-	const totalFoods = keys.length, totalAttempts = foodLog.length;
-	const liked = keys.filter((k) =>
-		groups[k].attempts.some((a) => a.reaction === "Loved" || a.reaction === "Good"),
-	).length;
-	const allergic = foodLog.filter((f) => f.reaction === "Allergic").length;
-	const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><style>body{font-family:-apple-system,Helvetica,Arial,sans-serif;margin:0;padding:32px;background:#fff;color:#3d3d3d;}h1{color:#5a2d7a;font-size:26px;margin:0 0 4px;}.subtitle{color:#8a7aaa;font-size:14px;margin-bottom:24px;}.stats{display:flex;gap:16px;margin-bottom:28px;flex-wrap:wrap;}.stat{background:#ede8f7;border-radius:10px;padding:12px 18px;text-align:center;}.stat-val{font-size:24px;font-weight:700;color:#9b7fe8;}.stat-lbl{font-size:11px;color:#8a7aaa;text-transform:uppercase;}.footer{margin-top:40px;padding-top:16px;border-top:2px solid #ece8f9;font-size:11px;color:#8a7aaa;text-align:center;}</style></head><body><h1>🌱 Munch Sprouts</h1><p class="subtitle">Food Log${childName ? ` — ${childName}` : ""} · Generated ${formatDate(new Date().toISOString().split("T")[0])}</p><div class="stats"><div class="stat"><div class="stat-val">${totalFoods}</div><div class="stat-lbl">Foods tried</div></div><div class="stat"><div class="stat-val">${totalAttempts}</div><div class="stat-lbl">Attempts</div></div><div class="stat"><div class="stat-val">${liked}</div><div class="stat-lbl">Liked</div></div>${allergic > 0 ? `<div class="stat" style="background:#fde8e8;"><div class="stat-val" style="color:#c0392b;">${allergic}</div><div class="stat-lbl" style="color:#c0392b;">Allergic</div></div>` : ""}</div><div style="font-size:13px;font-weight:700;color:#5a2d7a;text-transform:uppercase;letter-spacing:1px;margin:24px 0 12px;">Food Log (${totalFoods} foods)</div>${rows}<div class="footer">Generated by Munch Sprouts · For informational purposes only.<br/>Always consult your GP or Health Visitor before starting weaning.</div></body></html>`;
-	try {
-		const { uri } = await Print.printToFileAsync({ html, base64: false });
-		await Sharing.shareAsync(uri, {
-			mimeType: "application/pdf",
-			dialogTitle: `${childName || "MunchSprouts"} Food Log`,
-			UTI: "com.adobe.pdf",
-		});
-	} catch (e) {
-		Alert.alert("Export failed", "Could not generate PDF. Please try again.");
-	}
-}
-
 const MILK_TYPE_COLORS = {
-	formula: { color: "#2a5f8f", bg: "#d4e8f5" },
-	breast: { color: "#7a2d6a", bg: "#f5d4f0" },
+	formula:     { color: "#2a5f8f", bg: "#d4e8f5" },
+	breast:      { color: "#7a2d6a", bg: "#f5d4f0" },
 	specialised: { color: "#a85a1a", bg: "#fde8cc" },
 };
+
+const MILK_LABELS = { formula: "Formula", breast: "Breast Milk", specialised: "Specialised" };
+
+// ── Sub-components ────────────────────────────────────────────────────────────
 
 function MilkGraph({ entries }) {
 	const { C } = useTheme();
 	if (entries.length === 0) return null;
-
-	const BAR_HEIGHT = 64;
+	const BAR_H = 64;
 	const maxMl = Math.max(...entries.map((e) => toMl(e.amount, e.unit)));
-
 	return (
-		<View style={{ flexDirection: "row", alignItems: "flex-end", gap: 6, height: BAR_HEIGHT + 28 }}>
+		<View style={{ flexDirection: "row", alignItems: "flex-end", gap: 6, height: BAR_H + 28 }}>
 			{entries.map((e) => {
 				const ml = toMl(e.amount, e.unit);
-				const height = Math.max(8, Math.round((ml / maxMl) * BAR_HEIGHT));
 				const tc = MILK_TYPE_COLORS[e.type] || MILK_TYPE_COLORS.formula;
 				return (
 					<View key={e.id} style={{ flex: 1, alignItems: "center", justifyContent: "flex-end" }}>
-						<Text style={{ fontSize: 9, fontWeight: "700", color: tc.color, marginBottom: 3 }}>
-							{e.amount}{e.unit}
-						</Text>
-						<View
-							style={{
-								width: "100%",
-								height,
-								backgroundColor: tc.color,
-								borderRadius: 6,
-								opacity: 0.85,
-							}}
-						/>
-						<Text style={{ fontSize: 9, color: C.mutedText, marginTop: 4, fontWeight: "600" }}>
-							{formatTime(e.time)}
-						</Text>
+						<Text style={{ fontSize: 9, fontWeight: "700", color: tc.color, marginBottom: 3 }}>{e.amount}{e.unit}</Text>
+						<View style={{ width: "100%", height: Math.max(8, Math.round((ml / maxMl) * BAR_H)), backgroundColor: tc.color, borderRadius: 6, opacity: 0.85 }} />
+						<Text style={{ fontSize: 9, color: C.mutedText, marginTop: 4, fontWeight: "600" }}>{formatTime(e.time)}</Text>
 					</View>
 				);
 			})}
@@ -101,77 +38,121 @@ function MilkGraph({ entries }) {
 	);
 }
 
+function CheckInReminderCard({ allergenStatus, onNavigate }) {
+	const { C } = useTheme();
+	const s = useStyles();
+	const checkIns = allergenStatus.filter((a) => a.needsCheckIn);
+	if (checkIns.length === 0) return null;
+	return (
+		<TouchableOpacity onPress={() => onNavigate("allergens")} activeOpacity={0.88} style={[s.card, { borderWidth: 1.5, borderColor: "#d4860a55" }]}>
+			<View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
+				<View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#fff0cc", alignItems: "center", justifyContent: "center" }}>
+					<Icon name="clock" size={18} color="#d4860a" />
+				</View>
+				<View style={{ flex: 1 }}>
+					<Text style={{ fontWeight: "800", fontSize: 14, color: "#a85a1a" }}>Allergen Check-in Needed</Text>
+					<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>Log whether your baby had any reaction</Text>
+				</View>
+				<Icon name="chevRight" size={14} color="#d4860a" />
+			</View>
+			<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+				{checkIns.map((a) => (
+					<View key={a.value} style={{ flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: "#fff8ec", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: "#d4860a33" }}>
+						<AllergenIcon allergen={a.value} size={22} />
+						<View>
+							<Text style={{ fontSize: 11, fontWeight: "700", color: "#a85a1a" }}>{a.value}</Text>
+							<Text style={{ fontSize: 9, color: "#d4860a", fontWeight: "600" }}>{a.daysSinceFirst}d ago</Text>
+						</View>
+					</View>
+				))}
+			</View>
+		</TouchableOpacity>
+	);
+}
+
+function FavouritesSection({ foodLog, onNavigateFiltered }) {
+	const { C } = useTheme();
+	const s = useStyles();
+	const favItems = Object.values(groupByFood(foodLog))
+		.filter((g) => g.attempts.some((a) => a.favourite))
+		.sort((a, b) => a.name.localeCompare(b.name));
+	if (favItems.length === 0) return null;
+	return (
+		<View style={s.card}>
+			<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+				<Text style={s.sectionTitle}>Favourites</Text>
+				<TouchableOpacity onPress={() => onNavigateFiltered("log", "Favourites")}>
+					<Text style={{ fontSize: 13, color: C.primaryPurple, fontWeight: "700" }}>View all</Text>
+				</TouchableOpacity>
+			</View>
+			<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+				{favItems.slice(0, 8).map((g) => {
+					const latestFav = g.attempts.filter((a) => a.favourite).at(-1);
+					return (
+						<TouchableOpacity
+							key={g.key}
+							onPress={() => onNavigateFiltered("log", "Favourites")}
+							style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: C.statNeutralBg, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, width: "100%" }}
+							activeOpacity={0.8}>
+							<CategoryIcon category={g.category} size={28} />
+							<View>
+								<Text style={{ fontWeight: "700", fontSize: 13, color: "#7a5a00" }}>{g.name}</Text>
+								{latestFav?.reaction && <Text style={{ fontSize: 10, color: "#c49a10", fontWeight: "600" }}>{latestFav.reaction}</Text>}
+							</View>
+						</TouchableOpacity>
+					);
+				})}
+			</View>
+		</View>
+	);
+}
+
+// ── Screen ────────────────────────────────────────────────────────────────────
+
 export function DashboardScreen({
-	child,
-	foodLog,
-	bottleLog = [],
-	showMilkOnDashboard = true,
-	showAllergenOnDashboard = true,
-	recipes = [],
-	onNavigate,
-	onNavigateToRecipe,
-	onNavigateFiltered,
-	refreshing,
-	onRefresh,
+	child, foodLog, bottleLog = [], showMilkOnDashboard = true, showAllergenOnDashboard = true,
+	recipes = [], onNavigate, onNavigateToRecipe, onNavigateFiltered, refreshing, onRefresh,
 }) {
 	const { C } = useTheme();
 	const s = useStyles();
-	const groups = groupByFood(foodLog);
-	const keys = Object.keys(groups);
-	const unique = keys.length, total = foodLog.length;
-	const liked = keys.filter((k) =>
-		groups[k].attempts.some((a) => a.reaction === "Loved" || a.reaction === "Good"),
-	).length;
-	const disliked = keys.filter((k) =>
-		groups[k].attempts.some((a) => a.reaction === "Rejected"),
-	).length;
-	const neutral = keys.filter((k) =>
-		groups[k].attempts.some((a) => a.reaction === "Neutral"),
-	).length;
-	const allergic = foodLog.filter((f) => f.reaction === "Allergic").length;
-	const liquids = keys.filter((k) => groups[k].category === "Liquids").length;
-	const favourites = keys.filter((k) =>
-		groups[k].attempts.some((a) => a.favourite),
-	).length;
-	const weeks = child ? calcAgeWeeks(child.dob) : null;
+
+	const groups  = groupByFood(foodLog);
+	const keys    = Object.keys(groups);
+	const unique  = keys.length;
+	const liked      = keys.filter((k) => groups[k].attempts.some((a) => a.reaction === "Loved" || a.reaction === "Good")).length;
+	const disliked   = keys.filter((k) => groups[k].attempts.some((a) => a.reaction === "Rejected")).length;
+	const neutral    = keys.filter((k) => groups[k].attempts.some((a) => a.reaction === "Neutral")).length;
+	const allergic   = foodLog.filter((f) => f.reaction === "Allergic").length;
+	const liquids    = keys.filter((k) => groups[k].category === "Liquids").length;
+	const favourites = keys.filter((k) => groups[k].attempts.some((a) => a.favourite)).length;
+	const weeks  = child ? calcAgeWeeks(child.dob) : null;
 	const months = child ? calcAgeMonths(child.dob) : null;
 
-	// Allergen summary
-	const allergenStatus = computeAllergenStatus(foodLog, ALLERGENS);
+	const allergenStatus     = computeAllergenStatus(foodLog, ALLERGENS);
 	const allergenIntroduced = allergenStatus.filter((a) => a.status !== "Not Tried").length;
-	const allergenTotal = ALLERGENS.length;
-	const allergenPct = allergenTotal > 0 ? Math.round((allergenIntroduced / allergenTotal) * 100) : 0;
-	const nextAllergen = allergenStatus.find((a) => a.status === "Not Tried") || null;
-	const recent = [...foodLog].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+	const allergenTotal      = ALLERGENS.length;
+	const allergenPct        = allergenTotal > 0 ? Math.round((allergenIntroduced / allergenTotal) * 100) : 0;
+	const nextAllergen       = allergenStatus.find((a) => a.status === "Not Tried") || null;
+	const recent             = [...foodLog].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
 
-	// Pick a featured recipe of the day (rotates daily)
 	const featuredRecipes = recipes.filter((r) => r.featured);
-	const dayIndex = Math.floor(Date.now() / 86400000);
-	const featuredRecipe = featuredRecipes.length > 0
-		? featuredRecipes[dayIndex % featuredRecipes.length]
+	const featuredRecipe  = featuredRecipes.length > 0
+		? featuredRecipes[Math.floor(Date.now() / 86400000) % featuredRecipes.length]
 		: null;
 
-	const today = new Date().toISOString().split("T")[0];
-	const todayBottles = [...bottleLog]
-		.filter((e) => e.date === today)
-		.sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+	const today       = new Date().toISOString().split("T")[0];
+	const todayBottles = [...bottleLog].filter((e) => e.date === today).sort((a, b) => (a.time || "").localeCompare(b.time || ""));
 	const todayTotalMl = todayBottles.reduce((sum, e) => sum + toMl(e.amount, e.unit), 0);
-	const lastBottle = todayBottles.at(-1);
+	const lastBottle   = todayBottles.at(-1);
 
 	return (
 		<ScrollView
 			style={{ flex: 1 }}
 			contentContainerStyle={{ gap: 18, paddingBottom: 24 }}
 			showsVerticalScrollIndicator={false}
-			refreshControl={
-				<RefreshControl
-					refreshing={refreshing}
-					onRefresh={onRefresh}
-					tintColor={C.primaryPurple}
-					colors={[C.primaryPurple]}
-					progressBackgroundColor={C.white}
-				/>
-			}>
+			refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primaryPurple} colors={[C.primaryPurple]} progressBackgroundColor={C.white} />}>
+
+			{/* ── Child hero ── */}
 			{child ? (
 				<View style={{ backgroundColor: C.primaryPurple, borderRadius: 24, padding: 22, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
 					<View style={{ flex: 1 }}>
@@ -187,11 +168,7 @@ export function DashboardScreen({
 								</View>
 							</View>
 						)}
-						{child.weaningStart && (
-							<Text style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", marginTop: 6 }}>
-								Weaning since {formatDate(child.weaningStart)}
-							</Text>
-						)}
+						{child.weaningStart && <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", marginTop: 6 }}>Weaning since {formatDate(child.weaningStart)}</Text>}
 					</View>
 					<TouchableOpacity onPress={() => onNavigate("children")} activeOpacity={0.8} style={{ position: "relative" }}>
 						{child.photoUri ? (
@@ -202,8 +179,8 @@ export function DashboardScreen({
 							<Svg width={64} height={64} viewBox="0 0 64 64">
 								<Circle cx="32" cy="32" r="30" fill="rgba(255,255,255,0.15)" />
 								<Circle cx="32" cy="28" r="16" fill="rgba(255,255,255,0.25)" />
-								<Circle cx="24" cy="26" r="3" fill="rgba(255,255,255,0.8)" />
-								<Circle cx="40" cy="26" r="3" fill="rgba(255,255,255,0.8)" />
+								<Circle cx="24" cy="26" r="3"  fill="rgba(255,255,255,0.8)" />
+								<Circle cx="40" cy="26" r="3"  fill="rgba(255,255,255,0.8)" />
 								<Path d="M26 34 Q32 39 38 34" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
 								<Path d="M14 44 Q32 56 50 44" stroke="rgba(255,255,255,0.25)" strokeWidth="3" strokeLinecap="round" fill="none" />
 							</Svg>
@@ -223,36 +200,38 @@ export function DashboardScreen({
 				</View>
 			)}
 
+			{/* ── Stats row 1 ── */}
 			<View style={{ flexDirection: "row", gap: 10 }}>
-				<TouchableOpacity onPress={() => onNavigateFiltered("log", "")} style={[s.statCard, { backgroundColor: C.bgPurple, flex: 1 }]} activeOpacity={0.8}>
+				<TouchableOpacity onPress={() => onNavigateFiltered("log", "")}        style={[s.statCard, { backgroundColor: C.bgPurple,       flex: 1 }]} activeOpacity={0.8}>
 					<Icon name="grid" size={20} color={C.primaryPurple} />
 					<Text style={[s.statValue, { color: C.primaryPurple }]}>{unique}</Text>
 					<Text style={[s.statLabel, { color: C.primaryPurple }]}>Tried</Text>
 				</TouchableOpacity>
-				<TouchableOpacity onPress={() => onNavigateFiltered("log", "Loved")} style={[s.statCard, { backgroundColor: C.statGreenBg, flex: 1 }]} activeOpacity={0.8}>
+				<TouchableOpacity onPress={() => onNavigateFiltered("log", "Loved")}   style={[s.statCard, { backgroundColor: C.statGreenBg,   flex: 1 }]} activeOpacity={0.8}>
 					<ReactionFace reaction="Loved" size={24} />
 					<Text style={[s.statValue, { color: C.statGreenText }]}>{liked}</Text>
 					<Text style={[s.statLabel, { color: C.statGreenText }]}>Likes</Text>
 				</TouchableOpacity>
-				<TouchableOpacity onPress={() => onNavigateFiltered("log", "Rejected")} style={[s.statCard, { backgroundColor: C.statRedBg, flex: 1 }]} activeOpacity={0.8}>
+				<TouchableOpacity onPress={() => onNavigateFiltered("log", "Rejected")} style={[s.statCard, { backgroundColor: C.statRedBg,    flex: 1 }]} activeOpacity={0.8}>
 					<ReactionFace reaction="Rejected" size={24} />
 					<Text style={[s.statValue, { color: C.statRedText }]}>{disliked}</Text>
 					<Text style={[s.statLabel, { color: C.statRedText }]}>Dislikes</Text>
 				</TouchableOpacity>
-				<TouchableOpacity onPress={() => onNavigateFiltered("log", "Neutral")} style={[s.statCard, { backgroundColor: C.statNeutralBg, flex: 1 }]} activeOpacity={0.8}>
+				<TouchableOpacity onPress={() => onNavigateFiltered("log", "Neutral")}  style={[s.statCard, { backgroundColor: C.statNeutralBg, flex: 1 }]} activeOpacity={0.8}>
 					<ReactionFace reaction="Neutral" size={24} />
 					<Text style={[s.statValue, { color: C.statNeutralText }]}>{neutral}</Text>
 					<Text style={[s.statLabel, { color: C.statNeutralText }]}>Neutral</Text>
 				</TouchableOpacity>
 			</View>
 
+			{/* ── Stats row 2 ── */}
 			<View style={{ flexDirection: "row", gap: 10 }}>
-				<TouchableOpacity onPress={() => onNavigateFiltered("log", "Allergic")} style={[s.statCard, { backgroundColor: C.statRedBg, flex: 1 }]} activeOpacity={0.8}>
+				<TouchableOpacity onPress={() => onNavigateFiltered("log", "Allergic")}   style={[s.statCard, { backgroundColor: C.statRedBg,     flex: 1 }]} activeOpacity={0.8}>
 					<ReactionFace reaction="Allergic" size={24} />
 					<Text style={[s.statValue, { color: "#c0392b" }]}>{allergic}</Text>
 					<Text style={[s.statLabel, { color: "#c0392b" }]}>Allergic</Text>
 				</TouchableOpacity>
-				<TouchableOpacity onPress={() => onNavigateFiltered("log", "Liquids")} style={[s.statCard, { backgroundColor: C.statBlueBg, flex: 1 }]} activeOpacity={0.8}>
+				<TouchableOpacity onPress={() => onNavigateFiltered("log", "Liquids")}    style={[s.statCard, { backgroundColor: C.statBlueBg,    flex: 1 }]} activeOpacity={0.8}>
 					<CategoryIcon category="Liquids" size={30} />
 					<Text style={[s.statValue, { color: C.statBlueText }]}>{liquids}</Text>
 					<Text style={[s.statLabel, { color: C.statBlueText }]}>Liquids</Text>
@@ -264,190 +243,100 @@ export function DashboardScreen({
 				</TouchableOpacity>
 			</View>
 
-			{/* ── Allergen Summary Card ── */}
-			{showAllergenOnDashboard && <TouchableOpacity onPress={() => onNavigate("allergens")} activeOpacity={0.88} style={s.card}>
-				<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-					<View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-						<View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#ece8f9", alignItems: "center", justifyContent: "center" }}>
-							<Icon name="shield" size={20} color="#7b5ea7" />
-						</View>
-						<View>
-							<Text style={s.sectionTitle}>Allergen Tracker</Text>
-							<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>
-								{allergenTotal - allergenIntroduced} still to introduce
-							</Text>
-						</View>
-					</View>
-					<View style={{ alignItems: "flex-end" }}>
-						<Text style={{ fontSize: 22, fontWeight: "800", color: C.primaryPurple }}>
-							{allergenIntroduced}/{allergenTotal}
-						</Text>
-						<Text style={{ fontSize: 11, color: C.mutedText }}>introduced</Text>
-					</View>
-				</View>
-
-				{/* Progress bar */}
-				<View style={{ backgroundColor: C.borderLight, borderRadius: 999, height: 8, overflow: "hidden", marginBottom: 12 }}>
-					<View style={{ backgroundColor: "#3db87a", height: "100%", width: `${allergenPct}%`, borderRadius: 999 }} />
-				</View>
-
-				{/* Next allergen suggestion */}
-				{nextAllergen ? (
-					<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-						<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-							<AllergenIcon allergen={nextAllergen.value} size={32} />
+			{/* ── Allergen summary ── */}
+			{showAllergenOnDashboard && (
+				<TouchableOpacity onPress={() => onNavigate("allergens")} activeOpacity={0.88} style={s.card}>
+					<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+						<View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+							<View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#ece8f9", alignItems: "center", justifyContent: "center" }}>
+								<Icon name="shield" size={20} color="#7b5ea7" />
+							</View>
 							<View>
-								<Text style={{ fontSize: 10, color: C.mutedText, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.3 }}>Try next</Text>
-								<Text style={{ fontSize: 13, fontWeight: "700", color: C.primaryPinkDark }}>{nextAllergen.value}</Text>
+								<Text style={s.sectionTitle}>Allergen Tracker</Text>
+								<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>{allergenTotal - allergenIntroduced} still to introduce</Text>
 							</View>
 						</View>
-						<View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-							<Text style={{ fontSize: 12, fontWeight: "700", color: C.primaryPurple }}>View Tracker</Text>
-							<Icon name="chevRight" size={12} color={C.primaryPurple} />
+						<View style={{ alignItems: "flex-end" }}>
+							<Text style={{ fontSize: 22, fontWeight: "800", color: C.primaryPurple }}>{allergenIntroduced}/{allergenTotal}</Text>
+							<Text style={{ fontSize: 11, color: C.mutedText }}>introduced</Text>
 						</View>
 					</View>
-				) : (
-					<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-						<Text style={{ fontSize: 14 }}>🎉</Text>
-						<Text style={{ fontSize: 13, fontWeight: "700", color: "#2d7a55" }}>All allergens introduced!</Text>
+					<View style={{ backgroundColor: C.borderLight, borderRadius: 999, height: 8, overflow: "hidden", marginBottom: 12 }}>
+						<View style={{ backgroundColor: "#3db87a", height: "100%", width: `${allergenPct}%`, borderRadius: 999 }} />
 					</View>
-				)}
-			</TouchableOpacity>}
+					{nextAllergen ? (
+						<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+							<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+								<AllergenIcon allergen={nextAllergen.value} size={32} />
+								<View>
+									<Text style={{ fontSize: 10, color: C.mutedText, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.3 }}>Try next</Text>
+									<Text style={{ fontSize: 13, fontWeight: "700", color: C.primaryPinkDark }}>{nextAllergen.value}</Text>
+								</View>
+							</View>
+							<View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+								<Text style={{ fontSize: 12, fontWeight: "700", color: C.primaryPurple }}>View Tracker</Text>
+								<Icon name="chevRight" size={12} color={C.primaryPurple} />
+							</View>
+						</View>
+					) : (
+						<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+							<Text style={{ fontSize: 14 }}>🎉</Text>
+							<Text style={{ fontSize: 13, fontWeight: "700", color: "#2d7a55" }}>All allergens introduced!</Text>
+						</View>
+					)}
+				</TouchableOpacity>
+			)}
 
-			{/* ── Allergen Check-in Reminder ── */}
-			{showAllergenOnDashboard && (() => {
-				const checkIns = allergenStatus.filter((a) => a.needsCheckIn);
-				if (checkIns.length === 0) return null;
-				return (
-					<TouchableOpacity
-						onPress={() => onNavigate("allergens")}
-						activeOpacity={0.88}
-						style={[s.card, { borderWidth: 1.5, borderColor: "#d4860a55" }]}>
-						<View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
-							<View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#fff0cc", alignItems: "center", justifyContent: "center" }}>
-								<Icon name="clock" size={18} color="#d4860a" />
+			{/* ── Allergen check-in reminder ── */}
+			{showAllergenOnDashboard && <CheckInReminderCard allergenStatus={allergenStatus} onNavigate={onNavigate} />}
+
+			{/* ── Milk tracking ── */}
+			{showMilkOnDashboard && (
+				<TouchableOpacity onPress={() => onNavigate("bottle")} activeOpacity={0.92} style={s.card}>
+					<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+						<View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+							<View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#d4e8f5", alignItems: "center", justifyContent: "center" }}>
+								<Icon name="bottle" size={20} color="#2a5f8f" />
 							</View>
-							<View style={{ flex: 1 }}>
-								<Text style={{ fontWeight: "800", fontSize: 14, color: "#a85a1a" }}>
-									Allergen Check-in Needed
-								</Text>
-								<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>
-									Log whether your baby had any reaction
-								</Text>
+							<View>
+								<Text style={s.sectionTitle}>Milk Today</Text>
+								{lastBottle && <Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>Last feed {formatTime(lastBottle.time)}</Text>}
 							</View>
-							<Icon name="chevRight" size={14} color="#d4860a" />
 						</View>
-						<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-							{checkIns.map((a) => (
-								<View
-									key={a.value}
-									style={{
-										flexDirection: "row",
-										alignItems: "center",
-										gap: 7,
-										backgroundColor: "#fff8ec",
-										borderRadius: 20,
-										paddingHorizontal: 10,
-										paddingVertical: 6,
-										borderWidth: 1,
-										borderColor: "#d4860a33",
-									}}>
-									<AllergenIcon allergen={a.value} size={22} />
-									<View>
-										<Text style={{ fontSize: 11, fontWeight: "700", color: "#a85a1a" }}>
-											{a.value}
-										</Text>
-										<Text style={{ fontSize: 9, color: "#d4860a", fontWeight: "600" }}>
-											{a.daysSinceFirst}d ago
-										</Text>
+						<View style={{ alignItems: "flex-end" }}>
+							<Text style={{ fontSize: 22, fontWeight: "800", color: "#2a5f8f" }}>{todayTotalMl} ml</Text>
+							<Text style={{ fontSize: 11, color: C.mutedText }}>{todayBottles.length} feed{todayBottles.length !== 1 ? "s" : ""}</Text>
+						</View>
+					</View>
+					{todayBottles.length > 0 ? (
+						<MilkGraph entries={todayBottles} />
+					) : (
+						<View style={{ alignItems: "center", paddingVertical: 16, backgroundColor: C.bgPurple, borderRadius: 14 }}>
+							<Icon name="bottle" size={28} color={C.secondaryPurple} />
+							<Text style={{ fontSize: 13, color: C.mutedText, fontWeight: "600", marginTop: 6 }}>No bottles logged today</Text>
+						</View>
+					)}
+					{todayBottles.length > 0 && (
+						<View style={{ flexDirection: "row", gap: 6, marginTop: 12, flexWrap: "wrap" }}>
+							{Object.entries(todayBottles.reduce((acc, e) => { acc[e.type] = (acc[e.type] || 0) + 1; return acc; }, {})).map(([type, count]) => {
+								const tc = MILK_TYPE_COLORS[type] || MILK_TYPE_COLORS.formula;
+								return (
+									<View key={type} style={{ backgroundColor: tc.bg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexDirection: "row", alignItems: "center", gap: 4 }}>
+										<View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: tc.color }} />
+										<Text style={{ fontSize: 11, fontWeight: "700", color: tc.color }}>{count}× {MILK_LABELS[type] || type}</Text>
 									</View>
-								</View>
-							))}
+								);
+							})}
 						</View>
-					</TouchableOpacity>
-				);
-			})()}
+					)}
+				</TouchableOpacity>
+			)}
 
-			{/* ── Milk Tracking Card ── */}
-
-			{showMilkOnDashboard && <TouchableOpacity onPress={() => onNavigate("bottle")} activeOpacity={0.92} style={s.card}>
-				<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-					<View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-						<View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#d4e8f5", alignItems: "center", justifyContent: "center" }}>
-							<Icon name="bottle" size={20} color="#2a5f8f" />
-						</View>
-						<View>
-							<Text style={s.sectionTitle}>Milk Today</Text>
-							{lastBottle && (
-								<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>
-									Last feed {formatTime(lastBottle.time)}
-								</Text>
-							)}
-						</View>
-					</View>
-					<View style={{ alignItems: "flex-end" }}>
-						<Text style={{ fontSize: 22, fontWeight: "800", color: "#2a5f8f" }}>{todayTotalMl} ml</Text>
-						<Text style={{ fontSize: 11, color: C.mutedText }}>
-							{todayBottles.length} feed{todayBottles.length !== 1 ? "s" : ""}
-						</Text>
-					</View>
-				</View>
-
-				{todayBottles.length > 0 ? (
-					<MilkGraph entries={todayBottles} />
-				) : (
-					<View style={{ alignItems: "center", paddingVertical: 16, backgroundColor: C.bgPurple, borderRadius: 14 }}>
-						<Icon name="bottle" size={28} color={C.secondaryPurple} />
-						<Text style={{ fontSize: 13, color: C.mutedText, fontWeight: "600", marginTop: 6 }}>
-							No bottles logged today
-						</Text>
-					</View>
-				)}
-
-				{todayBottles.length > 0 && (
-					<View style={{ flexDirection: "row", gap: 6, marginTop: 12, flexWrap: "wrap" }}>
-						{Object.entries(
-							todayBottles.reduce((acc, e) => {
-								acc[e.type] = (acc[e.type] || 0) + 1;
-								return acc;
-							}, {}),
-						).map(([type, count]) => {
-							const tc = MILK_TYPE_COLORS[type] || MILK_TYPE_COLORS.formula;
-							const label = { formula: "Formula", breast: "Breast Milk", specialised: "Specialised" }[type] || type;
-							return (
-								<View key={type} style={{ backgroundColor: tc.bg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexDirection: "row", alignItems: "center", gap: 4 }}>
-									<View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: tc.color }} />
-									<Text style={{ fontSize: 11, fontWeight: "700", color: tc.color }}>
-										{count}× {label}
-									</Text>
-								</View>
-							);
-						})}
-					</View>
-				)}
-			</TouchableOpacity>}
-
-			{/* ── Featured Recipe Card ── */}
+			{/* ── Featured recipe ── */}
 			{featuredRecipe && (
-				<TouchableOpacity
-					onPress={() => onNavigateToRecipe?.(featuredRecipe.id)}
-					activeOpacity={0.88}
-					style={{
-						borderRadius: 20,
-						overflow: "hidden",
-						backgroundColor: C.white,
-						shadowColor: "#9b7fe8",
-						shadowOpacity: 0.1,
-						shadowRadius: 10,
-						shadowOffset: { width: 0, height: 4 },
-						elevation: 3,
-					}}>
+				<TouchableOpacity onPress={() => onNavigateToRecipe?.(featuredRecipe.id)} activeOpacity={0.88} style={{ borderRadius: 20, overflow: "hidden", backgroundColor: C.white, shadowColor: "#9b7fe8", shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 }}>
 					{featuredRecipe.imageUrl ? (
-						<Image
-							source={{ uri: featuredRecipe.imageUrl }}
-							style={{ width: "100%", height: 160 }}
-							resizeMode="cover"
-						/>
+						<Image source={{ uri: featuredRecipe.imageUrl }} style={{ width: "100%", height: 160 }} resizeMode="cover" />
 					) : (
 						<View style={{ width: "100%", height: 120, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center" }}>
 							<CategoryIcon category={featuredRecipe.category} size={64} />
@@ -465,41 +354,19 @@ export function DashboardScreen({
 						</View>
 					)}
 					<View style={{ padding: 16 }}>
-						<Text style={{ fontWeight: "800", fontSize: 16, color: C.primaryPinkDark, marginBottom: 8 }}>
-							{featuredRecipe.title}
-						</Text>
+						<Text style={{ fontWeight: "800", fontSize: 16, color: C.primaryPinkDark, marginBottom: 8 }}>{featuredRecipe.title}</Text>
 						<View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-							{featuredRecipe.ageGroup && (
-								<View style={{ backgroundColor: C.bgGreen, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-									<Text style={{ fontSize: 11, fontWeight: "700", color: "#2e7d52" }}>{featuredRecipe.ageGroup}</Text>
-								</View>
-							)}
-							{featuredRecipe.time && (
-								<View style={{ backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-									<Text style={{ fontSize: 11, fontWeight: "700", color: C.primaryPurple }}>⏱ {featuredRecipe.time}</Text>
-								</View>
-							)}
-							{featuredRecipe.servings && (
-								<View style={{ backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-									<Text style={{ fontSize: 11, fontWeight: "700", color: C.primaryPurple }}>🍽 {featuredRecipe.servings} servings</Text>
-								</View>
-							)}
+							{featuredRecipe.ageGroup  && <View style={{ backgroundColor: C.bgGreen,   borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ fontSize: 11, fontWeight: "700", color: "#2e7d52" }}>{featuredRecipe.ageGroup}</Text></View>}
+							{featuredRecipe.time      && <View style={{ backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ fontSize: 11, fontWeight: "700", color: C.primaryPurple }}>⏱ {featuredRecipe.time}</Text></View>}
+							{featuredRecipe.servings  && <View style={{ backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ fontSize: 11, fontWeight: "700", color: C.primaryPurple }}>🍽 {featuredRecipe.servings} servings</Text></View>}
 						</View>
-						{featuredRecipe.description ? (
-							<Text style={{ fontSize: 13, color: C.mutedText, lineHeight: 19, marginBottom: 14 }} numberOfLines={2}>
-								{featuredRecipe.description}
-							</Text>
-						) : null}
+						{featuredRecipe.description && <Text style={{ fontSize: 13, color: C.mutedText, lineHeight: 19, marginBottom: 14 }} numberOfLines={2}>{featuredRecipe.description}</Text>}
 						<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
 							<View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
 								<Text style={{ fontSize: 13, fontWeight: "700", color: C.primaryPurple }}>View Recipe</Text>
 								<Icon name="chevRight" size={13} color={C.primaryPurple} />
 							</View>
-							<TouchableOpacity
-								onPress={(e) => { e.stopPropagation?.(); onNavigate("recipes"); }}
-								activeOpacity={0.75}
-								hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-								style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 }}>
+							<TouchableOpacity onPress={(e) => { e.stopPropagation?.(); onNavigate("recipes"); }} activeOpacity={0.75} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 }}>
 								<Icon name="chef" size={13} color={C.primaryPurple} />
 								<Text style={{ fontSize: 12, fontWeight: "700", color: C.primaryPurple }}>More Recipes</Text>
 							</TouchableOpacity>
@@ -508,6 +375,7 @@ export function DashboardScreen({
 				</TouchableOpacity>
 			)}
 
+			{/* ── Allergy alert ── */}
 			{allergic > 0 && (
 				<View style={{ backgroundColor: C.statRedBg, borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", gap: 14, shadowColor: "#c0392b", shadowOpacity: 0.1, shadowRadius: 8, elevation: 2 }}>
 					<View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: C.statRedBg, alignItems: "center", justifyContent: "center" }}>
@@ -515,13 +383,12 @@ export function DashboardScreen({
 					</View>
 					<View style={{ flex: 1 }}>
 						<Text style={{ fontWeight: "700", fontSize: 14, color: "#c0392b" }}>Allergic Reactions Logged</Text>
-						<Text style={{ fontSize: 12, color: "#c0392b", marginTop: 2 }}>
-							{allergic} reaction{allergic !== 1 ? "s" : ""} recorded — check food log
-						</Text>
+						<Text style={{ fontSize: 12, color: "#c0392b", marginTop: 2 }}>{allergic} reaction{allergic !== 1 ? "s" : ""} recorded — check food log</Text>
 					</View>
 				</View>
 			)}
 
+			{/* ── Recent foods ── */}
 			{recent.length > 0 && (
 				<View style={s.card}>
 					<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -538,12 +405,8 @@ export function DashboardScreen({
 							activeOpacity={0.7}>
 							<CategoryIcon category={e.category} size={44} />
 							<View style={{ flex: 1 }}>
-								<Text style={{ fontWeight: "700", fontSize: 15, color: C.primaryPinkDark }}>
-									{e.name}{e.favourite ? " ★" : ""}
-								</Text>
-								<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>
-									{formatDate(e.date)}{e.form ? ` · ${e.form}` : ""}
-								</Text>
+								<Text style={{ fontWeight: "700", fontSize: 15, color: C.primaryPinkDark }}>{e.name}{e.favourite ? " ★" : ""}</Text>
+								<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>{formatDate(e.date)}{e.form ? ` · ${e.form}` : ""}</Text>
 							</View>
 							<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
 								<ReactionFace reaction={e.reaction} size={34} />
@@ -554,50 +417,15 @@ export function DashboardScreen({
 				</View>
 			)}
 
-			{(() => {
-				const favItems = Object.values(groupByFood(foodLog))
-					.filter((g) => g.attempts.some((a) => a.favourite))
-					.sort((a, b) => a.name.localeCompare(b.name));
-				if (favItems.length === 0) return null;
-				return (
-					<View style={s.card}>
-						<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-							<Text style={s.sectionTitle}>Favourites</Text>
-							<TouchableOpacity onPress={() => onNavigateFiltered("log", "Favourites")}>
-								<Text style={{ fontSize: 13, color: C.primaryPurple, fontWeight: "700" }}>View all</Text>
-							</TouchableOpacity>
-						</View>
-						<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-							{favItems.slice(0, 8).map((g) => {
-								const latestFav = g.attempts.filter((a) => a.favourite).at(-1);
-								return (
-									<TouchableOpacity
-										key={g.key}
-										onPress={() => onNavigateFiltered("log", "Favourites")}
-										style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: C.statNeutralBg, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, width: "100%" }}
-										activeOpacity={0.8}>
-										<CategoryIcon category={g.category} size={28} />
-										<View>
-											<Text style={{ fontWeight: "700", fontSize: 13, color: "#7a5a00" }}>{g.name}</Text>
-											{latestFav?.reaction ? (
-												<Text style={{ fontSize: 10, color: "#c49a10", fontWeight: "600" }}>{latestFav.reaction}</Text>
-											) : null}
-										</View>
-									</TouchableOpacity>
-								);
-							})}
-						</View>
-					</View>
-				);
-			})()}
+			{/* ── Favourites ── */}
+			<FavouritesSection foodLog={foodLog} onNavigateFiltered={onNavigateFiltered} />
 
+			{/* ── Empty state ── */}
 			{foodLog.length === 0 && (
 				<View style={[s.card, { alignItems: "center", paddingVertical: 40 }]}>
 					<Icon name="utensils" size={48} color={C.secondaryPurple} />
 					<Text style={[s.sectionTitle, { marginTop: 16, marginBottom: 8 }]}>No foods logged yet</Text>
-					<Text style={{ color: C.mutedText, fontSize: 14, textAlign: "center", marginBottom: 20, lineHeight: 22 }}>
-						Start tracking your little one's weaning journey
-					</Text>
+					<Text style={{ color: C.mutedText, fontSize: 14, textAlign: "center", marginBottom: 20, lineHeight: 22 }}>Start tracking your little one's weaning journey</Text>
 					<TouchableOpacity onPress={() => onNavigate("add")} style={[s.btnPrimary, { paddingHorizontal: 32, width: "auto" }]}>
 						<Text style={s.btnPrimaryText}>Log First Food</Text>
 					</TouchableOpacity>

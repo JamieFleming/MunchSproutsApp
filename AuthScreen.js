@@ -12,7 +12,7 @@ import {
 	ScrollView,
 	ActivityIndicator,
 } from "react-native";
-import Svg, { Path } from "react-native-svg";
+import Svg, { Path, Circle } from "react-native-svg";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import Constants from "expo-constants";
@@ -65,6 +65,25 @@ const C = {
 	mutedText: "#8a7aaa",
 };
 
+function EyeIcon({ visible }) {
+	const stroke = C.mutedText;
+	const p = { stroke, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", fill: "none" };
+	if (visible) {
+		return (
+			<Svg width={20} height={20} viewBox="0 0 24 24">
+				<Path {...p} d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+				<Circle {...p} cx="12" cy="12" r="3" />
+			</Svg>
+		);
+	}
+	return (
+		<Svg width={20} height={20} viewBox="0 0 24 24">
+			<Path {...p} d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+			<Path {...p} d="M1 1l22 22" />
+		</Svg>
+	);
+}
+
 export default function AuthScreen() {
 	// mode: "signin" | "signup" | "forgot"
 	const [mode, setMode] = useState("signin");
@@ -73,6 +92,8 @@ export default function AuthScreen() {
 	const [confirm, setConfirm] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [googleLoading, setGoogleLoading] = useState(false);
+	const [showPassword, setShowPassword] = useState(false);
+	const [showConfirm, setShowConfirm] = useState(false);
 
 	// ── Google OAuth via expo-auth-session ──
 	const [request, response, promptAsync] = Google.useAuthRequest({
@@ -279,28 +300,46 @@ export default function AuthScreen() {
 					</View>
 					<View style={styles.fieldGroup}>
 						<Text style={styles.label}>Password</Text>
-						<TextInput
-							value={password}
-							onChangeText={setPassword}
-							placeholder={
-								mode === "signup" ? "At least 6 characters" : "Your password"
-							}
-							secureTextEntry
-							style={styles.input}
-							placeholderTextColor={C.mutedText}
-						/>
+						<View style={styles.inputWrapper}>
+							<TextInput
+								value={password}
+								onChangeText={setPassword}
+								placeholder={
+									mode === "signup" ? "At least 6 characters" : "Your password"
+								}
+								secureTextEntry={!showPassword}
+								style={[styles.input, styles.inputWithEye]}
+								placeholderTextColor={C.mutedText}
+							/>
+							<TouchableOpacity
+								onPress={() => setShowPassword((v) => !v)}
+								style={styles.eyeBtn}
+								hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+								activeOpacity={0.6}>
+								<EyeIcon visible={showPassword} />
+							</TouchableOpacity>
+						</View>
 					</View>
 					{mode === "signup" && (
 						<View style={styles.fieldGroup}>
 							<Text style={styles.label}>Confirm Password</Text>
-							<TextInput
-								value={confirm}
-								onChangeText={setConfirm}
-								placeholder="Repeat your password"
-								secureTextEntry
-								style={styles.input}
-								placeholderTextColor={C.mutedText}
-							/>
+							<View style={styles.inputWrapper}>
+								<TextInput
+									value={confirm}
+									onChangeText={setConfirm}
+									placeholder="Repeat your password"
+									secureTextEntry={!showConfirm}
+									style={[styles.input, styles.inputWithEye]}
+									placeholderTextColor={C.mutedText}
+								/>
+								<TouchableOpacity
+									onPress={() => setShowConfirm((v) => !v)}
+									style={styles.eyeBtn}
+									hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+									activeOpacity={0.6}>
+									<EyeIcon visible={showConfirm} />
+								</TouchableOpacity>
+							</View>
 						</View>
 					)}
 					{/* Forgot password link — only on sign in */}
@@ -451,6 +490,20 @@ const styles = StyleSheet.create({
 		color: C.textCharcoal,
 		fontWeight: "600",
 		fontSize: 15,
+	},
+	inputWrapper: {
+		position: "relative",
+		justifyContent: "center",
+	},
+	inputWithEye: {
+		paddingRight: 46,
+	},
+	eyeBtn: {
+		position: "absolute",
+		right: 14,
+		top: 0,
+		bottom: 0,
+		justifyContent: "center",
 	},
 	btnPrimary: {
 		backgroundColor: C.primaryPurple,

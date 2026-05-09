@@ -26,7 +26,7 @@ import {
 	orderBy,
 } from "firebase/firestore";
 import { auth, db, storage } from "./firebase";
-import { ref, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
+import { ref, uploadString, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
 // AUTH STATE
 export function useAuth() {
@@ -234,10 +234,11 @@ export async function addChild(userId, child) {
 export async function updateChild(childId, data) {
 	const safeData = { ...data };
 	if (safeData.photoUri) {
+		const ownerUid = auth.currentUser?.uid || safeData.userId || "unknown";
 		try {
 			safeData.photoUri = await uploadPhotoIfBase64(
 				safeData.photoUri,
-				`childPhotos/${safeData.userId || "unknown"}/${childId}.jpg`,
+				`childPhotos/${ownerUid}/${childId}.jpg`,
 			);
 		} catch (e) {
 			console.warn("Child photo upload failed:", e.message);
@@ -312,13 +313,37 @@ export async function fetchFoodLog(userId) {
 	return Array.from(allEntries.values());
 }
 
-// Upload a base64 photo to Firebase Storage and return the download URL.
-// If the value is already an https:// URL (already migrated) it passes through unchanged.
-async function uploadPhotoIfBase64(base64Uri, storagePath) {
-	if (!base64Uri) return "";
-	if (base64Uri.startsWith("http")) return base64Uri; // already a URL
+// Upload a photo to Firebase Storage and return the download URL.
+// Accepts a local file URI (file:// or content://) or a legacy base64 data URL.
+// Already-uploaded https:// URLs pass through unchanged.
+async function uploadPhotoIfBase64(photoUri, storagePath) {
+	if (!photoUri) return "";
+	if (photoUri.startsWith("http")) return photoUri; // already an uploaded URL
+
 	const photoRef = ref(storage, storagePath);
-	await uploadString(photoRef, base64Uri, "data_url");
+
+	if (photoUri.startsWith("data:")) {
+		// Legacy base64 data URL path — strip the prefix and upload as raw base64.
+		// This avoids the ArrayBuffer→Blob path that crashes on Hermes.
+		const base64 = photoUri.split(",")[1];
+		const contentType = photoUri.split(";")[0].split(":")[1] || "image/jpeg";
+		await uploadString(photoRef, base64, "base64", { contentType });
+	} else {
+		// Local file URI (file:// on iOS, content:// on Android).
+		// Use XMLHttpRequest to create a native blob — this works correctly in Hermes
+		// whereas fetch().blob() and new Blob([ArrayBuffer]) do not.
+		const blob = await new Promise((resolve, reject) => {
+			const xhr = new XMLHttpRequest();
+			xhr.onload = () => resolve(xhr.response);
+			xhr.onerror = () => reject(new Error("XHR blob fetch failed"));
+			xhr.responseType = "blob";
+			xhr.open("GET", photoUri, true);
+			xhr.send(null);
+		});
+		await uploadBytes(photoRef, blob);
+		blob.close?.();
+	}
+
 	return await getDownloadURL(photoRef);
 }
 
@@ -355,10 +380,14 @@ export async function addFoodEntry(userId, entry) {
 export async function updateFoodEntry(entryId, data) {
 	const safeData = { ...data };
 	if (safeData.photoUri) {
+		// Use the authenticated user's UID for the storage path — this ensures
+		// it always matches request.auth.uid in Storage security rules, even
+		// if the entry's userId field differs (e.g. family sharing).
+		const ownerUid = auth.currentUser?.uid || safeData.userId || "unknown";
 		try {
 			safeData.photoUri = await uploadPhotoIfBase64(
 				safeData.photoUri,
-				`foodPhotos/${safeData.userId || "unknown"}/${entryId}.jpg`,
+				`foodPhotos/${ownerUid}/${entryId}.jpg`,
 			);
 		} catch (e) {
 			console.warn("Photo upload failed — updating without photo:", e.message);

@@ -4,16 +4,35 @@ import { useTheme, useStyles } from "../ThemeContext";
 import { Icon, ReactionFace } from "./Icon";
 import { reactionCfg } from "../helpers";
 
+// ── Micro-components ─────────────────────────────────────────────────────────
+
+/** Rounded pill badge. children can be a string or JSX. */
+export function Pill({ bg, color, children, border, style }) {
+	return (
+		<View style={[{ backgroundColor: bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, ...(border && { borderWidth: 1, borderColor: border }) }, style]}>
+			{typeof children === "string"
+				? <Text style={{ fontSize: 10, fontWeight: "700", color }}>{children}</Text>
+				: children}
+		</View>
+	);
+}
+
+/** Square icon container (rounded corners). */
+export function IconCircle({ bg, icon, iconColor, size = 42, radius = 13, iconSize = 20 }) {
+	return (
+		<View style={{ width: size, height: size, borderRadius: radius, backgroundColor: bg, alignItems: "center", justifyContent: "center" }}>
+			<Icon name={icon} size={iconSize} color={iconColor} />
+		</View>
+	);
+}
+
+// ── Existing components ───────────────────────────────────────────────────────
+
 export function Card({ children, style, danger = false }) {
 	const { C } = useTheme();
 	const s = useStyles();
 	return (
-		<View
-			style={[
-				s.card,
-				danger && { backgroundColor: C.statRedBg, borderColor: "#e07070" },
-				style,
-			]}>
+		<View style={[s.card, danger && { backgroundColor: C.statRedBg, borderColor: "#e07070" }, style]}>
 			{children}
 		</View>
 	);
@@ -23,13 +42,7 @@ export function SectionTitle({ children, icon }) {
 	const { C } = useTheme();
 	const s = useStyles();
 	return (
-		<View
-			style={{
-				flexDirection: "row",
-				alignItems: "center",
-				gap: 8,
-				marginBottom: 14,
-			}}>
+		<View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 }}>
 			{icon && <Icon name={icon} size={16} color={C.primaryPurple} />}
 			<Text style={s.sectionTitle}>{children}</Text>
 		</View>
@@ -39,20 +52,9 @@ export function SectionTitle({ children, icon }) {
 export function ReactionBadge({ reaction }) {
 	const r = reactionCfg(reaction);
 	return (
-		<View
-			style={{
-				flexDirection: "row",
-				alignItems: "center",
-				gap: 6,
-				backgroundColor: r.bg,
-				borderRadius: 999,
-				paddingHorizontal: 10,
-				paddingVertical: 5,
-			}}>
+		<View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: r.bg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 }}>
 			<ReactionFace reaction={reaction} size={18} />
-			<Text style={{ color: r.color, fontSize: 12, fontWeight: "700" }}>
-				{reaction}
-			</Text>
+			<Text style={{ color: r.color, fontSize: 12, fontWeight: "700" }}>{reaction}</Text>
 		</View>
 	);
 }
@@ -69,20 +71,10 @@ export function StatCard({ icon, label, value, color, bg }) {
 }
 
 export function PrimaryBtn({ label, onPress, color, icon }) {
-	const { C } = useTheme();
 	const s = useStyles();
 	return (
-		<TouchableOpacity
-			onPress={onPress}
-			style={[s.btnPrimary, color && { backgroundColor: color }]}
-			activeOpacity={0.8}>
-			<View
-				style={{
-					flexDirection: "row",
-					alignItems: "center",
-					gap: 8,
-					justifyContent: "center",
-				}}>
+		<TouchableOpacity onPress={onPress} style={[s.btnPrimary, color && { backgroundColor: color }]} activeOpacity={0.8}>
+			<View style={{ flexDirection: "row", alignItems: "center", gap: 8, justifyContent: "center" }}>
 				{icon && <Icon name={icon} size={14} color="#ffffff" />}
 				<Text style={s.btnPrimaryText}>{label}</Text>
 			</View>
@@ -93,10 +85,7 @@ export function PrimaryBtn({ label, onPress, color, icon }) {
 export function SecondaryBtn({ onPress, children, style: extra }) {
 	const s = useStyles();
 	return (
-		<TouchableOpacity
-			onPress={onPress}
-			style={[s.btnSecondary, extra]}
-			activeOpacity={0.8}>
+		<TouchableOpacity onPress={onPress} style={[s.btnSecondary, extra]} activeOpacity={0.8}>
 			{children}
 		</TouchableOpacity>
 	);
@@ -105,10 +94,7 @@ export function SecondaryBtn({ onPress, children, style: extra }) {
 export function DangerBtn({ onPress, children, style: extra }) {
 	const s = useStyles();
 	return (
-		<TouchableOpacity
-			onPress={onPress}
-			style={[s.btnDanger, extra]}
-			activeOpacity={0.8}>
+		<TouchableOpacity onPress={onPress} style={[s.btnDanger, extra]} activeOpacity={0.8}>
 			{children}
 		</TouchableOpacity>
 	);

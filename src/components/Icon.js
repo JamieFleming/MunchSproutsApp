@@ -194,6 +194,87 @@ export function Icon({ name, size = 18, color }) {
 				<Polyline {...p} points="12 6 12 12 16 14" />
 			</Svg>
 		),
+		bell: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				<Path {...p} d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+				<Path {...p} d="M13.73 21a2 2 0 0 1-3.46 0" />
+			</Svg>
+		),
+		bellOff: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				<Path {...p} d="M13.73 21a2 2 0 0 1-3.46 0" />
+				<Path {...p} d="M18.63 13A17.89 17.89 0 0 1 18 8" />
+				<Path {...p} d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14" />
+				<Path {...p} d="M18 8a6 6 0 0 0-9.33-5" />
+				<Line {...p} x1="1" y1="1" x2="23" y2="23" />
+			</Svg>
+		),
+		volume: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				<Polygon {...p} points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+				<Path {...p} d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+				<Path {...p} d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+			</Svg>
+		),
+		volumeOff: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				<Polygon {...p} points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+				<Line {...p} x1="23" y1="9" x2="17" y2="15" />
+				<Line {...p} x1="17" y1="9" x2="23" y2="15" />
+			</Svg>
+		),
+		moon: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				<Path {...p} d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+			</Svg>
+		),
+		reflux: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				{/* Upward arrow — liquid coming back up */}
+				<Path {...p} d="M12 20V8" />
+				<Path {...p} d="M8 12l4-4 4 4" />
+				{/* Drops spraying out */}
+				<Circle cx="7"  cy="7"  r="1.2" fill={color} stroke="none" />
+				<Circle cx="17" cy="6"  r="0.9" fill={color} stroke="none" />
+				<Circle cx="15" cy="9"  r="0.7" fill={color} stroke="none" />
+				{/* Stomach base curve */}
+				<Path {...p} d="M7 20q2.5-3 5-3t5 3" />
+			</Svg>
+		),
+		fussiness: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				{/* Face circle */}
+				<Circle {...p} cx="12" cy="12" r="9" />
+				{/* Dot eyes */}
+				<Circle cx="9"  cy="10" r="1.2" fill={color} stroke="none" />
+				<Circle cx="15" cy="10" r="1.2" fill={color} stroke="none" />
+				{/* Sad / frown mouth */}
+				<Path {...p} d="M8.5 16q1.75-2.5 3.5-2.5t3.5 2.5" />
+				{/* Tear drops */}
+				<Path {...p} strokeWidth={1.5} d="M9 12.5 8 15" />
+				<Path {...p} strokeWidth={1.5} d="M15 12.5 16 15" />
+			</Svg>
+		),
+		windGas: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				<Path {...p} d="M3 8h10a3 3 0 1 0-3-3" />
+				<Path {...p} d="M3 12h14a3 3 0 1 1-3 3" />
+				<Path {...p} d="M3 16h7a2 2 0 1 0-2-2" />
+			</Svg>
+		),
+		discomfort: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				{/* Body outline */}
+				<Path {...p} d="M12 3a2 2 0 1 0 0-4 2 2 0 0 0 0 4" />
+				<Circle {...p} cx="12" cy="4" r="2" />
+				{/* Torso */}
+				<Path {...p} d="M9 7h6l1 6H8L9 7z" />
+				{/* Legs */}
+				<Path {...p} d="M10 13l-1 6M14 13l1 6" />
+				{/* Pain zigzag on tummy */}
+				<Path {...p} strokeWidth={1.5} d="M9.5 10l1.5 1.5 1.5-1.5 1.5 1.5" />
+			</Svg>
+		),
 		chart: (
 			<Svg width={size} height={size} viewBox="0 0 24 24">
 				<Line {...p} x1="18" y1="20" x2="18" y2="10" />

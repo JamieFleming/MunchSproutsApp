@@ -51,6 +51,12 @@ export function applyWeeklyFeaturedRotation(recipes) {
 export function computeAllergenStatus(foodLog, allergenList) {
 	const todayMs = new Date().setHours(0, 0, 0, 0);
 
+	const daysSinceDate = (dateStr) => {
+		if (!dateStr) return null;
+		const ms = new Date(dateStr).setHours(0, 0, 0, 0);
+		return Math.floor((todayMs - ms) / (1000 * 60 * 60 * 24));
+	};
+
 	return allergenList.map((allergen) => {
 		const entries = foodLog.filter(
 			(e) => Array.isArray(e.allergens) && e.allergens.includes(allergen.value),
@@ -65,38 +71,58 @@ export function computeAllergenStatus(foodLog, allergenList) {
 				count: 0,
 				daysSinceFirst: null,
 				needsCheckIn: false,
+				awaitingWindow: false,
 			};
 		}
 
 		const hasReaction = entries.some((e) => e.reaction === "Allergic");
-		const hasSafe = entries.some(
-			(e) => e.reaction === "Loved" || e.reaction === "Good",
-		);
 
-		const dates = entries
-			.filter((e) => e.date)
-			.map((e) => e.date)
-			.sort();
+		// "Mature safe" = positive reaction that is either:
+		//   a) a confirmed allergen check-in (isAllergenCheckin: true), OR
+		//   b) >= 2 days old (the 48hr window has passed naturally)
+		const hasMatureSafe = entries.some((e) => {
+			if (e.reaction !== "Loved" && e.reaction !== "Good") return false;
+			if (e.isAllergenCheckin) return true;
+			return (daysSinceDate(e.date) ?? 0) >= 2;
+		});
 
+		// "Awaiting window" = logged with positive reaction but < 2 days ago, not yet confirmed
+		const awaitingWindow =
+			!hasReaction &&
+			!hasMatureSafe &&
+			entries.some((e) => {
+				if (e.reaction !== "Loved" && e.reaction !== "Good") return false;
+				if (e.isAllergenCheckin) return false;
+				return (daysSinceDate(e.date) ?? 999) < 2;
+			});
+
+		const dates = entries.filter((e) => e.date).map((e) => e.date).sort();
 		const firstDate = dates[0] || null;
 		const lastDate = dates[dates.length - 1] || null;
 
 		let status;
 		if (hasReaction) status = "Reaction";
-		else if (hasSafe) status = "Safe";
+		else if (hasMatureSafe) status = "Safe";
 		else status = "In Progress";
 
-		// How many days since first introduction
 		let daysSinceFirst = null;
 		let needsCheckIn = false;
 		if (firstDate) {
-			const firstMs = new Date(firstDate).setHours(0, 0, 0, 0);
-			daysSinceFirst = Math.floor((todayMs - firstMs) / (1000 * 60 * 60 * 24));
-			// Remind at 2–7 days after first intro if still In Progress
+			daysSinceFirst = daysSinceDate(firstDate);
+			// Prompt check-in at 2–7 days after first intro if still In Progress
 			needsCheckIn = status === "In Progress" && daysSinceFirst >= 2 && daysSinceFirst <= 7;
 		}
 
-		return { ...allergen, status, firstDate, lastDate, count: entries.length, daysSinceFirst, needsCheckIn };
+		return {
+			...allergen,
+			status,
+			firstDate,
+			lastDate,
+			count: entries.length,
+			daysSinceFirst,
+			needsCheckIn,
+			awaitingWindow,
+		};
 	});
 }
 
@@ -185,6 +211,81 @@ export function toMl(amount, unit) {
 	return unit === "oz" ? Math.round(n * 29.5735) : Math.round(n);
 }
 
+// ── Milestone thresholds ───────────────────────────────────────────────────
+const MILESTONE_THRESHOLDS = [
+	{ count: 1,  icon: "star",        color: "#c49a10", bg: "#fef6d4" },
+	{ count: 5,  icon: "starFill",    color: "#9b7fe8", bg: "#ede8f7" },
+	{ count: 10, icon: "shieldCheck", color: "#3db87a", bg: "#e6f7ef" },
+	{ count: 25, icon: "crown",       color: "#e87a1a", bg: "#fde8d4" },
+];
+
+/**
+ * Returns a map of { [entryId]: milestone[] } where each milestone has:
+ *   { type, label, icon, color, bg, category?, count? }
+ */
+export function computeMilestones(foodLog) {
+	const sorted = [...foodLog]
+		.filter((e) => e.id && e.name)
+		.sort((a, b) => {
+			const da = `${a.date || "1970-01-01"}T${a.time || "00:00"}`;
+			const db = `${b.date || "1970-01-01"}T${b.time || "00:00"}`;
+			return da.localeCompare(db);
+		});
+
+	const result = {};
+	const seenEver = new Set();
+	const seenPerCat = {};
+
+	for (const entry of sorted) {
+		const food = normalize(entry.name);
+		const cats =
+			Array.isArray(entry.categories) && entry.categories.length
+				? entry.categories
+				: entry.category
+					? [entry.category]
+					: [];
+
+		const badges = [];
+
+		// First food ever
+		if (seenEver.size === 0) {
+			badges.push({
+				type: "first_ever",
+				label: "First food logged!",
+				icon: "star",
+				color: "#c49a10",
+				bg: "#fef6d4",
+			});
+		}
+		seenEver.add(food);
+
+		// Per-category milestones (only on the first log of each unique food name per category)
+		for (const cat of cats) {
+			if (!seenPerCat[cat]) seenPerCat[cat] = new Set();
+			if (!seenPerCat[cat].has(food)) {
+				seenPerCat[cat].add(food);
+				const n = seenPerCat[cat].size;
+				const threshold = MILESTONE_THRESHOLDS.find((t) => t.count === n);
+				if (threshold) {
+					badges.push({
+						type: `${n}_${cat}`,
+						label: n === 1 ? `First ${cat}!` : `${n} ${cat} tried!`,
+						category: cat,
+						count: n,
+						icon: threshold.icon,
+						color: threshold.color,
+						bg: threshold.bg,
+					});
+				}
+			}
+		}
+
+		if (badges.length) result[entry.id] = badges;
+	}
+
+	return result;
+}
+
 export function buildHours() {
 	return Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
 }
@@ -208,17 +309,15 @@ export async function pickImageAsBase64(aspect = [4, 3]) {
 		mediaTypes: ["images"],
 		allowsEditing: true,
 		aspect,
-		quality: 0.3,
-		base64: true,
+		quality: 0.7,
+		base64: false, // Return file URI — base64 causes Hermes blob errors on upload
 		exif: false,
 	});
 
 	if (result.canceled || !result.assets?.[0]) return null;
 
 	const asset = result.assets[0];
-	if (!asset.base64) return null;
+	if (!asset.uri) return null;
 
-	const ext = asset.uri.split(".").pop()?.toLowerCase() || "jpg";
-	const mimeType = ext === "png" ? "image/png" : "image/jpeg";
-	return `data:${mimeType};base64,${asset.base64}`;
+	return asset.uri; // Local file URI (file:// on iOS, content:// on Android)
 }
