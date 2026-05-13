@@ -97,10 +97,11 @@ export default function AuthScreen() {
 
 	// ── Google OAuth via expo-auth-session ──
 	const [request, response, promptAsync] = Google.useAuthRequest({
-		webClientId: GOOGLE_WEB_CLIENT_ID,
-		iosClientId: GOOGLE_IOS_CLIENT_ID,
+		webClientId:     GOOGLE_WEB_CLIENT_ID,
+		iosClientId:     GOOGLE_IOS_CLIENT_ID,
 		androidClientId: GOOGLE_ANDROID_CLIENT_ID,
 		redirectUri,
+		scopes: ["openid", "profile", "email"],
 	});
 
 	useEffect(() => {
@@ -141,31 +142,66 @@ export default function AuthScreen() {
 		setLoading(false);
 	};
 
+	// Password rules — evaluated live as the user types
+	const passwordChecks = {
+		length:    password.length >= 8,
+		uppercase: /[A-Z]/.test(password),
+		lowercase: /[a-z]/.test(password),
+		number:    /[0-9]/.test(password),
+		special:   /[^A-Za-z0-9]/.test(password),
+	};
+	const allChecksPassed = Object.values(passwordChecks).every(Boolean);
+
 	const handleSignUp = async () => {
 		if (!email.trim() || !password.trim()) {
 			Alert.alert("Missing Fields", "Please enter your email and password.");
+			return;
+		}
+		if (!allChecksPassed) {
+			const failed = [
+				!passwordChecks.length    && "• At least 8 characters",
+				!passwordChecks.uppercase && "• One uppercase letter (A–Z)",
+				!passwordChecks.lowercase && "• One lowercase letter (a–z)",
+				!passwordChecks.number    && "• One number (0–9)",
+				!passwordChecks.special   && "• One special character (e.g. !@#$%)",
+			].filter(Boolean).join("\n");
+			Alert.alert(
+				"Password doesn't meet requirements",
+				`Please fix the following:\n\n${failed}`,
+			);
 			return;
 		}
 		if (password !== confirm) {
 			Alert.alert("Password Mismatch", "Passwords do not match.");
 			return;
 		}
-		if (password.length < 6) {
-			Alert.alert("Weak Password", "Password must be at least 6 characters.");
-			return;
-		}
 		setLoading(true);
 		try {
 			await signUp(email.trim(), password);
 		} catch (e) {
-			const messages = {
-				"auth/email-already-in-use":
-					"An account with that email already exists.",
-				"auth/invalid-email": "Please enter a valid email address.",
-				"auth/weak-password": "Password must be at least 6 characters.",
-				"auth/network-request-failed": "No internet connection.",
-			};
-			Alert.alert("Error", messages[e.code] || e.message);
+			if (e.code === "auth/weak-password") {
+				// Show the same specific breakdown as the client-side check
+				const failed = [
+					!passwordChecks.length    && "• At least 8 characters",
+					!passwordChecks.uppercase && "• One uppercase letter (A–Z)",
+					!passwordChecks.lowercase && "• One lowercase letter (a–z)",
+					!passwordChecks.number    && "• One number (0–9)",
+					!passwordChecks.special   && "• One special character (e.g. !@#$%)",
+				].filter(Boolean);
+				Alert.alert(
+					"Password doesn't meet requirements",
+					failed.length > 0
+						? `Your password needs:\n\n${failed.join("\n")}`
+						: "Please choose a stronger password.",
+				);
+			} else {
+				const messages = {
+					"auth/email-already-in-use":   "An account with that email already exists.",
+					"auth/invalid-email":           "Please enter a valid email address.",
+					"auth/network-request-failed":  "No internet connection.",
+				};
+				Alert.alert("Error", messages[e.code] || e.message);
+			}
 		}
 		setLoading(false);
 	};
@@ -305,7 +341,7 @@ export default function AuthScreen() {
 								value={password}
 								onChangeText={setPassword}
 								placeholder={
-									mode === "signup" ? "At least 6 characters" : "Your password"
+									mode === "signup" ? "Create a strong password" : "Your password"
 								}
 								secureTextEntry={!showPassword}
 								style={[styles.input, styles.inputWithEye]}
@@ -320,6 +356,32 @@ export default function AuthScreen() {
 							</TouchableOpacity>
 						</View>
 					</View>
+
+					{/* Live password requirements — only shown during sign-up */}
+					{mode === "signup" && password.length > 0 && (
+						<View style={styles.passwordRules}>
+							{[
+								{ key: "length",    label: "At least 8 characters" },
+								{ key: "uppercase", label: "One uppercase letter (A–Z)" },
+								{ key: "lowercase", label: "One lowercase letter (a–z)" },
+								{ key: "number",    label: "One number (0–9)" },
+								{ key: "special",   label: "One special character (!@#$%…)" },
+							].map(({ key, label }) => {
+								const passed = passwordChecks[key];
+								return (
+									<View key={key} style={styles.passwordRuleRow}>
+										<Text style={[styles.passwordRuleDot, { color: passed ? "#2ecc71" : C.warningStroke }]}>
+											{passed ? "✓" : "✗"}
+										</Text>
+										<Text style={[styles.passwordRuleText, { color: passed ? "#2ecc71" : C.mutedText }]}>
+											{label}
+										</Text>
+									</View>
+								);
+							})}
+						</View>
+					)}
+
 					{mode === "signup" && (
 						<View style={styles.fieldGroup}>
 							<Text style={styles.label}>Confirm Password</Text>
@@ -414,9 +476,24 @@ export default function AuthScreen() {
 					</TouchableOpacity>
 				</View>
 				<View style={styles.proBadge}>
-					<Text style={styles.proBadgeText}>
-						🔒 Pro accounts unlock all BLW recipes — £4.99
-					</Text>
+					<Text style={styles.proBadgeTitle}>🌟 Unlock Pro</Text>
+					<Text style={styles.proBadgeSubtitle}>All recipes · Milestones · Multi-child</Text>
+					<View style={styles.proPricingRow}>
+						<View style={styles.proPricingItem}>
+							<Text style={styles.proPricingAmount}>£2.99</Text>
+							<Text style={styles.proPricingLabel}>/ month</Text>
+						</View>
+						<View style={styles.proPricingDivider} />
+						<View style={styles.proPricingItem}>
+							<Text style={styles.proPricingAmount}>£19.99</Text>
+							<Text style={styles.proPricingLabel}>/ year</Text>
+						</View>
+						<View style={styles.proPricingDivider} />
+						<View style={styles.proPricingItem}>
+							<Text style={styles.proPricingAmount}>£39.99</Text>
+							<Text style={styles.proPricingLabel}>lifetime</Text>
+						</View>
+					</View>
 				</View>
 				<Text style={styles.footer}>
 					Your data is stored securely and privately.{"\n"}
@@ -564,16 +641,77 @@ const styles = StyleSheet.create({
 		fontWeight: "700",
 		color: C.textCharcoal,
 	},
+	passwordRules: {
+		backgroundColor: "#f9f7ff",
+		borderRadius: 10,
+		padding: 12,
+		gap: 6,
+		borderWidth: 1,
+		borderColor: C.borderLight,
+	},
+	passwordRuleRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 8,
+	},
+	passwordRuleDot: {
+		fontSize: 13,
+		fontWeight: "800",
+		width: 16,
+		textAlign: "center",
+	},
+	passwordRuleText: {
+		fontSize: 12,
+		fontWeight: "600",
+	},
 	proBadge: {
 		backgroundColor: C.bgWarning,
 		borderColor: C.warningStroke,
 		borderWidth: 1.5,
-		borderRadius: 12,
-		paddingVertical: 10,
+		borderRadius: 16,
+		paddingVertical: 14,
 		paddingHorizontal: 16,
 		alignItems: "center",
+		gap: 6,
 	},
-	proBadgeText: { fontSize: 13, fontWeight: "700", color: C.warningStroke },
+	proBadgeTitle: {
+		fontSize: 15,
+		fontWeight: "800",
+		color: C.warningStroke,
+	},
+	proBadgeSubtitle: {
+		fontSize: 12,
+		fontWeight: "600",
+		color: C.warningStroke,
+		opacity: 0.8,
+	},
+	proPricingRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		marginTop: 4,
+		gap: 0,
+	},
+	proPricingItem: {
+		flex: 1,
+		alignItems: "center",
+	},
+	proPricingDivider: {
+		width: 1,
+		height: 28,
+		backgroundColor: C.warningStroke,
+		opacity: 0.25,
+	},
+	proPricingAmount: {
+		fontSize: 15,
+		fontWeight: "800",
+		color: C.warningStroke,
+	},
+	proPricingLabel: {
+		fontSize: 11,
+		fontWeight: "600",
+		color: C.warningStroke,
+		opacity: 0.75,
+	},
 	footer: {
 		textAlign: "center",
 		fontSize: 12,

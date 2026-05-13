@@ -9,67 +9,6 @@ import { ZoomableImage } from "../components/ZoomableImage";
 import { ReactionBadge, SecondaryBtn, DangerBtn } from "../components/SharedComponents";
 import { CATEGORIES, MEAL_TIMES, ALLERGENS } from "../constants";
 import { groupByFood, normalize, formatDate, reactionCfg } from "../helpers";
-import * as Print from "expo-print";
-import * as Sharing from "expo-sharing";
-
-// ── PDF export ────────────────────────────────────────────────────────────────
-
-async function exportFoodLogAsPDF(foodLog, childName, bottleLog = []) {
-	if (!foodLog.length && !bottleLog.length) {
-		Alert.alert("Nothing to export", "Add some entries first.");
-		return;
-	}
-
-	const groups   = groupByFood(foodLog);
-	const keys     = Object.keys(groups);
-	const foodRows = keys.map((key) => {
-		const g        = groups[key];
-		const likedCnt = g.attempts.filter((a) => a.reaction === "Loved" || a.reaction === "Good").length;
-		const pct      = Math.round((likedCnt / g.attempts.length) * 100);
-		const hasAllergy   = g.attempts.some((a) => a.reaction === "Allergic");
-		const attemptsHTML = g.attempts.map((a, i) =>
-			`<tr style="background:${i % 2 === 0 ? "#f9f7fe" : "#ffffff"}"><td style="padding:7px 10px;color:#8a7aaa;font-size:11px;">Attempt ${i + 1}</td><td style="padding:7px 10px;font-size:11px;">${formatDate(a.date)}${a.time ? ` ${a.time}` : ""}</td><td style="padding:7px 10px;font-size:11px;color:#d4860a;font-weight:600;">${a.mealTime || ""}</td><td style="padding:7px 10px;font-size:11px;">${a.form || "—"}</td><td style="padding:7px 10px;font-size:11px;color:${reactionCfg(a.reaction).color};font-weight:700;">${a.reaction || "—"}</td><td style="padding:7px 10px;font-size:11px;color:#8a7aaa;font-style:italic;">${a.notes || ""}</td></tr>`
-		).join("");
-		return `<div style="margin-bottom:18px;border-radius:10px;overflow:hidden;border:2px solid ${hasAllergy ? "#e07070" : "#ece8f9"};"><div style="background:${hasAllergy ? "#fde8e8" : "#ede8f7"};padding:10px 14px;display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:700;font-size:14px;color:#5a2d7a;">${g.name}${hasAllergy ? '<span style="margin-left:8px;background:#fee2e2;color:#c0392b;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:700;">ALLERGY</span>' : ""}</span><span style="font-size:11px;color:#3db87a;font-weight:700;">${pct}% liked · ${g.attempts.length} attempt${g.attempts.length !== 1 ? "s" : ""}</span></div><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f3f0fa;"><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">#</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Date</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Meal Time</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Form</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Reaction</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Notes</th></tr></thead><tbody>${attemptsHTML}</tbody></table></div>`;
-	}).join("");
-
-	const toMlLocal    = (amount, unit) => { const n = parseFloat(amount) || 0; return unit === "oz" ? Math.round(n * 29.5735) : Math.round(n); };
-	const milkColor    = { formula: "#2a5f8f", breast: "#7a2d6a", specialised: "#a85a1a" };
-	const sortedBottles = [...bottleLog].sort((a, b) => {
-		const da = new Date((a.date || "1970-01-01") + "T" + (a.time || "00:00"));
-		const db = new Date((b.date || "1970-01-01") + "T" + (b.time || "00:00"));
-		return db - da;
-	});
-	const bottleByDate = {};
-	sortedBottles.forEach((b) => { if (!bottleByDate[b.date]) bottleByDate[b.date] = []; bottleByDate[b.date].push(b); });
-
-	const totalBottleFeeds = bottleLog.length;
-	const totalBottleMl    = bottleLog.reduce((sum, b) => sum + toMlLocal(b.amount, b.unit), 0);
-	const bottleRows = Object.keys(bottleByDate).map((date) => {
-		const feeds    = bottleByDate[date];
-		const dayMl    = feeds.reduce((sum, f) => sum + toMlLocal(f.amount, f.unit), 0);
-		const feedRows = feeds.map((f, i) => {
-			const ml  = toMlLocal(f.amount, f.unit);
-			const col = milkColor[f.type] || "#8a7aaa";
-			return `<tr style="background:${i % 2 === 0 ? "#f0f6fc" : "#ffffff"}"><td style="padding:7px 10px;font-size:11px;">${f.time || "—"}</td><td style="padding:7px 10px;font-size:11px;color:${col};font-weight:700;text-transform:capitalize;">${f.type || "—"}</td><td style="padding:7px 10px;font-size:11px;">${f.amount || "—"} ${f.unit || ""} (${ml} ml)</td><td style="padding:7px 10px;font-size:11px;color:#8a7aaa;font-style:italic;">${f.notes || ""}</td></tr>`;
-		}).join("");
-		return `<div style="margin-bottom:18px;border-radius:10px;overflow:hidden;border:2px solid #d4e8f5;"><div style="background:#d4e8f5;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:700;font-size:14px;color:#2a5f8f;">${formatDate(date)}</span><span style="font-size:11px;color:#2a5f8f;font-weight:700;">${feeds.length} feed${feeds.length !== 1 ? "s" : ""} · ${dayMl} ml total</span></div><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#eaf3fa;"><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Time</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Type</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Amount</th><th style="padding:7px 10px;text-align:left;font-size:10px;color:#8a7aaa;">Notes</th></tr></thead><tbody>${feedRows}</tbody></table></div>`;
-	}).join("");
-
-	const totalFoods    = keys.length;
-	const totalAttempts = foodLog.length;
-	const liked         = keys.filter((k) => groups[k].attempts.some((a) => a.reaction === "Loved" || a.reaction === "Good")).length;
-	const allergic      = foodLog.filter((f) => f.reaction === "Allergic").length;
-
-	const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><style>body{font-family:-apple-system,Helvetica,Arial,sans-serif;margin:0;padding:28px;background:#fff;color:#3d3d3d;}.subtitle{color:#8a7aaa;font-size:13px;margin:12px 0 20px;border-bottom:2px solid #ece8f9;padding-bottom:12px;}.stats{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;}.stat{background:#ede8f7;border-radius:10px;padding:10px 16px;text-align:center;min-width:80px;}.stat-val{font-size:22px;font-weight:700;color:#9b7fe8;}.stat-lbl{font-size:10px;color:#8a7aaa;text-transform:uppercase;}.section-title{font-size:12px;font-weight:700;color:#5a2d7a;text-transform:uppercase;letter-spacing:1px;margin:20px 0 10px;padding:8px 12px;background:#ede8f7;border-radius:8px;}.footer{margin-top:36px;padding-top:14px;border-top:2px solid #ece8f9;font-size:10px;color:#8a7aaa;text-align:center;}</style></head><body><div style="display:flex;align-items:center;gap:14px;background:#f5f2ff;border-radius:16px;padding:14px 20px;margin-bottom:6px;"><div style="font-size:52px;line-height:1;">&#127793;</div><div><div style="font-size:28px;font-weight:900;line-height:1.1;letter-spacing:-0.5px;"><span style="color:#2d1b5e;">Munch</span><br/><span style="color:#3db87a;">Sprouts</span><span style="color:#3db87a;font-size:20px;"> &#127793;</span></div><div style="font-size:11px;color:#8a7aaa;font-weight:500;margin-top:3px;letter-spacing:0.3px;">Baby Weaning Tracker</div></div></div><p class="subtitle">Report${childName ? ` — ${childName}` : ""} &nbsp;·&nbsp; Generated ${formatDate(new Date().toISOString().split("T")[0])}</p>${foodLog.length > 0 ? `<div class="stats"><div class="stat"><div class="stat-val">${totalFoods}</div><div class="stat-lbl">Foods tried</div></div><div class="stat"><div class="stat-val">${totalAttempts}</div><div class="stat-lbl">Attempts</div></div><div class="stat"><div class="stat-val">${liked}</div><div class="stat-lbl">Liked</div></div>${allergic > 0 ? `<div class="stat" style="background:#fde8e8;"><div class="stat-val" style="color:#c0392b;">${allergic}</div><div class="stat-lbl" style="color:#c0392b;">Allergic</div></div>` : ""}</div>` : ""}${bottleLog.length > 0 ? `<div class="stats"><div class="stat" style="background:#d4e8f5;"><div class="stat-val" style="color:#2a5f8f;">${totalBottleFeeds}</div><div class="stat-lbl" style="color:#2a5f8f;">Total Feeds</div></div><div class="stat" style="background:#d4e8f5;"><div class="stat-val" style="color:#2a5f8f;">${totalBottleMl}</div><div class="stat-lbl" style="color:#2a5f8f;">Total ml</div></div></div>` : ""}${foodLog.length > 0 ? `<div class="section-title">Food Log (${totalFoods} foods · ${totalAttempts} attempts)</div>${foodRows}` : ""}${bottleLog.length > 0 ? `<div class="section-title">Milk &amp; Bottle Feeds (${totalBottleFeeds} feeds · ${totalBottleMl} ml)</div>${bottleRows}` : ""}<div class="footer">Generated by Munch Sprouts &nbsp;·&nbsp; For informational purposes only.<br/>Always consult your GP or Health Visitor before starting weaning.</div></body></html>`;
-
-	try {
-		const { uri } = await Print.printToFileAsync({ html, base64: false });
-		await Sharing.shareAsync(uri, { mimeType: "application/pdf", dialogTitle: `${childName || "MunchSprouts"} Report`, UTI: "com.adobe.pdf" });
-	} catch {
-		Alert.alert("Export failed", "Could not generate PDF. Please try again.");
-	}
-}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -423,15 +362,6 @@ export function LogScreen({
 						onAddAttempt={onAddAttempt}
 						setLightboxPhoto={setLightboxPhoto}
 					/>
-				)}
-				ListFooterComponent={() => (
-					<TouchableOpacity
-						onPress={() => exportFoodLogAsPDF(foodLog, childName, bottleLog)}
-						style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: C.white, borderRadius: 16, paddingVertical: 14, marginTop: 4, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}
-						activeOpacity={0.8}>
-						<Icon name="pdf" size={18} color={C.primaryPurple} />
-						<Text style={{ fontWeight: "700", fontSize: 14, color: C.primaryPurple }}>Export as PDF</Text>
-					</TouchableOpacity>
 				)}
 			/>
 

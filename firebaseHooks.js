@@ -24,6 +24,7 @@ import {
 	where,
 	serverTimestamp,
 	orderBy,
+	onSnapshot,
 } from "firebase/firestore";
 import { auth, db, storage } from "./firebase";
 import { ref, uploadString, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
@@ -35,17 +36,48 @@ export function useAuth() {
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
-		const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+		let unsubDoc = null;
+
+		const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
+			// Clean up any previous Firestore listener when auth state changes
+			if (unsubDoc) { unsubDoc(); unsubDoc = null; }
+
 			setUser(firebaseUser);
 
 			if (firebaseUser) {
-				try {
-					const snap = await getDoc(doc(db, "users", firebaseUser.uid));
-					setUserDoc(snap.exists() ? snap.data() : null);
-				} catch (e) {
-					console.error("Error fetching user doc:", e);
-					setUserDoc(null);
-				}
+				// Real-time listener — picks up the user doc as soon as it's
+				// created or updated (fixes the Google sign-in race condition where
+				// onAuthStateChanged fires before signInWithGoogle finishes writing
+				// the Firestore document).
+				// If the document is missing entirely (e.g. existing users caught
+				// by the race condition), we recreate it so they aren't stuck null.
+				unsubDoc = onSnapshot(
+					doc(db, "users", firebaseUser.uid),
+					async (snap) => {
+						if (snap.exists()) {
+							setUserDoc(snap.data());
+						} else {
+							// Doc missing — write it now. merge:true is safe even if
+							// setupNotifications already wrote a pushToken field.
+							try {
+								await setDoc(
+									doc(db, "users", firebaseUser.uid),
+									{
+										email:     firebaseUser.email,
+										plan:      "free",
+										createdAt: serverTimestamp(),
+									},
+									{ merge: true },
+								);
+								// onSnapshot will fire again automatically with the new doc
+							} catch (e) {
+								console.error("Failed to create missing user doc:", e);
+								setUserDoc(null);
+							}
+						}
+					},
+					(e) => { console.error("User doc listener error:", e); setUserDoc(null); },
+				);
 			} else {
 				setUserDoc(null);
 			}
@@ -53,7 +85,10 @@ export function useAuth() {
 			setLoading(false);
 		});
 
-		return unsubscribe;
+		return () => {
+			unsubAuth();
+			if (unsubDoc) unsubDoc();
+		};
 	}, []);
 
 	return {
@@ -91,15 +126,19 @@ export async function signInWithGoogle(idToken) {
 	const result = await signInWithCredential(auth, credential);
 	const { user } = result;
 
-	// Create Firestore user doc if this is a new Google user
+	// Create or patch Firestore user doc
 	const userRef = doc(db, "users", user.uid);
-	const snap = await getDoc(userRef);
+	const snap    = await getDoc(userRef);
 	if (!snap.exists()) {
+		// Brand-new Google user
 		await setDoc(userRef, {
-			email: user.email,
-			plan: "free",
+			email:     user.email,
+			plan:      "free",
 			createdAt: serverTimestamp(),
 		});
+	} else if (!snap.data().email && user.email) {
+		// Existing user whose email was previously saved as null — backfill it
+		await updateDoc(userRef, { email: user.email });
 	}
 
 	return user;
@@ -133,19 +172,24 @@ export async function sendPasswordReset(email) {
 }
 
 export async function deleteAccount(userId) {
-	// Delete all children
+	// Delete the Firebase Auth account FIRST so we fail fast if re-auth is
+	// required, before any Firestore data is touched. Deleting the auth user
+	// also triggers onAuthStateChanged → the app navigates to the auth screen
+	// automatically without needing a manual sign-out call.
+	await deleteUser(auth.currentUser);
+
+	// Auth account removed — now clean up all Firestore data (best-effort,
+	// non-fatal if individual collections fail)
 	const childSnap = await getDocs(
 		query(collection(db, "children"), where("userId", "==", userId)),
 	);
 	await Promise.all(childSnap.docs.map((d) => deleteDoc(d.ref)));
 
-	// Delete all food log entries
 	const logSnap = await getDocs(
 		query(collection(db, "foodLog"), where("userId", "==", userId)),
 	);
 	await Promise.all(logSnap.docs.map((d) => deleteDoc(d.ref)));
 
-	// Delete favourite recipes subcollection
 	try {
 		const favSnap = await getDocs(
 			collection(db, "users", userId, "favouriteRecipes"),
@@ -155,17 +199,15 @@ export async function deleteAccount(userId) {
 		console.warn("Could not delete favourite recipes:", e.message);
 	}
 
-	// Delete bottle log entries
 	try {
 		const bottleSnap = await getDocs(
 			query(collection(db, "bottleLog"), where("userId", "==", userId)),
 		);
 		await Promise.all(bottleSnap.docs.map((d) => deleteDoc(d.ref)));
 	} catch (e) {
-		console.warn("Could not delete bottle log entries:", e.message);
+		console.warn("Could not delete bottle log:", e.message);
 	}
 
-	// Delete any recipe suggestions
 	try {
 		const suggestSnap = await getDocs(
 			query(collection(db, "recipeSuggestions"), where("userId", "==", userId)),
@@ -175,11 +217,43 @@ export async function deleteAccount(userId) {
 		console.warn("Could not delete recipe suggestions:", e.message);
 	}
 
-	// Delete user document
-	await deleteDoc(doc(db, "users", userId));
+	try {
+		const weightSnap = await getDocs(
+			query(collection(db, "weightLog"), where("userId", "==", userId)),
+		);
+		await Promise.all(weightSnap.docs.map((d) => deleteDoc(d.ref)));
+	} catch (e) {
+		console.warn("Could not delete weight log:", e.message);
+	}
 
-	// Delete the Firebase Auth account itself
-	await deleteUser(auth.currentUser);
+	try {
+		await deleteDoc(doc(db, "users", userId));
+	} catch (e) {
+		console.warn("Could not delete user doc:", e.message);
+	}
+}
+
+// WEIGHT LOG
+export async function fetchWeightLog(userId) {
+	const snap = await getDocs(
+		query(collection(db, "weightLog"), where("userId", "==", userId)),
+	);
+	return snap.docs
+		.map((d) => ({ id: d.id, ...d.data() }))
+		.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+}
+
+export async function addWeightEntry(userId, entry) {
+	const ref = await addDoc(collection(db, "weightLog"), { userId, ...entry });
+	return ref.id;
+}
+
+export async function updateWeightEntry(id, fields) {
+	await updateDoc(doc(db, "weightLog", id), fields);
+}
+
+export async function deleteWeightEntry(id) {
+	await deleteDoc(doc(db, "weightLog", id));
 }
 
 // CHILDREN
@@ -465,4 +539,18 @@ export async function updateBottleEntry(entryId, data) {
 
 export async function deleteBottleEntry(entryId) {
 	await deleteDoc(doc(db, "bottleLog", entryId));
+}
+
+// ── Push notifications ────────────────────────────────────────────────────────
+
+/**
+ * Persist an Expo push token against the user's Firestore document.
+ * Uses merge so no other fields are overwritten.
+ */
+export async function savePushToken(userId, token) {
+	await setDoc(
+		doc(db, "users", userId),
+		{ pushToken: token, pushTokenUpdatedAt: new Date().toISOString() },
+		{ merge: true },
+	);
 }

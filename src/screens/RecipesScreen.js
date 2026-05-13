@@ -232,6 +232,7 @@ export function RecipesScreen({ isPro, recipes, favouriteRecipeIds, onUpgradePro
 	const [filterAge,       setFilterAge]       = useState("all");
 	const [searchQuery,     setSearchQuery]     = useState("");
 	const [upgradeLoading,  setUpgradeLoading]  = useState(false);
+	const [upgradePlan,     setUpgradePlan]     = useState("monthly");
 	const [showSuggest,     setShowSuggest]     = useState(false);
 	const [suggestForm,     setSuggestForm]     = useState(EMPTY_SUGGEST);
 	const [suggestSent,     setSuggestSent]     = useState(false);
@@ -292,37 +293,85 @@ export function RecipesScreen({ isPro, recipes, favouriteRecipeIds, onUpgradePro
 
 			{/* Pro upgrade banner */}
 			{!isPro && (
-				<View style={{ backgroundColor: "#2d1f5e", borderRadius: 20, padding: 22, overflow: "hidden" }}>
-					<View style={{ position: "absolute", top: -20, right: -20, width: 120, height: 120, borderRadius: 60, backgroundColor: "rgba(155,127,232,0.2)" }} />
-					<View style={{ position: "absolute", bottom: -30, left: -10, width: 80, height: 80, borderRadius: 40, backgroundColor: "rgba(155,127,232,0.15)" }} />
-					<View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
-						<View style={{ backgroundColor: C.warningStroke, borderRadius: 12, width: 38, height: 38, alignItems: "center", justifyContent: "center" }}>
-							<Icon name="crown" size={20} color={C.white} />
+				<View style={{ backgroundColor: "#2d1f5e", borderRadius: 20, padding: 20, overflow: "hidden" }}>
+					<View style={{ position: "absolute", top: -24, right: -24, width: 110, height: 110, borderRadius: 55, backgroundColor: "rgba(155,127,232,0.18)" }} />
+					<View style={{ position: "absolute", bottom: -16, left: -16, width: 80, height: 80, borderRadius: 40, backgroundColor: "rgba(61,184,122,0.12)" }} />
+
+					{/* Header */}
+					<View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 }}>
+						<View style={{ backgroundColor: "#f5c842", borderRadius: 10, width: 34, height: 34, alignItems: "center", justifyContent: "center" }}>
+							<Icon name="crown" size={17} color="#2d1f5e" />
 						</View>
-						<Text style={{ fontWeight: "800", fontSize: 18, color: C.white }}>Munch Sprouts Pro</Text>
+						<View>
+							<Text style={{ fontWeight: "900", fontSize: 17, color: "#fff", letterSpacing: -0.3 }}>Munch Sprouts Pro</Text>
+							<Text style={{ fontSize: 12, color: "#f5c842", fontWeight: "700" }}>
+								{upgradePlan === "lifetime" ? "£39.99 one-off" : upgradePlan === "yearly" ? "£19.99 / year" : "£2.99 / month"}
+							</Text>
+						</View>
 					</View>
-					<View style={{ flexDirection: "row", alignItems: "baseline", gap: 4, marginBottom: 14 }}>
-						<Text style={{ fontSize: 34, fontWeight: "800", color: C.white }}>£4.99</Text>
-						<Text style={{ fontSize: 14, color: "rgba(255,255,255,0.7)" }}>one-off</Text>
+
+					{/* Plan toggle */}
+					<View style={{ flexDirection: "row", backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 12, padding: 4, marginTop: 14, marginBottom: 14 }}>
+						{[
+							{ key: "monthly",  label: "Monthly",  price: "£2.99/mo" },
+							{ key: "yearly",   label: "Yearly",   price: "£19.99/yr", badge: "Save 28%" },
+							{ key: "lifetime", label: "Lifetime", price: "£39.99",    badge: "Best Value" },
+						].map(({ key, label, price, badge }) => {
+							const active = upgradePlan === key;
+							return (
+								<TouchableOpacity
+									key={key}
+									onPress={() => setUpgradePlan(key)}
+									activeOpacity={0.8}
+									style={{
+										flex: 1, alignItems: "center", paddingVertical: 9, borderRadius: 10,
+										backgroundColor: active ? "#f5c842" : "transparent",
+									}}>
+									<View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+										<Text style={{ fontWeight: "800", fontSize: 13, color: active ? "#2d1f5e" : "rgba(255,255,255,0.6)" }}>
+											{label}
+										</Text>
+										{badge && (
+											<View style={{ backgroundColor: active ? "#2d1f5e" : "rgba(245,200,66,0.25)", borderRadius: 999, paddingHorizontal: 5, paddingVertical: 1 }}>
+												<Text style={{ fontSize: 9, fontWeight: "700", color: "#f5c842" }}>{badge}</Text>
+											</View>
+										)}
+									</View>
+									<Text style={{ fontSize: 11, fontWeight: "600", color: active ? "#2d1f5e" : "rgba(255,255,255,0.45)", marginTop: 1 }}>{price}</Text>
+								</TouchableOpacity>
+							);
+						})}
 					</View>
-					{["Access to all BLW recipes", "Recipes for every age group", "Nutritionist-approved meal ideas", "New recipes added regularly", "More premium features coming soon"].map((f, i) => (
+
+					{/* Feature list */}
+					{["Access to all BLW recipes", "Recipes for every age group", "Nutritionist-approved meal ideas", "New recipes added regularly", "Unlimited child profiles", "PDF export, milestones & more"].map((f, i) => (
 						<View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 7 }}>
-							<View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: C.primaryGreen, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-								<Icon name="check" size={12} color={C.white} />
+							<View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: "#3db87a", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+								<Icon name="check" size={12} color="#fff" />
 							</View>
 							<Text style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", flex: 1 }}>{f}</Text>
 						</View>
 					))}
+
+					{/* CTA */}
 					<TouchableOpacity
-						onPress={() => { setUpgradeLoading(true); onUpgradePro?.().finally(() => setUpgradeLoading(false)); }}
+						onPress={() => { setUpgradeLoading(true); onUpgradePro?.(upgradePlan).finally(() => setUpgradeLoading(false)); }}
 						disabled={upgradeLoading}
-						style={{ backgroundColor: C.warningStroke, borderRadius: 14, paddingVertical: 14, alignItems: "center", justifyContent: "center", marginTop: 16, flexDirection: "row", gap: 8, opacity: upgradeLoading ? 0.7 : 1 }}
+						style={{ backgroundColor: "#f5c842", borderRadius: 14, paddingVertical: 14, alignItems: "center", justifyContent: "center", marginTop: 16, flexDirection: "row", gap: 8, opacity: upgradeLoading ? 0.7 : 1 }}
 						activeOpacity={0.85}>
-						{upgradeLoading ? <ActivityIndicator color={C.white} /> : <><Icon name="crown" size={16} color={C.white} /><Text style={{ color: C.white, fontWeight: "700", fontSize: 15 }}>Upgrade for £4.99</Text></>}
+						{upgradeLoading ? <ActivityIndicator color="#2d1f5e" /> : (
+							<>
+								<Icon name="crown" size={15} color="#2d1f5e" />
+								<Text style={{ color: "#2d1f5e", fontWeight: "800", fontSize: 15 }}>
+									{upgradePlan === "lifetime"
+										? "Get Lifetime Access — £39.99"
+										: upgradePlan === "yearly"
+										? "Start Pro — £19.99/year"
+										: "Start Pro — £2.99/month"}
+								</Text>
+							</>
+						)}
 					</TouchableOpacity>
-					<Text style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", textAlign: "center", marginTop: 8 }}>
-						One-off · No subscription · Billed through {Platform.OS === "ios" ? "Apple" : "Google"} Play
-					</Text>
 				</View>
 			)}
 

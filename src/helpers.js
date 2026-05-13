@@ -70,6 +70,7 @@ export function computeAllergenStatus(foodLog, allergenList) {
 				lastDate: null,
 				count: 0,
 				daysSinceFirst: null,
+				daysSinceFirstIntro: null,
 				needsCheckIn: false,
 				awaitingWindow: false,
 			};
@@ -77,24 +78,39 @@ export function computeAllergenStatus(foodLog, allergenList) {
 
 		const hasReaction = entries.some((e) => e.reaction === "Allergic");
 
-		// "Mature safe" = positive reaction that is either:
-		//   a) a confirmed allergen check-in (isAllergenCheckin: true), OR
-		//   b) >= 2 days old (the 48hr window has passed naturally)
-		const hasMatureSafe = entries.some((e) => {
-			if (e.reaction !== "Loved" && e.reaction !== "Good") return false;
-			if (e.isAllergenCheckin) return true;
-			return (daysSinceDate(e.date) ?? 0) >= 2;
-		});
+		// "Mature safe" = explicitly confirmed via the 48-hour delayed-reaction check-in
+		const hasMatureSafe = entries.some(
+			(e) => (e.reaction === "Loved" || e.reaction === "Good") && !!e.isAllergenCheckin,
+		);
 
-		// "Awaiting window" = logged with positive reaction but < 2 days ago, not yet confirmed
+		// First positive-reaction entry that hasn't been confirmed yet via check-in.
+		// Only the very first introduction requires the 48-hour delayed-reaction window —
+		// subsequent logs of the same allergen don't re-trigger the check-in.
+		const firstUnconfirmedPositive = entries
+			.filter(
+				(e) =>
+					(e.reaction === "Loved" || e.reaction === "Good") && !e.isAllergenCheckin,
+			)
+			.sort((a, b) => (a.date || "").localeCompare(b.date || ""))[0]; // earliest first
+
+		const daysSinceFirstIntro = firstUnconfirmedPositive
+			? daysSinceDate(firstUnconfirmedPositive.date)
+			: null;
+
+		// "Awaiting window" = first positive intro logged < 2 days ago, waiting for the 48-hr window
 		const awaitingWindow =
 			!hasReaction &&
 			!hasMatureSafe &&
-			entries.some((e) => {
-				if (e.reaction !== "Loved" && e.reaction !== "Good") return false;
-				if (e.isAllergenCheckin) return false;
-				return (daysSinceDate(e.date) ?? 999) < 2;
-			});
+			!!firstUnconfirmedPositive &&
+			(daysSinceFirstIntro ?? 999) < 2;
+
+		// "Needs check-in" = first positive intro was >= 2 days ago and not yet confirmed
+		// (ask about delayed reaction in the 48-hr window)
+		const needsCheckIn =
+			!hasReaction &&
+			!hasMatureSafe &&
+			!!firstUnconfirmedPositive &&
+			(daysSinceFirstIntro ?? 0) >= 2;
 
 		const dates = entries.filter((e) => e.date).map((e) => e.date).sort();
 		const firstDate = dates[0] || null;
@@ -105,13 +121,7 @@ export function computeAllergenStatus(foodLog, allergenList) {
 		else if (hasMatureSafe) status = "Safe";
 		else status = "In Progress";
 
-		let daysSinceFirst = null;
-		let needsCheckIn = false;
-		if (firstDate) {
-			daysSinceFirst = daysSinceDate(firstDate);
-			// Prompt check-in at 2–7 days after first intro if still In Progress
-			needsCheckIn = status === "In Progress" && daysSinceFirst >= 2 && daysSinceFirst <= 7;
-		}
+		const daysSinceFirst = firstDate ? daysSinceDate(firstDate) : null;
 
 		return {
 			...allergen,
@@ -120,6 +130,7 @@ export function computeAllergenStatus(foodLog, allergenList) {
 			lastDate,
 			count: entries.length,
 			daysSinceFirst,
+			daysSinceFirstIntro,
 			needsCheckIn,
 			awaitingWindow,
 		};
@@ -168,9 +179,9 @@ export function groupByFood(log) {
 	});
 	Object.values(g).forEach((food) => {
 		food.attempts.sort((a, b) => {
-			const da = new Date((a.date || "1970-01-01") + "T" + (a.time || "00:00"));
-			const db2 = new Date((b.date || "1970-01-01") + "T" + (b.time || "00:00"));
-			return da - db2;
+			const dateA = new Date((a.date || "1970-01-01") + "T" + (a.time || "00:00"));
+			const dateB = new Date((b.date || "1970-01-01") + "T" + (b.time || "00:00"));
+			return dateA - dateB;
 		});
 	});
 	return g;
@@ -209,6 +220,25 @@ export function formatTime(time) {
 export function toMl(amount, unit) {
 	const n = parseFloat(amount) || 0;
 	return unit === "oz" ? Math.round(n * 29.5735) : Math.round(n);
+}
+
+/**
+ * Format a weight stored in kg into a human-readable string.
+ * unit = "kg"  → "7.50 kg"
+ * unit = "lbs" → "7lb 8oz"  (rounds to nearest oz)
+ */
+export function formatWeight(valueKg, unit = "lbs") {
+	if (valueKg == null || valueKg === "") return "";
+	const kg = parseFloat(valueKg);
+	if (isNaN(kg)) return "";
+	if (unit === "kg") {
+		return `${(Math.round(kg * 100) / 100).toFixed(2)} kg`;
+	}
+	// Convert kg → total ounces, then split into lb + oz
+	const totalOz = Math.round(kg * 35.27396);
+	const lb = Math.floor(totalOz / 16);
+	const oz = totalOz % 16;
+	return oz === 0 ? `${lb}lb` : `${lb}lb ${oz}oz`;
 }
 
 // ── Milestone thresholds ───────────────────────────────────────────────────

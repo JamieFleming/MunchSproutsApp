@@ -431,6 +431,20 @@ export function Icon({ name, size = 18, color }) {
 				<Circle cx="12" cy="20" r="1" fill={color} stroke="none" />
 			</Svg>
 		),
+		scale: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				{/* Flat base */}
+				<Line {...p} x1="4" y1="21" x2="20" y2="21" />
+				{/* Stem */}
+				<Line {...p} x1="12" y1="21" x2="12" y2="6" />
+				{/* Crossbar */}
+				<Line {...p} x1="5" y1="6" x2="19" y2="6" />
+				{/* Left pan */}
+				<Path {...p} d="M5 6 C3 10 3 13 5 13 H9 C11 13 11 10 9 6" />
+				{/* Right pan */}
+				<Path {...p} d="M15 6 C13 10 13 13 15 13 H19 C21 13 21 10 19 6" />
+			</Svg>
+		),
 	};
 	return icons[name] || null;
 }

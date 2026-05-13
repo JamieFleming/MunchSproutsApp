@@ -25,23 +25,33 @@ export function ChildrenScreen({
 	onAdd,
 	onEdit,
 	onDelete,
+	isPro = false,
+	onUpgradePro,
 }) {
 	const { C } = useTheme();
 	const s = useStyles();
 	const [modalVisible, setModalVisible] = useState(false);
 	const [editTarget, setEditTarget] = useState(null);
-	const [form, setForm] = useState({ name: "", dob: "", weaningStart: "" });
+	const [form, setForm] = useState({ name: "", dob: "", weaningStart: "", initialWeight: "", initialWeightOz: "", initialWeightUnit: "kg" });
 	const [childPhoto, setChildPhoto] = useState("");
 	const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
+	// Free accounts can only have 1 owned profile
+	const ownedChildren = children.filter((c) => c.isOwner !== false);
+	const atFreeLimit   = !isPro && ownedChildren.length >= 1;
+
 	const openAdd = () => {
-		setForm({ name: "", dob: "", weaningStart: "" });
+		if (atFreeLimit) {
+			onUpgradePro?.();
+			return;
+		}
+		setForm({ name: "", dob: "", weaningStart: "", initialWeight: "", initialWeightOz: "", initialWeightUnit: "kg" });
 		setChildPhoto(null);
 		setEditTarget(null);
 		setModalVisible(true);
 	};
 	const openEdit = (child) => {
-		setForm({ name: child.name, dob: child.dob, weaningStart: child.weaningStart || "" });
+		setForm({ name: child.name, dob: child.dob, weaningStart: child.weaningStart || "", initialWeight: "", initialWeightOz: "", initialWeightUnit: "kg" });
 		setChildPhoto(child.photoUri || "");
 		setEditTarget(child);
 		setModalVisible(true);
@@ -62,9 +72,10 @@ export function ChildrenScreen({
 		<View style={{ flex: 1 }}>
 			<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
 				<Text style={s.pageTitle}>Children</Text>
-				<TouchableOpacity onPress={openAdd} style={[s.btnPrimary, { paddingHorizontal: 18, width: "auto", paddingVertical: 10 }]}>
+				<TouchableOpacity onPress={openAdd}
+					style={[s.btnPrimary, { paddingHorizontal: 18, width: "auto", paddingVertical: 10, backgroundColor: atFreeLimit ? "#a085d0" : C.primaryPurple }]}>
 					<View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-						<Icon name="plus" size={14} color={C.white} />
+						<Icon name={atFreeLimit ? "crown" : "plus"} size={14} color={C.white} />
 						<Text style={s.btnPrimaryText}>Add Child</Text>
 					</View>
 				</TouchableOpacity>
@@ -126,7 +137,7 @@ export function ChildrenScreen({
 											<Text style={[s.btnPrimaryText, { fontSize: 12 }]}>Select</Text>
 										</TouchableOpacity>
 									)}
-									<View style={{ flexDirection: "row", gap: 8 }}>
+												<View style={{ flexDirection: "row", gap: 8 }}>
 										<SecondaryBtn onPress={() => openEdit(child)} style={{ padding: 8 }}>
 											<Icon name="edit" size={14} color={C.primaryPurple} />
 										</SecondaryBtn>
@@ -146,6 +157,22 @@ export function ChildrenScreen({
 						</View>
 					);
 				})}
+				{/* Pro upsell — shown when free user is at the 1-child limit */}
+				{atFreeLimit && (
+					<TouchableOpacity onPress={onUpgradePro} activeOpacity={0.88}
+						style={{ backgroundColor: "#2d1f5e", borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", gap: 14, marginTop: 4 }}>
+						<View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(155,127,232,0.3)", alignItems: "center", justifyContent: "center" }}>
+							<Icon name="crown" size={20} color="#f5c842" />
+						</View>
+						<View style={{ flex: 1 }}>
+							<Text style={{ fontWeight: "800", fontSize: 14, color: "#fff" }}>Unlimited Profiles — Pro</Text>
+							<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", marginTop: 2 }}>
+								Upgrade to add more children and share with family
+							</Text>
+						</View>
+						<Icon name="chevRight" size={14} color="rgba(255,255,255,0.5)" />
+					</TouchableOpacity>
+				)}
 			</ScrollView>
 
 			<Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
@@ -175,7 +202,7 @@ export function ChildrenScreen({
 									<Text style={s.label}>Name</Text>
 									<TextInput
 										value={form.name}
-										onChangeText={(v) => set("name", v)}
+										onChangeText={(v) => set("name", v ? v.charAt(0).toUpperCase() + v.slice(1) : v)}
 										placeholder="e.g. Eleia"
 										style={[s.input, { backgroundColor: C.white }]}
 										placeholderTextColor={C.mutedText}
@@ -185,6 +212,63 @@ export function ChildrenScreen({
 								</View>
 								<DateField label="Date of Birth" value={form.dob} onChange={(v) => set("dob", v)} minYear={2018} maxYear={new Date().getFullYear()} />
 								<DateField label="Weaning Start Date (optional)" value={form.weaningStart} onChange={(v) => set("weaningStart", v)} minYear={2018} maxYear={new Date().getFullYear() + 1} />
+								{!editTarget && (
+									<View style={{ gap: 10 }}>
+										<Text style={s.label}>Current Weight (optional)</Text>
+
+										{/* Unit toggle */}
+										<View style={{ flexDirection: "row", backgroundColor: C.bgPurple, borderRadius: 10, overflow: "hidden" }}>
+											{["kg", "lbs"].map((u) => (
+												<TouchableOpacity
+													key={u}
+													onPress={() => { set("initialWeightUnit", u); set("initialWeight", ""); set("initialWeightOz", ""); }}
+													style={{ flex: 1, paddingVertical: 10, alignItems: "center", backgroundColor: form.initialWeightUnit === u ? C.primaryPurple : "transparent" }}>
+													<Text style={{ fontWeight: "700", fontSize: 13, color: form.initialWeightUnit === u ? C.white : C.mutedText }}>{u}</Text>
+												</TouchableOpacity>
+											))}
+										</View>
+
+										{/* Inputs */}
+										{form.initialWeightUnit === "lbs" ? (
+											<View style={{ flexDirection: "row", gap: 10 }}>
+												<View style={{ flex: 1 }}>
+													<TextInput
+														value={form.initialWeight}
+														onChangeText={(v) => set("initialWeight", v)}
+														placeholder="0"
+														keyboardType="number-pad"
+														style={[s.input, { backgroundColor: C.white, textAlign: "center" }]}
+														placeholderTextColor={C.mutedText}
+													/>
+													<Text style={{ fontSize: 11, color: C.mutedText, textAlign: "center", marginTop: 4 }}>pounds (lb)</Text>
+												</View>
+												<View style={{ flex: 1 }}>
+													<TextInput
+														value={form.initialWeightOz}
+														onChangeText={(v) => set("initialWeightOz", v)}
+														placeholder="0"
+														keyboardType="number-pad"
+														style={[s.input, { backgroundColor: C.white, textAlign: "center" }]}
+														placeholderTextColor={C.mutedText}
+													/>
+													<Text style={{ fontSize: 11, color: C.mutedText, textAlign: "center", marginTop: 4 }}>ounces (oz)</Text>
+												</View>
+											</View>
+										) : (
+											<View>
+												<TextInput
+													value={form.initialWeight}
+													onChangeText={(v) => set("initialWeight", v)}
+													placeholder="e.g. 7.2"
+													keyboardType="decimal-pad"
+													style={[s.input, { backgroundColor: C.white }]}
+													placeholderTextColor={C.mutedText}
+												/>
+												<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 4 }}>kilograms (kg)</Text>
+											</View>
+										)}
+									</View>
+								)}
 								<PrimaryBtn label={editTarget ? "Update Child" : "Save Child"} onPress={save} />
 							</View>
 						</ScrollView>

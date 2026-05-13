@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, TouchableOpacity, ScrollView, Image, RefreshControl } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon, CategoryIcon, ReactionFace, AllergenIcon } from "../components/Icon";
-import { groupByFood, calcAgeWeeks, calcAgeMonths, formatDate, normalize, formatTime, toMl, computeAllergenStatus } from "../helpers";
+import { groupByFood, calcAgeWeeks, calcAgeMonths, formatDate, normalize, formatTime, toMl, computeAllergenStatus, formatWeight } from "../helpers";
 import { ALLERGENS } from "../constants";
 
 const MILK_TYPE_COLORS = {
@@ -50,8 +50,8 @@ function CheckInReminderCard({ allergenStatus, onNavigate }) {
 					<Icon name="clock" size={18} color="#d4860a" />
 				</View>
 				<View style={{ flex: 1 }}>
-					<Text style={{ fontWeight: "800", fontSize: 14, color: "#a85a1a" }}>Allergen Check-in Needed</Text>
-					<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>Log whether your baby had any reaction</Text>
+					<Text style={{ fontWeight: "800", fontSize: 14, color: "#a85a1a" }}>48-Hour Reaction Check</Text>
+					<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>Did your baby have a delayed reaction?</Text>
 				</View>
 				<Icon name="chevRight" size={14} color="#d4860a" />
 			</View>
@@ -61,7 +61,7 @@ function CheckInReminderCard({ allergenStatus, onNavigate }) {
 						<AllergenIcon allergen={a.value} size={22} />
 						<View>
 							<Text style={{ fontSize: 11, fontWeight: "700", color: "#a85a1a" }}>{a.value}</Text>
-							<Text style={{ fontSize: 9, color: "#d4860a", fontWeight: "600" }}>{a.daysSinceFirst}d ago</Text>
+							<Text style={{ fontSize: 9, color: "#d4860a", fontWeight: "600" }}>{a.daysSinceFirstIntro ?? a.daysSinceFirst}d ago</Text>
 						</View>
 					</View>
 				))}
@@ -110,39 +110,53 @@ function FavouritesSection({ foodLog, onNavigateFiltered }) {
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 export function DashboardScreen({
-	child, foodLog, bottleLog = [], showMilkOnDashboard = true, showAllergenOnDashboard = true,
+	child, foodLog, bottleLog = [], weightLog = [], weightPreference = "lbs",
+	showMilkOnDashboard = true, showAllergenOnDashboard = true,
 	recipes = [], onNavigate, onNavigateToRecipe, onNavigateFiltered, refreshing, onRefresh,
+	isPro = false, onUpgradePro,
 }) {
 	const { C } = useTheme();
 	const s = useStyles();
 
-	const groups  = groupByFood(foodLog);
-	const keys    = Object.keys(groups);
-	const unique  = keys.length;
-	const liked      = keys.filter((k) => groups[k].attempts.some((a) => a.reaction === "Loved" || a.reaction === "Good")).length;
-	const disliked   = keys.filter((k) => groups[k].attempts.some((a) => a.reaction === "Rejected")).length;
-	const neutral    = keys.filter((k) => groups[k].attempts.some((a) => a.reaction === "Neutral")).length;
-	const allergic   = foodLog.filter((f) => f.reaction === "Allergic").length;
-	const liquids    = keys.filter((k) => groups[k].category === "Liquids").length;
-	const favourites = keys.filter((k) => groups[k].attempts.some((a) => a.favourite)).length;
-	const weeks  = child ? calcAgeWeeks(child.dob) : null;
-	const months = child ? calcAgeMonths(child.dob) : null;
+	const groups = useMemo(() => groupByFood(foodLog), [foodLog]);
+	const keys   = useMemo(() => Object.keys(groups), [groups]);
 
-	const allergenStatus     = computeAllergenStatus(foodLog, ALLERGENS);
-	const allergenIntroduced = allergenStatus.filter((a) => a.status !== "Not Tried").length;
+	const unique     = keys.length;
+	const liked      = useMemo(() => keys.filter((k) => groups[k].attempts.some((a) => a.reaction === "Loved" || a.reaction === "Good")).length, [keys, groups]);
+	const disliked   = useMemo(() => keys.filter((k) => groups[k].attempts.some((a) => a.reaction === "Rejected")).length, [keys, groups]);
+	const neutral    = useMemo(() => keys.filter((k) => groups[k].attempts.some((a) => a.reaction === "Neutral")).length, [keys, groups]);
+	const allergic   = useMemo(() => foodLog.filter((f) => f.reaction === "Allergic").length, [foodLog]);
+	const liquids    = useMemo(() => keys.filter((k) => groups[k].category === "Liquids").length, [keys, groups]);
+	const favourites = useMemo(() => keys.filter((k) => groups[k].attempts.some((a) => a.favourite)).length, [keys, groups]);
+
+	const weeks  = useMemo(() => (child ? calcAgeWeeks(child.dob) : null), [child]);
+	const months = useMemo(() => (child ? calcAgeMonths(child.dob) : null), [child]);
+
+	const latestWeight = useMemo(
+		() => [...weightLog].sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0] || null,
+		[weightLog],
+	);
+
+	const allergenStatus = useMemo(() => computeAllergenStatus(foodLog, ALLERGENS), [foodLog]);
+	const allergenIntroduced = useMemo(() => allergenStatus.filter((a) => a.status !== "Not Tried").length, [allergenStatus]);
 	const allergenTotal      = ALLERGENS.length;
 	const allergenPct        = allergenTotal > 0 ? Math.round((allergenIntroduced / allergenTotal) * 100) : 0;
-	const nextAllergen       = allergenStatus.find((a) => a.status === "Not Tried") || null;
-	const recent             = [...foodLog].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+	const nextAllergen       = useMemo(() => allergenStatus.find((a) => a.status === "Not Tried") || null, [allergenStatus]);
+	const recent             = useMemo(() => [...foodLog].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5), [foodLog]);
 
-	const featuredRecipes = recipes.filter((r) => r.featured);
-	const featuredRecipe  = featuredRecipes.length > 0
-		? featuredRecipes[Math.floor(Date.now() / 86400000) % featuredRecipes.length]
-		: null;
+	const featuredRecipe = useMemo(() => {
+		const featured = recipes.filter((r) => r.featured);
+		return featured.length > 0
+			? featured[Math.floor(Date.now() / 86400000) % featured.length]
+			: null;
+	}, [recipes]);
 
-	const today       = new Date().toISOString().split("T")[0];
-	const todayBottles = [...bottleLog].filter((e) => e.date === today).sort((a, b) => (a.time || "").localeCompare(b.time || ""));
-	const todayTotalMl = todayBottles.reduce((sum, e) => sum + toMl(e.amount, e.unit), 0);
+	const today        = new Date().toISOString().split("T")[0];
+	const todayBottles = useMemo(
+		() => [...bottleLog].filter((e) => e.date === today).sort((a, b) => (a.time || "").localeCompare(b.time || "")),
+		[bottleLog, today],
+	);
+	const todayTotalMl = useMemo(() => todayBottles.reduce((sum, e) => sum + toMl(e.amount, e.unit), 0), [todayBottles]);
 	const lastBottle   = todayBottles.at(-1);
 
 	return (
@@ -154,18 +168,28 @@ export function DashboardScreen({
 
 			{/* ── Child hero ── */}
 			{child ? (
-				<View style={{ backgroundColor: C.primaryPurple, borderRadius: 24, padding: 22, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+				<TouchableOpacity
+					onPress={() => onNavigate("childDetail")}
+					activeOpacity={0.92}
+					style={{ backgroundColor: C.primaryPurple, borderRadius: 24, padding: 22, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
 					<View style={{ flex: 1 }}>
 						<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", fontWeight: "600", marginBottom: 4 }}>Tracking for</Text>
 						<Text style={{ fontSize: 30, fontWeight: "800", color: "#ffffff" }}>{child.name}</Text>
 						{weeks !== null && (
-							<View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+							<View style={{ flexDirection: "row", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
 								<View style={{ backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}>
 									<Text style={{ fontSize: 12, color: "#ffffff", fontWeight: "700" }}>{weeks} weeks</Text>
 								</View>
 								<View style={{ backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}>
 									<Text style={{ fontSize: 12, color: "#ffffff", fontWeight: "700" }}>{months} months</Text>
 								</View>
+								{latestWeight && (
+									<View style={{ backgroundColor: "rgba(255,255,255,0.25)", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}>
+										<Text style={{ fontSize: 12, color: "#ffffff", fontWeight: "700" }}>
+											{formatWeight(latestWeight.value_kg, weightPreference)}
+										</Text>
+									</View>
+								)}
 							</View>
 						)}
 						{child.weaningStart && <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", marginTop: 6 }}>Weaning since {formatDate(child.weaningStart)}</Text>}
@@ -189,7 +213,7 @@ export function DashboardScreen({
 							<Icon name="edit" size={11} color="#ffffff" />
 						</View>
 					</TouchableOpacity>
-				</View>
+				</TouchableOpacity>
 			) : (
 				<View style={[s.card, { alignItems: "center", paddingVertical: 28 }]}>
 					<Icon name="baby" size={44} color={C.secondaryPurple} />
@@ -430,6 +454,22 @@ export function DashboardScreen({
 						<Text style={s.btnPrimaryText}>Log First Food</Text>
 					</TouchableOpacity>
 				</View>
+			)}
+
+			{/* ── Pro upsell banner ── */}
+			{!isPro && (
+				<TouchableOpacity onPress={onUpgradePro} activeOpacity={0.88}
+					style={{ backgroundColor: "#2d1f5e", borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", gap: 14, overflow: "hidden" }}>
+					<View style={{ position: "absolute", top: -20, right: -20, width: 90, height: 90, borderRadius: 45, backgroundColor: "rgba(155,127,232,0.15)" }} />
+					<View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(245,200,66,0.15)", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+						<Icon name="crown" size={20} color="#f5c842" />
+					</View>
+					<View style={{ flex: 1 }}>
+						<Text style={{ fontWeight: "800", fontSize: 14, color: "#fff" }}>Unlock Munch Sprouts Pro</Text>
+						<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", marginTop: 2 }}>Recipes, PDF export, milestones & more — from £2.99/mo</Text>
+					</View>
+					<Icon name="chevRight" size={14} color="rgba(255,255,255,0.4)" />
+				</TouchableOpacity>
 			)}
 		</ScrollView>
 	);
