@@ -541,6 +541,17 @@ export function MoreScreen({
 	const [pickerMinute,       setPickerMinute]       = useState(0);   // 0–55
 	const [pickerAmPm,         setPickerAmPm]         = useState("AM");
 
+	// ── PDF Export modal ──────────────────────────────────────────────────────
+	const [showExportModal, setShowExportModal] = useState(false);
+	const [exportRange,     setExportRange]     = useState("all"); // "7d"|"30d"|"3m"|"6m"|"all"|"custom"
+	const [exportFromInput, setExportFromInput] = useState("");    // DD/MM/YYYY
+	const [exportToInput,   setExportToInput]   = useState("");    // DD/MM/YYYY
+	const [exportFood,      setExportFood]      = useState(true);
+	const [exportMilk,      setExportMilk]      = useState(true);
+	const [exportWeight,    setExportWeight]    = useState(true);
+	const [exportAllergens, setExportAllergens] = useState(true);
+	const [exportLoading,   setExportLoading]   = useState(false);
+
 	// ── Profile edit modal ────────────────────────────────────────────────────
 	const [showProfileEdit, setShowProfileEdit] = useState(false);
 	const [editName,        setEditName]        = useState("");
@@ -629,6 +640,72 @@ export function MoreScreen({
 	const photoEntries = [...foodLog]
 		.filter((e) => !!e.photoUri)
 		.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+	// ── Export date-range helpers ─────────────────────────────────────────────
+	const getExportDateRange = () => {
+		const today    = new Date().toISOString().split("T")[0];
+		const daysAgo  = (n) => { const d = new Date(); d.setDate(d.getDate() - n);   return d.toISOString().split("T")[0]; };
+		const monthsAgo = (n) => { const d = new Date(); d.setMonth(d.getMonth() - n); return d.toISOString().split("T")[0]; };
+		if (exportRange === "7d")    return { from: daysAgo(7),    to: today };
+		if (exportRange === "30d")   return { from: daysAgo(30),   to: today };
+		if (exportRange === "3m")    return { from: monthsAgo(3),  to: today };
+		if (exportRange === "6m")    return { from: monthsAgo(6),  to: today };
+		if (exportRange === "custom") {
+			const parse = (s) => { // DD/MM/YYYY → YYYY-MM-DD
+				const parts = s.replace(/\D/g, "");
+				if (parts.length < 8) return null;
+				const d = parts.slice(0, 2), m = parts.slice(2, 4), y = parts.slice(4, 8);
+				return `${y}-${m}-${d}`;
+			};
+			return { from: parse(exportFromInput), to: parse(exportToInput) };
+		}
+		return { from: null, to: null }; // "all" — no filter
+	};
+
+	const filterByDateRange = (arr, from, to) => {
+		if (!from && !to) return arr;
+		return arr.filter((e) => {
+			const d = e.date || "";
+			return (!from || d >= from) && (!to || d <= to);
+		});
+	};
+
+	const autoFormatDate = (text, prev) => {
+		// Strip non-digits then re-insert slashes at positions 2 and 4
+		const digits = text.replace(/\D/g, "").slice(0, 8);
+		let out = digits;
+		if (digits.length > 4) out = digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4);
+		else if (digits.length > 2) out = digits.slice(0, 2) + "/" + digits.slice(2);
+		return out;
+	};
+
+	const handleExport = async () => {
+		const { from, to }     = getExportDateRange();
+		const filteredFood     = filterByDateRange(foodLog,   from, to);
+		const filteredMilk     = filterByDateRange(bottleLog, from, to);
+		const filteredWeight   = filterByDateRange(weightLog, from, to);
+		const opts = {
+			food:      exportFood      && filteredFood.length   > 0,
+			milk:      exportMilk      && filteredMilk.length   > 0,
+			weight:    exportWeight    && filteredWeight.length  > 1,
+			allergens: exportAllergens && filteredFood.length   > 0,
+		};
+		if (!opts.food && !opts.milk && !opts.weight && !opts.allergens) {
+			Alert.alert("Nothing to export", "No data found for the selected date range and sections.");
+			return;
+		}
+		setExportLoading(true);
+		setShowExportModal(false);
+		await exportFoodLogAsPDF(
+			exportFood      ? filteredFood   : [],
+			childName,
+			exportMilk      ? filteredMilk  : [],
+			exportWeight    ? filteredWeight : [],
+			weightPreference,
+			opts,
+		);
+		setExportLoading(false);
+	};
 
 	useEffect(() => {
 		if (!user?.uid) return;
@@ -1138,6 +1215,149 @@ export function MoreScreen({
 				</View>
 			</Modal>
 
+			{/* ── PDF Export Modal ─────────────────────────────────────────── */}
+			<Modal visible={showExportModal} transparent animationType="slide" onRequestClose={() => setShowExportModal(false)}>
+				<KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+					<TouchableOpacity activeOpacity={1} onPress={() => setShowExportModal(false)}
+						style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" }}>
+						<TouchableOpacity activeOpacity={1} onPress={() => {}}>
+							<View style={{ backgroundColor: C.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingTop: 12, paddingBottom: 36 }}>
+
+								{/* Handle bar */}
+								<View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: C.borderLight, alignSelf: "center", marginBottom: 20 }} />
+
+								{/* Header */}
+								<View style={{ flexDirection: "row", alignItems: "center", marginBottom: 22 }}>
+									<View style={{ flex: 1 }}>
+										<Text style={{ fontSize: 20, fontWeight: "800", color: C.textCharcoal }}>Export as PDF</Text>
+										<Text style={{ fontSize: 13, color: C.mutedText, marginTop: 2 }}>Choose what to include in your report</Text>
+									</View>
+									<TouchableOpacity onPress={() => setShowExportModal(false)}
+										style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center" }}>
+										<Icon name="close" size={16} color={C.mutedText} />
+									</TouchableOpacity>
+								</View>
+
+								{/* ── Date range ── */}
+								<Text style={{ fontSize: 11, fontWeight: "700", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Date Range</Text>
+								<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+									{[
+										{ key: "7d",     label: "Last 7 days"  },
+										{ key: "30d",    label: "Last 30 days" },
+										{ key: "3m",     label: "3 months"     },
+										{ key: "6m",     label: "6 months"     },
+										{ key: "all",    label: "All time"     },
+										{ key: "custom", label: "Custom"       },
+									].map(({ key, label }) => {
+										const active = exportRange === key;
+										return (
+											<TouchableOpacity key={key} onPress={() => setExportRange(key)} activeOpacity={0.75}
+												style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: active ? C.primaryPurple : C.bgPurple, borderWidth: 1.5, borderColor: active ? C.primaryPurple : "transparent" }}>
+												<Text style={{ fontSize: 13, fontWeight: "700", color: active ? "#fff" : C.mutedText }}>{label}</Text>
+											</TouchableOpacity>
+										);
+									})}
+								</View>
+
+								{/* Custom date inputs */}
+								{exportRange === "custom" && (
+									<View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>
+										<View style={{ flex: 1 }}>
+											<Text style={{ fontSize: 11, fontWeight: "700", color: C.mutedText, marginBottom: 6 }}>From</Text>
+											<TextInput
+												value={exportFromInput}
+												onChangeText={(t) => setExportFromInput(autoFormatDate(t, exportFromInput))}
+												placeholder="DD/MM/YYYY"
+												placeholderTextColor={C.mutedText}
+												keyboardType="number-pad"
+												maxLength={10}
+												style={{ backgroundColor: C.bgPurple, borderRadius: 12, padding: 12, fontSize: 15, fontWeight: "600", color: C.textCharcoal, borderWidth: 1.5, borderColor: exportFromInput.length === 10 ? C.primaryPurple : "transparent" }}
+											/>
+										</View>
+										<View style={{ flex: 1 }}>
+											<Text style={{ fontSize: 11, fontWeight: "700", color: C.mutedText, marginBottom: 6 }}>To</Text>
+											<TextInput
+												value={exportToInput}
+												onChangeText={(t) => setExportToInput(autoFormatDate(t, exportToInput))}
+												placeholder="DD/MM/YYYY"
+												placeholderTextColor={C.mutedText}
+												keyboardType="number-pad"
+												maxLength={10}
+												style={{ backgroundColor: C.bgPurple, borderRadius: 12, padding: 12, fontSize: 15, fontWeight: "600", color: C.textCharcoal, borderWidth: 1.5, borderColor: exportToInput.length === 10 ? C.primaryPurple : "transparent" }}
+											/>
+										</View>
+									</View>
+								)}
+
+								{/* ── Sections ── */}
+								<Text style={{ fontSize: 11, fontWeight: "700", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 12 }}>Include</Text>
+								<View style={{ backgroundColor: C.bgPurple, borderRadius: 16, overflow: "hidden", marginBottom: 20 }}>
+									{[
+										{ label: "Food Log",       sublabel: "All food attempts & reactions", icon: "food",   color: "#5a2d7a", bg: "#ede8f7", value: exportFood,      set: setExportFood,      count: foodLog.length   },
+										{ label: "Milk & Bottles", sublabel: "Formula, breast & bottle feeds",  icon: "bottle", color: "#2a5f8f", bg: "#d4e8f5", value: exportMilk,      set: setExportMilk,      count: bottleLog.length },
+										{ label: "Weight",         sublabel: "Weight recordings over time",    icon: "scale",  color: "#2d7a55", bg: "#e6f7ef", value: exportWeight,    set: setExportWeight,    count: weightLog.length },
+										{ label: "Allergens",      sublabel: "Allergen introduction tracker",  icon: "shield", color: "#7b5ea7", bg: "#ece8f9", value: exportAllergens, set: setExportAllergens, count: foodLog.length   },
+									].map(({ label, sublabel, icon, color, bg, value, set, count }, idx, arr) => (
+										<TouchableOpacity key={label} onPress={() => set((v) => !v)} activeOpacity={0.8}
+											style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: idx < arr.length - 1 ? 1 : 0, borderBottomColor: C.borderLight, opacity: count === 0 ? 0.4 : 1 }}>
+											<View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: bg, alignItems: "center", justifyContent: "center" }}>
+												<Icon name={icon} size={18} color={color} />
+											</View>
+											<View style={{ flex: 1 }}>
+												<Text style={{ fontWeight: "700", fontSize: 14, color: C.textCharcoal }}>{label}</Text>
+												<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>{count > 0 ? sublabel : "No data yet"}</Text>
+											</View>
+											<Toggle value={value && count > 0} onPress={() => count > 0 && set((v) => !v)} />
+										</TouchableOpacity>
+									))}
+								</View>
+
+								{/* ── Preview count ── */}
+								{(() => {
+									const { from, to } = getExportDateRange();
+									const ff = filterByDateRange(foodLog,   from, to);
+									const fm = filterByDateRange(bottleLog, from, to);
+									const fw = filterByDateRange(weightLog, from, to);
+									const parts = [];
+									if (exportFood      && ff.length > 0) parts.push(`${ff.length} food attempt${ff.length !== 1 ? "s" : ""}`);
+									if (exportMilk      && fm.length > 0) parts.push(`${fm.length} feed${fm.length !== 1 ? "s" : ""}`);
+									if (exportWeight    && fw.length > 0) parts.push(`${fw.length} weight recording${fw.length !== 1 ? "s" : ""}`);
+									if (exportAllergens && ff.length > 0) parts.push("allergen summary");
+									return parts.length > 0 ? (
+										<View style={{ backgroundColor: "#f0f6fc", borderRadius: 12, padding: 12, marginBottom: 18, flexDirection: "row", alignItems: "center", gap: 10 }}>
+											<Icon name="info" size={16} color="#2a5f8f" />
+											<Text style={{ flex: 1, fontSize: 12, color: "#2a5f8f", fontWeight: "600" }}>
+												{`Will include: ${parts.join(", ")}`}
+											</Text>
+										</View>
+									) : (
+										<View style={{ backgroundColor: "#fde8e8", borderRadius: 12, padding: 12, marginBottom: 18, flexDirection: "row", alignItems: "center", gap: 10 }}>
+											<Icon name="info" size={16} color="#c0392b" />
+											<Text style={{ flex: 1, fontSize: 12, color: "#c0392b", fontWeight: "600" }}>
+												No data found for the selected range and sections
+											</Text>
+										</View>
+									);
+								})()}
+
+								{/* ── Generate button ── */}
+								<TouchableOpacity onPress={handleExport} disabled={exportLoading} activeOpacity={0.85}
+									style={{ backgroundColor: C.primaryPurple, borderRadius: 16, paddingVertical: 16, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 10, opacity: exportLoading ? 0.7 : 1 }}>
+									{exportLoading
+										? <ActivityIndicator color="#fff" />
+										: <>
+											<Icon name="pdf" size={18} color="#fff" />
+											<Text style={{ color: "#fff", fontWeight: "800", fontSize: 16 }}>Generate PDF</Text>
+										</>
+									}
+								</TouchableOpacity>
+
+							</View>
+						</TouchableOpacity>
+					</TouchableOpacity>
+				</KeyboardAvoidingView>
+			</Modal>
+
 			{/* Gallery */}
 			<MoreRow
 				icon="Camera" iconBg={C.bgPurple}
@@ -1153,21 +1373,7 @@ export function MoreScreen({
 				label="Export as PDF"
 				sublabel={isPro ? "Download your food, milk & allergen data as a PDF" : "Pro feature — upgrade to unlock"}
 				color={isPro ? undefined : C.mutedText}
-				onPress={isPro
-					? () => Alert.alert(
-						"Export as PDF",
-						"What would you like to include?",
-						[
-							{ text: "Everything",    onPress: () => exportFoodLogAsPDF(foodLog, childName, bottleLog, weightLog, weightPreference, { food: true,  milk: true,  allergens: true,  weight: true  }) },
-							{ text: "Food Log",      onPress: () => exportFoodLogAsPDF(foodLog, childName, bottleLog, weightLog, weightPreference, { food: true,  milk: false, allergens: false, weight: false }) },
-							{ text: "Milk & Bottles",onPress: () => exportFoodLogAsPDF(foodLog, childName, bottleLog, weightLog, weightPreference, { food: false, milk: true,  allergens: false, weight: false }) },
-							{ text: "Weight",        onPress: () => exportFoodLogAsPDF(foodLog, childName, bottleLog, weightLog, weightPreference, { food: false, milk: false, allergens: false, weight: true  }) },
-							{ text: "Allergens Only",onPress: () => exportFoodLogAsPDF(foodLog, childName, bottleLog, weightLog, weightPreference, { food: false, milk: false, allergens: true,  weight: false }) },
-							{ text: "Cancel", style: "cancel" },
-						],
-					)
-					: onUpgradePro
-				}
+				onPress={isPro ? () => setShowExportModal(true) : onUpgradePro}
 				right={isPro ? undefined : (
 					<View style={{ backgroundColor: C.warningStroke, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
 						<Text style={{ fontSize: 10, fontWeight: "700", color: C.white }}>PRO</Text>
