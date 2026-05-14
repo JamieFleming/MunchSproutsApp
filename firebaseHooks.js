@@ -10,6 +10,7 @@ import {
 	deleteUser,
 	EmailAuthProvider,
 	reauthenticateWithCredential,
+	updateProfile,
 } from "firebase/auth";
 import {
 	collection,
@@ -25,15 +26,23 @@ import {
 	serverTimestamp,
 	orderBy,
 	onSnapshot,
+	deleteField,
 } from "firebase/firestore";
 import { auth, db, storage } from "./firebase";
 import { ref, uploadString, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
+// Set to true by deleteAccount so the onSnapshot handler knows not to
+// recreate the user doc while deletion is in progress.
+let _deletingAccount = false;
+
 // AUTH STATE
 export function useAuth() {
-	const [user, setUser] = useState(null);
-	const [userDoc, setUserDoc] = useState(null);
-	const [loading, setLoading] = useState(true);
+	const [user, setUser]               = useState(null);
+	const [userDoc, setUserDoc]         = useState(null);
+	const [loading, setLoading]         = useState(true);
+	// Becomes true once the first Firestore snapshot resolves (success OR error),
+	// so Root knows it's safe to route without a permanent LoadingScreen.
+	const [userDocLoaded, setUserDocLoaded] = useState(false);
 
 	useEffect(() => {
 		let unsubDoc = null;
@@ -43,6 +52,9 @@ export function useAuth() {
 			if (unsubDoc) { unsubDoc(); unsubDoc = null; }
 
 			setUser(firebaseUser);
+			// Reset the "doc loaded" flag whenever auth state changes so Root
+			// waits for the new user's document before routing.
+			setUserDocLoaded(false);
 
 			if (firebaseUser) {
 				// Real-time listener — picks up the user doc as soon as it's
@@ -55,31 +67,59 @@ export function useAuth() {
 					doc(db, "users", firebaseUser.uid),
 					async (snap) => {
 						if (snap.exists()) {
-							setUserDoc(snap.data());
+							const data = snap.data();
+							setUserDoc(data);
+							setUserDocLoaded(true);
+
+							// Self-heal: if the Firestore doc has no email but Firebase
+							// Auth does (covers Google/Apple users whose email was stored
+							// as null by an old bug), backfill it silently.
+							if (!data.email) {
+								const authEmail =
+									firebaseUser.email ||
+									firebaseUser.providerData?.find((p) => p.email)?.email ||
+									null;
+								if (authEmail) {
+									updateDoc(doc(db, "users", firebaseUser.uid), { email: authEmail })
+										.catch(() => {}); // non-fatal
+								}
+							}
 						} else {
-							// Doc missing — write it now. merge:true is safe even if
+							// Doc missing. If we're in the middle of deleting the account
+							// this is expected — don't recreate it.
+							if (_deletingAccount) return;
+
+							// Otherwise recreate it (e.g. race on first sign-in, or the
+							// doc was accidentally removed). merge:true is safe even if
 							// setupNotifications already wrote a pushToken field.
 							try {
+								// Only include email if set — Apple sign-in may not return
+								// one, and we never want to store null into Firestore.
+								const baseDoc = { plan: "free", createdAt: serverTimestamp(), onboardingComplete: false };
+								if (firebaseUser.email) baseDoc.email = firebaseUser.email;
 								await setDoc(
 									doc(db, "users", firebaseUser.uid),
-									{
-										email:     firebaseUser.email,
-										plan:      "free",
-										createdAt: serverTimestamp(),
-									},
+									baseDoc,
 									{ merge: true },
 								);
 								// onSnapshot will fire again automatically with the new doc
+								// — setUserDocLoaded will be called then.
 							} catch (e) {
 								console.error("Failed to create missing user doc:", e);
 								setUserDoc(null);
+								setUserDocLoaded(true); // unblock Root even on failure
 							}
 						}
 					},
-					(e) => { console.error("User doc listener error:", e); setUserDoc(null); },
+					(e) => {
+						console.error("User doc listener error:", e);
+						setUserDoc(null);
+						setUserDocLoaded(true); // unblock Root even on error
+					},
 				);
 			} else {
 				setUserDoc(null);
+				setUserDocLoaded(true); // signed out — nothing to load
 			}
 
 			setLoading(false);
@@ -94,6 +134,7 @@ export function useAuth() {
 	return {
 		user,
 		userDoc,
+		userDocLoaded,
 		loading,
 		isPro: userDoc?.plan === "pro",
 	};
@@ -107,6 +148,7 @@ export async function signUp(email, password) {
 		email,
 		plan: "free",
 		createdAt: serverTimestamp(),
+		onboardingComplete: false,
 	});
 
 	return cred.user;
@@ -132,9 +174,10 @@ export async function signInWithGoogle(idToken) {
 	if (!snap.exists()) {
 		// Brand-new Google user
 		await setDoc(userRef, {
-			email:     user.email,
-			plan:      "free",
-			createdAt: serverTimestamp(),
+			email:              user.email,
+			plan:               "free",
+			createdAt:          serverTimestamp(),
+			onboardingComplete: false,
 		});
 	} else if (!snap.data().email && user.email) {
 		// Existing user whose email was previously saved as null — backfill it
@@ -144,39 +187,73 @@ export async function signInWithGoogle(idToken) {
 	return user;
 }
 
+// Decode the payload section of an Apple identity token (JWT) without
+// verifying the signature — Firebase verifies it for us. This lets us extract
+// the `email` claim directly, which Apple always embeds in the token even on
+// returning sign-ins where credential.email is null.
+function decodeAppleJWT(token) {
+	try {
+		const payload = token.split(".")[1];
+		// Base64url → base64 → JSON
+		const padded  = payload + "=".repeat((4 - (payload.length % 4)) % 4);
+		const decoded = atob(padded.replace(/-/g, "+").replace(/_/g, "/"));
+		return JSON.parse(decoded);
+	} catch {
+		return null;
+	}
+}
+
 // SIGN IN WITH APPLE
-export async function signInWithApple(identityToken, nonce, fullName) {
+// We extract the email from three sources in priority order:
+//   1. Firebase Auth user.email   (most reliable when Firebase decodes it)
+//   2. JWT identity token `email` claim (always present if Apple provided it)
+//   3. credential.email from signInAsync (only on first-ever authorisation)
+export async function signInWithApple(identityToken, nonce, fullName, appleEmail) {
 	if (!identityToken) throw new Error("No Apple identity token provided.");
 
-	// OAuthProvider lives in firebase/auth — import dynamically to keep tree-shaking happy
 	const { OAuthProvider } = await import("firebase/auth");
 	const provider = new OAuthProvider("apple.com");
 	const credential = provider.credential({ idToken: identityToken, rawNonce: nonce });
 	const result = await signInWithCredential(auth, credential);
 	const { user } = result;
 
-	// Build a display name from Apple's one-time fullName object
+	// Apple only provides name on the very first sign-in ever — capture while we can
 	const displayName = [fullName?.givenName, fullName?.familyName]
 		.filter(Boolean)
 		.join(" ") || null;
 
-	// Create or patch Firestore user doc
+	// Mirror displayName onto the Firebase Auth profile so it's immediately
+	// available on the user object without an extra Firestore read
+	if (displayName && !user.displayName) {
+		try { await updateProfile(user, { displayName }); } catch { /* non-fatal */ }
+	}
+
 	const userRef = doc(db, "users", user.uid);
 	const snap    = await getDoc(userRef);
+
+	// Decode the JWT to extract the email Apple embedded in the token
+	const jwtPayload  = decodeAppleJWT(identityToken);
+	const jwtEmail    = jwtPayload?.email || null;
+
+	// Best email available across all three sources
+	const resolvedEmail = user.email || jwtEmail || appleEmail || null;
+
+	// Build the data to write — never store null; use deleteField() to actively
+	// remove any nulls that a previous crashed sign-in may have written
+	const docData = { plan: "free" };
+
+	if (resolvedEmail) docData.email = resolvedEmail;
+	else if (snap.exists() && snap.data().email  === null) docData.email = deleteField();
+
+	if (displayName)  docData.name  = displayName;
+	else if (snap.exists() && snap.data().name   === null) docData.name  = deleteField();
+
 	if (!snap.exists()) {
-		await setDoc(userRef, {
-			email:     user.email ?? null,
-			name:      displayName,
-			plan:      "free",
-			createdAt: serverTimestamp(),
-		});
-	} else {
-		// Backfill name/email if Apple provided them (first sign-in only)
-		const updates = {};
-		if (displayName && !snap.data().name) updates.name  = displayName;
-		if (user.email  && !snap.data().email) updates.email = user.email;
-		if (Object.keys(updates).length) await updateDoc(userRef, updates);
+		docData.createdAt          = serverTimestamp();
+		docData.onboardingComplete = false;
 	}
+
+	await setDoc(userRef, docData, { merge: true });
 
 	return user;
 }
@@ -209,64 +286,115 @@ export async function sendPasswordReset(email) {
 }
 
 export async function deleteAccount(userId) {
-	// Delete the Firebase Auth account FIRST so we fail fast if re-auth is
-	// required, before any Firestore data is touched. Deleting the auth user
-	// also triggers onAuthStateChanged → the app navigates to the auth screen
-	// automatically without needing a manual sign-out call.
-	await deleteUser(auth.currentUser);
-
-	// Auth account removed — now clean up all Firestore data (best-effort,
-	// non-fatal if individual collections fail)
-	const childSnap = await getDocs(
-		query(collection(db, "children"), where("userId", "==", userId)),
-	);
-	await Promise.all(childSnap.docs.map((d) => deleteDoc(d.ref)));
-
-	const logSnap = await getDocs(
-		query(collection(db, "foodLog"), where("userId", "==", userId)),
-	);
-	await Promise.all(logSnap.docs.map((d) => deleteDoc(d.ref)));
+	// Signal the onSnapshot handler NOT to recreate the user doc if it sees
+	// it disappear — that recreation was the root cause of the doc surviving.
+	_deletingAccount = true;
 
 	try {
-		const favSnap = await getDocs(
-			collection(db, "users", userId, "favouriteRecipes"),
+		// ── 1. Children (owned) ────────────────────────────────────────────────
+		const childSnap = await getDocs(
+			query(collection(db, "children"), where("userId", "==", userId)),
 		);
-		await Promise.all(favSnap.docs.map((d) => deleteDoc(d.ref)));
-	} catch (e) {
-		console.warn("Could not delete favourite recipes:", e.message);
-	}
+		const childIds = childSnap.docs.map((d) => d.id);
+		await Promise.all(childSnap.docs.map((d) => deleteDoc(d.ref)));
 
-	try {
-		const bottleSnap = await getDocs(
-			query(collection(db, "bottleLog"), where("userId", "==", userId)),
-		);
-		await Promise.all(bottleSnap.docs.map((d) => deleteDoc(d.ref)));
-	} catch (e) {
-		console.warn("Could not delete bottle log:", e.message);
-	}
+		// ── 2. Food log — by userId AND by childId ─────────────────────────────
+		// Entries the user logged themselves are tagged with userId.
+		// Family-sharing partner entries are only tagged with childId, so we
+		// must delete those too to leave nothing behind.
+		try {
+			const logByUser = await getDocs(
+				query(collection(db, "foodLog"), where("userId", "==", userId)),
+			);
+			await Promise.all(logByUser.docs.map((d) => deleteDoc(d.ref)));
 
-	try {
-		const suggestSnap = await getDocs(
-			query(collection(db, "recipeSuggestions"), where("userId", "==", userId)),
-		);
-		await Promise.all(suggestSnap.docs.map((d) => deleteDoc(d.ref)));
-	} catch (e) {
-		console.warn("Could not delete recipe suggestions:", e.message);
-	}
+			// Batch by childId (Firestore "in" limit = 30)
+			for (let i = 0; i < childIds.length; i += 30) {
+				const batch = childIds.slice(i, i + 30);
+				const logByChild = await getDocs(
+					query(collection(db, "foodLog"), where("childId", "in", batch)),
+				);
+				await Promise.all(logByChild.docs.map((d) => deleteDoc(d.ref)));
+			}
+		} catch (e) {
+			console.warn("Could not fully delete food log:", e.message);
+		}
 
-	try {
-		const weightSnap = await getDocs(
-			query(collection(db, "weightLog"), where("userId", "==", userId)),
-		);
-		await Promise.all(weightSnap.docs.map((d) => deleteDoc(d.ref)));
-	} catch (e) {
-		console.warn("Could not delete weight log:", e.message);
-	}
+		// ── 3. Bottle log ──────────────────────────────────────────────────────
+		try {
+			const bottleByUser = await getDocs(
+				query(collection(db, "bottleLog"), where("userId", "==", userId)),
+			);
+			await Promise.all(bottleByUser.docs.map((d) => deleteDoc(d.ref)));
 
-	try {
-		await deleteDoc(doc(db, "users", userId));
-	} catch (e) {
-		console.warn("Could not delete user doc:", e.message);
+			for (let i = 0; i < childIds.length; i += 30) {
+				const batch = childIds.slice(i, i + 30);
+				const bottleByChild = await getDocs(
+					query(collection(db, "bottleLog"), where("childId", "in", batch)),
+				);
+				await Promise.all(bottleByChild.docs.map((d) => deleteDoc(d.ref)));
+			}
+		} catch (e) {
+			console.warn("Could not fully delete bottle log:", e.message);
+		}
+
+		// ── 4. Weight log ──────────────────────────────────────────────────────
+		try {
+			const weightSnap = await getDocs(
+				query(collection(db, "weightLog"), where("userId", "==", userId)),
+			);
+			await Promise.all(weightSnap.docs.map((d) => deleteDoc(d.ref)));
+		} catch (e) {
+			console.warn("Could not delete weight log:", e.message);
+		}
+
+		// ── 5. Favourite recipes (sub-collection) ──────────────────────────────
+		try {
+			const favSnap = await getDocs(
+				collection(db, "users", userId, "favouriteRecipes"),
+			);
+			await Promise.all(favSnap.docs.map((d) => deleteDoc(d.ref)));
+		} catch (e) {
+			console.warn("Could not delete favourite recipes:", e.message);
+		}
+
+		// ── 6. Recipe suggestions ──────────────────────────────────────────────
+		try {
+			const suggestSnap = await getDocs(
+				query(collection(db, "recipeSuggestions"), where("userId", "==", userId)),
+			);
+			await Promise.all(suggestSnap.docs.map((d) => deleteDoc(d.ref)));
+		} catch (e) {
+			console.warn("Could not delete recipe suggestions:", e.message);
+		}
+
+		// ── 7. Storage photos (profile + child photos) ─────────────────────────
+		try {
+			await deleteObject(ref(storage, `profilePhotos/${userId}/profile.jpg`));
+		} catch { /* file may not exist — non-fatal */ }
+
+		for (const childId of childIds) {
+			try {
+				await deleteObject(ref(storage, `childPhotos/${userId}/${childId}.jpg`));
+			} catch { /* non-fatal */ }
+		}
+
+		// ── 8. User document ───────────────────────────────────────────────────
+		// Delete last among Firestore ops — the onSnapshot firing here is now
+		// suppressed by _deletingAccount so the doc won't be recreated.
+		try {
+			await deleteDoc(doc(db, "users", userId));
+		} catch (e) {
+			console.warn("Could not delete user doc:", e.message);
+		}
+
+		// ── 9. Firebase Auth account ───────────────────────────────────────────
+		// MUST be last — once this runs the auth token is revoked and any
+		// subsequent Firestore writes would fail with "insufficient permissions".
+		// onAuthStateChanged fires automatically, navigating to the sign-in screen.
+		await deleteUser(auth.currentUser);
+	} finally {
+		_deletingAccount = false;
 	}
 }
 

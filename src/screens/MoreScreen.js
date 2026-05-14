@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
 	View, Text, TouchableOpacity, ScrollView, FlatList,
 	Modal, Platform, Alert, ActivityIndicator, Image, Dimensions, Linking, Switch,
+	TextInput, KeyboardAvoidingView,
 } from "react-native";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon } from "../components/Icon";
@@ -19,8 +20,8 @@ const SCREEN_W = Dimensions.get("window").width;
 const THUMB_SIZE = (SCREEN_W - 56) / 3;
 
 const LEGAL_URLS = {
-	privacy: "https://www.munchsprouts.co.uk/privacy-policy",
-	terms:   "https://www.munchsprouts.co.uk/terms-of-use",
+	privacy: "https://munchsprouts.co.uk/privacy-policy",
+	terms:   "https://munchsprouts.co.uk/terms-of-use",
 };
 
 // ── PDF export ────────────────────────────────────────────────────────────────
@@ -384,7 +385,7 @@ function MoreRow({ icon, iconBg, label, sublabel, onPress, color, right }) {
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
 export function MoreScreen({
-	user, isPro, ownedChildren, defaultChildId,
+	user, userDoc, isPro, ownedChildren, defaultChildId,
 	showMilkOnDashboard = true, onToggleMilkOnDashboard,
 	showAllergenOnDashboard = true, onToggleAllergenOnDashboard,
 	weightPreference = "lbs", onSetWeightPreference,
@@ -408,6 +409,73 @@ export function MoreScreen({
 	const [pickerHour,         setPickerHour]         = useState(7);   // 1–12
 	const [pickerMinute,       setPickerMinute]       = useState(0);   // 0–55
 	const [pickerAmPm,         setPickerAmPm]         = useState("AM");
+
+	// ── Profile edit modal ────────────────────────────────────────────────────
+	const [showProfileEdit, setShowProfileEdit] = useState(false);
+	const [editName,        setEditName]        = useState("");
+	const [editEmail,       setEditEmail]       = useState("");
+	const [profileSaving,   setProfileSaving]   = useState(false);
+
+	const isEmailUser = user?.providerData?.some((p) => p.providerId === "password");
+
+	// Prefer Firestore userDoc over stale Firebase Auth fields — userDoc is kept
+	// live by onSnapshot so it always reflects the latest saved values.
+	const displayName  = userDoc?.name  || user?.displayName || null;
+	// user.email can be null when Firebase restores a cached social-login user;
+	// providerData always has the real email even in that case.
+	const providerEmail = user?.providerData?.find?.((p) => p.email)?.email || null;
+	const displayEmail  = userDoc?.email || user?.email || providerEmail || null;
+
+	const openProfileEdit = () => {
+		setEditName(displayName ?? "");
+		setEditEmail(displayEmail ?? "");
+		setShowProfileEdit(true);
+	};
+
+	const handleSaveProfile = async () => {
+		setProfileSaving(true);
+		try {
+			const { updateProfile, updateEmail } = await import("firebase/auth");
+			const { updateUserProfile }          = await import("../../firebaseHooks");
+			const { auth }                       = await import("../../firebase");
+			const { doc, updateDoc }             = await import("firebase/firestore");
+			const { db }                         = await import("../../firebase");
+
+			const nameChanged  = editName.trim()  !== (displayName  ?? "");
+			const emailChanged = editEmail.trim() !== (displayEmail ?? "");
+
+			// Update display name in Firebase Auth + Firestore
+			if (nameChanged) {
+				await updateProfile(auth.currentUser, { displayName: editName.trim() || null });
+				await updateDoc(doc(db, "users", user.uid), { name: editName.trim() || null });
+			}
+
+			// Update email (email/password users only, requires recent login)
+			if (emailChanged && isEmailUser) {
+				try {
+					await updateEmail(auth.currentUser, editEmail.trim());
+					await updateDoc(doc(db, "users", user.uid), { email: editEmail.trim() });
+				} catch (e) {
+					if (e.code === "auth/requires-recent-login") {
+						Alert.alert("Re-authentication Required", "For security, please sign out and sign back in before changing your email.");
+					} else if (e.code === "auth/email-already-in-use") {
+						Alert.alert("Email In Use", "That email address is already linked to another account.");
+					} else {
+						Alert.alert("Email Update Failed", e.message);
+					}
+					setProfileSaving(false);
+					return;
+				}
+			}
+
+			setShowProfileEdit(false);
+			Alert.alert("Saved", "Your profile has been updated.");
+		} catch (e) {
+			Alert.alert("Error", "Could not save profile. Please try again.");
+		} finally {
+			setProfileSaving(false);
+		}
+	};
 
 	// Convert 24h {hour, minute} to display string
 	const fmt24 = (hour, minute) => {
@@ -480,27 +548,23 @@ export function MoreScreen({
 	return (
 		<ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
 
-			{/* Account card */}
-			<View style={[s.card, { marginBottom: 20, flexDirection: "row", alignItems: "center", gap: 14 }]}>
+			{/* Account card — tap to edit profile */}
+			<TouchableOpacity onPress={openProfileEdit} activeOpacity={0.85} style={[s.card, { marginBottom: 20, flexDirection: "row", alignItems: "center", gap: 14, position: "relative" }]}>
 				<View style={{ alignItems: "center", gap: 4 }}>
-					<TouchableOpacity onPress={handlePickProfilePhoto} activeOpacity={0.8}>
-						<View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: C.primaryPurple, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-							{profilePhoto
-								? <Image source={{ uri: profilePhoto }} style={{ width: 60, height: 60 }} resizeMode="cover" />
-								: <Icon name="user" size={26} color="#fff" />}
-						</View>
-						<View style={{ position: "absolute", bottom: 0, right: 0, width: 20, height: 20, borderRadius: 10, backgroundColor: C.primaryPurple, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: C.white }}>
-							<Icon name="Camera" size={10} color="#fff" />
-						</View>
-					</TouchableOpacity>
-					{profilePhoto && (
-						<TouchableOpacity onPress={handleRemoveProfilePhoto}>
-							<Text style={{ fontSize: 10, color: "#c0392b", fontWeight: "700" }}>Remove</Text>
-						</TouchableOpacity>
-					)}
+					<View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: C.primaryPurple, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+						{profilePhoto
+							? <Image source={{ uri: profilePhoto }} style={{ width: 60, height: 60 }} resizeMode="cover" />
+							: <Icon name="user" size={26} color="#fff" />}
+					</View>
+					<View style={{ position: "absolute", bottom: 0, right: 0, width: 20, height: 20, borderRadius: 10, backgroundColor: C.primaryPurple, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: C.white, top: 40, left: 40 }}>
+						<Icon name="Camera" size={10} color="#fff" />
+					</View>
 				</View>
 				<View style={{ flex: 1 }}>
-					<Text style={{ fontWeight: "700", fontSize: 15, color: C.primaryPinkDark }}>{user.email}</Text>
+					{displayName ? (
+						<Text style={{ fontWeight: "700", fontSize: 15, color: C.primaryPinkDark }}>{displayName}</Text>
+					) : null}
+					<Text style={{ fontWeight: displayName ? "400" : "700", fontSize: displayName ? 12 : 15, color: displayName ? C.mutedText : C.primaryPinkDark }}>{displayEmail ?? "No email"}</Text>
 					<View style={{ marginTop: 4 }}>
 						<View style={{ backgroundColor: isPro ? C.statGreenBg : C.bgPurple, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, alignSelf: "flex-start" }}>
 							<Text style={{ fontSize: 11, fontWeight: "700", color: isPro ? C.statGreenText : C.mutedText }}>
@@ -514,7 +578,131 @@ export function MoreScreen({
 						)}
 					</View>
 				</View>
-			</View>
+				<View style={{ alignItems: "center", gap: 4 }}>
+					<Icon name="settings" size={16} color={C.mutedText} />
+					<Text style={{ fontSize: 9, color: C.mutedText, fontWeight: "600" }}>Edit</Text>
+				</View>
+			</TouchableOpacity>
+
+			{/* ── Profile Edit Modal ───────────────────────────────────────────────── */}
+			<Modal visible={showProfileEdit} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowProfileEdit(false)}>
+				<KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: C.bgMain }}>
+					{/* Header */}
+					<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: Platform.OS === "ios" ? 20 : 20, paddingBottom: 16, backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
+						<TouchableOpacity onPress={() => setShowProfileEdit(false)} hitSlop={8}>
+							<Text style={{ fontSize: 15, color: C.primaryPurple, fontWeight: "600" }}>Cancel</Text>
+						</TouchableOpacity>
+						<Text style={{ fontSize: 17, fontWeight: "800", color: C.textCharcoal }}>Edit Profile</Text>
+						<TouchableOpacity onPress={handleSaveProfile} disabled={profileSaving} hitSlop={8}>
+							{profileSaving
+								? <ActivityIndicator size="small" color={C.primaryPurple} />
+								: <Text style={{ fontSize: 15, color: C.primaryPurple, fontWeight: "700" }}>Save</Text>}
+						</TouchableOpacity>
+					</View>
+
+					<ScrollView contentContainerStyle={{ padding: 24, gap: 24 }}>
+						{/* Avatar */}
+						<View style={{ alignItems: "center", gap: 10 }}>
+							<TouchableOpacity onPress={handlePickProfilePhoto} activeOpacity={0.8}>
+								<View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: C.primaryPurple, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+									{profilePhoto
+										? <Image source={{ uri: profilePhoto }} style={{ width: 96, height: 96 }} resizeMode="cover" />
+										: <Icon name="user" size={42} color="#fff" />}
+								</View>
+								<View style={{ position: "absolute", bottom: 2, right: 2, width: 28, height: 28, borderRadius: 14, backgroundColor: C.primaryPurple, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: C.white }}>
+									<Icon name="Camera" size={13} color="#fff" />
+								</View>
+							</TouchableOpacity>
+							<Text style={{ fontSize: 13, color: C.mutedText, fontWeight: "500" }}>Tap to change photo</Text>
+							{profilePhoto ? (
+								<TouchableOpacity onPress={handleRemoveProfilePhoto}>
+									<Text style={{ fontSize: 12, color: "#c0392b", fontWeight: "700" }}>Remove photo</Text>
+								</TouchableOpacity>
+							) : null}
+						</View>
+
+						{/* Name */}
+						<View style={{ gap: 6 }}>
+							<Text style={{ fontSize: 12, fontWeight: "700", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5 }}>Display Name</Text>
+							<TextInput
+								value={editName}
+								onChangeText={setEditName}
+								placeholder="Your name"
+								placeholderTextColor={C.mutedText}
+								style={{ backgroundColor: C.white, borderRadius: 12, borderWidth: 1.5, borderColor: C.borderLight, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, color: C.textCharcoal, fontWeight: "500" }}
+								autoCapitalize="words"
+								returnKeyType="next"
+							/>
+						</View>
+
+						{/* Email */}
+						<View style={{ gap: 6 }}>
+							<Text style={{ fontSize: 12, fontWeight: "700", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5 }}>Email Address</Text>
+							{isEmailUser ? (
+								<TextInput
+									value={editEmail}
+									onChangeText={setEditEmail}
+									placeholder="your@email.com"
+									placeholderTextColor={C.mutedText}
+									style={{ backgroundColor: C.white, borderRadius: 12, borderWidth: 1.5, borderColor: C.borderLight, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, color: C.textCharcoal, fontWeight: "500" }}
+									autoCapitalize="none"
+									keyboardType="email-address"
+									returnKeyType="done"
+								/>
+							) : (
+								<View style={{ backgroundColor: C.bgPurple, borderRadius: 12, borderWidth: 1.5, borderColor: C.borderLight, paddingHorizontal: 14, paddingVertical: 13, flexDirection: "row", alignItems: "center", gap: 8 }}>
+									<Text style={{ flex: 1, fontSize: 15, color: C.mutedText, fontWeight: "500" }}>{displayEmail ?? "No email"}</Text>
+									<Text style={{ fontSize: 11, color: C.mutedText }}>Managed by {user?.providerData?.[0]?.providerId === "apple.com" ? "Apple" : "Google"}</Text>
+								</View>
+							)}
+						</View>
+
+						{/* Save button */}
+						<TouchableOpacity
+							onPress={handleSaveProfile}
+							disabled={profileSaving}
+							activeOpacity={0.85}
+							style={{ backgroundColor: C.primaryPurple, borderRadius: 14, paddingVertical: 15, alignItems: "center", justifyContent: "center", opacity: profileSaving ? 0.7 : 1 }}>
+							{profileSaving
+								? <ActivityIndicator color="#fff" />
+								: <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>Save Changes</Text>}
+						</TouchableOpacity>
+
+						<View style={{ height: 1, backgroundColor: C.borderLight, marginVertical: 4 }} />
+
+						{/* Change Password — email users only */}
+						{isEmailUser && (
+							<TouchableOpacity
+								onPress={() => { setShowProfileEdit(false); setTimeout(() => setShowChangePassword(true), 300); }}
+								activeOpacity={0.8}
+								style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: C.white, borderRadius: 14, padding: 16 }}>
+								<View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#e8f0ff", alignItems: "center", justifyContent: "center" }}>
+									<Icon name="key" size={16} color={C.primaryPurple} />
+								</View>
+								<View style={{ flex: 1 }}>
+									<Text style={{ fontWeight: "700", fontSize: 14, color: C.textCharcoal }}>Change Password</Text>
+									<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 1 }}>Update your account password</Text>
+								</View>
+								<Icon name="chevron-right" size={14} color={C.mutedText} />
+							</TouchableOpacity>
+						)}
+
+						{/* Sign Out */}
+						<TouchableOpacity
+							onPress={() => { setShowProfileEdit(false); setTimeout(() => onLogout?.(), 300); }}
+							activeOpacity={0.8}
+							style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: C.white, borderRadius: 14, padding: 16 }}>
+							<View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: C.statRedBg, alignItems: "center", justifyContent: "center" }}>
+								<Icon name="logout" size={16} color="#c0392b" />
+							</View>
+							<View style={{ flex: 1 }}>
+								<Text style={{ fontWeight: "700", fontSize: 14, color: "#c0392b" }}>Sign Out</Text>
+								<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 1 }}>Sign out of your account</Text>
+							</View>
+						</TouchableOpacity>
+					</ScrollView>
+				</KeyboardAvoidingView>
+			</Modal>
 
 			{/* Upgrade card */}
 			{!isPro && (
@@ -629,6 +817,11 @@ export function MoreScreen({
 							<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontWeight: "600" }}>Manage subscription</Text>
 						</TouchableOpacity>
 					</View>
+					<Text style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", textAlign: "center", paddingTop: 8, paddingHorizontal: 8, lineHeight: 14 }}>
+						{upgradePlan === "lifetime"
+							? "One-time payment. No subscription, no renewal."
+							: `Subscription ${upgradePlan === "yearly" ? "renews annually at £19.99" : "renews monthly at £2.99"} unless cancelled at least 24 hours before the end of the current period. Manage or cancel in your Apple ID settings.`}
+					</Text>
 					<View style={{ flexDirection: "row", justifyContent: "center", gap: 16, paddingTop: 6 }}>
 						<TouchableOpacity onPress={() => Linking.openURL(LEGAL_URLS.privacy)}>
 							<Text style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: "500" }}>Privacy Policy</Text>
@@ -850,10 +1043,7 @@ export function MoreScreen({
 				)}
 			/>
 
-			{/* Account */}
-			<SectionLabel mt={4}>Account</SectionLabel>
-			<MoreRow icon="key" iconBg="#e8f0ff" label="Change Password" sublabel="Update your account password" onPress={() => setShowChangePassword(true)} />
-			<MoreRow icon="logout" iconBg={C.statRedBg} label="Sign Out" sublabel="Sign out of your account" color="#c0392b" onPress={onLogout} right={<View />} />
+			{/* Account — password/sign-out moved into profile edit modal (tap the card above) */}
 
 			{/* Family Sharing */}
 			<SectionLabel mt={10}>Family Sharing</SectionLabel>
@@ -880,6 +1070,11 @@ export function MoreScreen({
 			<SectionLabel mt={10}>Support</SectionLabel>
 			<MoreRow icon="info" iconBg={C.statBlueBg} label="Contact Support" sublabel="Get help, report bugs or request features" onPress={() => setShowSupport(true)} />
 			<SupportModal visible={showSupport} onClose={() => setShowSupport(false)} user={user} />
+
+			{/* Legal */}
+			<SectionLabel mt={10}>Legal</SectionLabel>
+			<MoreRow icon="info" iconBg={C.bgPurple} label="Privacy Policy" sublabel="How we collect and use your data" onPress={() => Linking.openURL(LEGAL_URLS.privacy)} />
+			<MoreRow icon="info" iconBg={C.bgPurple} label="Terms of Use" sublabel="Rules and conditions for using Munch Sprouts" onPress={() => Linking.openURL(LEGAL_URLS.terms)} />
 
 			{/* Danger Zone */}
 			<SectionLabel mt={10}>Danger Zone</SectionLabel>

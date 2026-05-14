@@ -18,15 +18,15 @@ import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import Constants from "expo-constants";
 import { signIn, signUp, sendPasswordReset, signInWithGoogle, signInWithApple } from "./firebaseHooks";
-import * as AppleAuthentication from "expo-apple-authentication";
-import * as Crypto from "expo-crypto";
+// expo-apple-authentication and expo-crypto are loaded dynamically so the app
+// doesn't crash on binaries that don't have the native modules compiled in yet.
 import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID, GOOGLE_ANDROID_CLIENT_ID } from "./firebase";
 
 WebBrowser.maybeCompleteAuthSession();
 
 const LEGAL_URLS = {
-	privacy: "https://www.munchsprouts.co.uk/privacy-policy",
-	terms:   "https://www.munchsprouts.co.uk/terms-of-use",
+	privacy: "https://munchsprouts.co.uk/privacy-policy",
+	terms:   "https://munchsprouts.co.uk/terms-of-use",
 };
 
 // "storeClient" = running inside Expo Go
@@ -100,35 +100,52 @@ export default function AuthScreen() {
 	const [confirm, setConfirm] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [googleLoading, setGoogleLoading] = useState(false);
-	const [appleLoading, setAppleLoading] = useState(false);
+	const [appleLoading,   setAppleLoading]   = useState(false);
+	const [appleAvailable, setAppleAvailable] = useState(false);
+	const [AppleAuth,      setAppleAuth]      = useState(null);
 	const [showPassword, setShowPassword] = useState(false);
 	const [showConfirm, setShowConfirm] = useState(false);
 
-	// ── Apple Sign-In ──
+	// ── Apple Sign-In — load native module lazily so the app doesn't crash on
+	//    binaries that don't have expo-apple-authentication compiled in yet ──
+	useEffect(() => {
+		if (Platform.OS !== "ios") return;
+		import("expo-apple-authentication")
+			.then((mod) =>
+				mod.isAvailableAsync()
+					.then((available) => { if (available) { setAppleAuth(mod); setAppleAvailable(true); } })
+					.catch(() => {}),
+			)
+			.catch(() => {});
+	}, []);
+
 	const handleAppleSignIn = async () => {
+		if (!AppleAuth) return;
 		try {
 			setAppleLoading(true);
 
 			// Generate a random nonce and its SHA-256 hash (required by Firebase)
 			const rawNonce = Array.from({ length: 32 }, () =>
 				Math.floor(Math.random() * 36).toString(36)).join("");
-			const hashedNonce = await Crypto.digestStringAsync(
-				Crypto.CryptoDigestAlgorithm.SHA256,
-				rawNonce,
+
+			// Load expo-crypto dynamically — same reason as above
+			const hashedNonce = await import("expo-crypto").then((Crypto) =>
+				Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce),
 			);
 
-			const credential = await AppleAuthentication.signInAsync({
+			const credential = await AppleAuth.signInAsync({
 				requestedScopes: [
-					AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-					AppleAuthentication.AppleAuthenticationScope.EMAIL,
+					AppleAuth.AppleAuthenticationScope.FULL_NAME,
+					AppleAuth.AppleAuthenticationScope.EMAIL,
 				],
 				nonce: hashedNonce,
 			});
 
 			await signInWithApple(
 				credential.identityToken,
-				rawNonce,           // Firebase needs the raw (unhashed) nonce
+				rawNonce,
 				credential.fullName,
+				credential.email,   // Apple only provides this on first-ever sign-in
 			);
 		} catch (e) {
 			if (e.code !== "ERR_REQUEST_CANCELED") {
@@ -502,11 +519,13 @@ export default function AuthScreen() {
 						)}
 					</TouchableOpacity>
 
-					{/* ── Apple Sign-In (iOS only) ── */}
-					{Platform.OS === "ios" && (
-						<AppleAuthentication.AppleAuthenticationButton
-							buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-							buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+					{/* ── Apple Sign-In (iOS only, only when native module is available) ── */}
+					{Platform.OS === "ios" && appleAvailable && AppleAuth && (
+						<AppleAuth.AppleAuthenticationButton
+							buttonType={mode === "signup"
+								? AppleAuth.AppleAuthenticationButtonType.SIGN_UP
+								: AppleAuth.AppleAuthenticationButtonType.SIGN_IN}
+							buttonStyle={AppleAuth.AppleAuthenticationButtonStyle.BLACK}
 							cornerRadius={14}
 							style={styles.btnApple}
 							onPress={handleAppleSignIn}

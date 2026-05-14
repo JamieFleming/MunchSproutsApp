@@ -9,8 +9,8 @@ import { useTheme, useStyles } from "../ThemeContext";
 import { Icon, CategoryIcon } from "../components/Icon";
 
 const LEGAL_URLS = {
-	privacy: "https://www.munchsprouts.co.uk/privacy-policy",
-	terms:   "https://www.munchsprouts.co.uk/terms-of-use",
+	privacy: "https://munchsprouts.co.uk/privacy-policy",
+	terms:   "https://munchsprouts.co.uk/terms-of-use",
 };
 
 // ── Small shared components ───────────────────────────────────────────────────
@@ -386,6 +386,11 @@ export function RecipesScreen({ isPro, recipes, favouriteRecipeIds, onUpgradePro
 							<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontWeight: "600" }}>Manage subscription</Text>
 						</TouchableOpacity>
 					</View>
+					<Text style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", textAlign: "center", paddingTop: 8, paddingHorizontal: 8, lineHeight: 14 }}>
+						{upgradePlan === "lifetime"
+							? "One-time payment. No subscription, no renewal."
+							: `Subscription ${upgradePlan === "yearly" ? "renews annually at £19.99" : "renews monthly at £2.99"} unless cancelled at least 24 hours before the end of the current period. Manage or cancel in your Apple ID settings.`}
+					</Text>
 					<View style={{ flexDirection: "row", justifyContent: "center", gap: 16, paddingTop: 6 }}>
 						<TouchableOpacity onPress={() => Linking.openURL(LEGAL_URLS.privacy)}>
 							<Text style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: "500" }}>Privacy Policy</Text>

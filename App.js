@@ -63,6 +63,7 @@ import { AllergenScreen } from "./src/screens/AllergenScreen";
 import { ChildrenScreen } from "./src/screens/ChildrenScreen";
 import { BottleScreen } from "./src/screens/BottleScreen";
 import { ChildDetailScreen } from "./src/screens/ChildDetailScreen";
+import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { setupNotifications, onNotificationTapped, clearBadge, scheduleBottleReminders, cancelBottleReminders } from "./src/notificationService";
 import { Icon } from "./src/components/Icon";
 import { FoodForm } from "./src/components/FoodForm";
@@ -520,7 +521,7 @@ const PAGE_TITLES = {
 	children: "Children",
 };
 
-function MainApp({ user, isPro: isPropPro }) {
+function MainApp({ user, userDoc, isPro: isPropPro }) {
 	const { C, theme } = useTheme();
 	const s = useStyles();
 	const insets = useSafeAreaInsets();
@@ -1806,6 +1807,7 @@ function MainApp({ user, isPro: isPropPro }) {
 					</View>
 					<MoreScreen
 						user={user}
+						userDoc={userDoc}
 						isPro={isPro}
 						ownedChildren={children}
 						defaultChildId={activeChild?.id || null}
@@ -1903,10 +1905,18 @@ function MainApp({ user, isPro: isPropPro }) {
 // ── Root ──────────────────────────────────────────────────────────────────────
 
 function Root() {
-	const { user, loading, isPro } = useAuth();
-	if (loading) return <LoadingScreen />;
+	const { user, userDoc, userDocLoaded, loading, isPro } = useAuth();
+	// Wait for Firebase Auth AND the first Firestore snapshot to settle.
+	// userDocLoaded becomes true once onSnapshot resolves (even on error),
+	// so we never get stuck on LoadingScreen indefinitely.
+	if (loading || (user && !userDocLoaded)) return <LoadingScreen />;
 	if (!user) return <AuthScreen />;
-	return <MainApp user={user} isPro={isPro} />;
+	// New users haven't completed onboarding yet — show the wizard first.
+	// Existing users (onboardingComplete === undefined) skip straight to the app.
+	if (userDoc?.onboardingComplete === false) {
+		return <OnboardingScreen user={user} />;
+	}
+	return <MainApp user={user} userDoc={userDoc} isPro={isPro} />;
 }
 
 export default function App() {
