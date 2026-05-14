@@ -1506,7 +1506,8 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 					paddingTop: 16,
 					backgroundColor: C.screen,
 				}}>
-				{page === "dashboard" && (
+				{/* ── Main tabs: kept mounted, just shown/hidden — avoids mount/unmount jitter on Android ── */}
+				<View style={{ flex: 1, display: page === "dashboard" ? "flex" : "none" }}>
 					<DashboardScreen
 						child={activeChild}
 						foodLog={childLog}
@@ -1535,8 +1536,8 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						isPro={isPro}
 						onUpgradePro={handleUpgradePro}
 					/>
-				)}
-				{page === "log" && (
+				</View>
+				<View style={{ flex: 1, display: page === "log" ? "flex" : "none" }}>
 					<LogScreen
 						foodLog={childLog}
 						childName={activeChild?.name || null}
@@ -1554,7 +1555,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						refreshing={refreshing}
 						onRefresh={onRefresh}
 					/>
-				)}
+				</View>
 				{page === "add" && (
 					<KeyboardAvoidingView
 						behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -1579,7 +1580,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						</ScrollView>
 					</KeyboardAvoidingView>
 				)}
-				{page === "recipes" && (
+				<View style={{ flex: 1, display: page === "recipes" ? "flex" : "none" }}>
 					<RecipesScreen
 						isPro={isPro}
 						recipes={recipes}
@@ -1592,8 +1593,8 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						jumpToRecipeId={jumpToRecipeId}
 						onJumpHandled={() => setJumpToRecipeId(null)}
 					/>
-				)}
-				{page === "bottle" && (
+				</View>
+				<View style={{ flex: 1, display: page === "bottle" ? "flex" : "none" }}>
 					<BottleScreen
 						bottleLog={childBottleLog}
 						childName={activeChild?.name || null}
@@ -1605,8 +1606,8 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						isPro={isPro}
 						onUpgradePro={handleUpgradePro}
 					/>
-				)}
-				{page === "allergens" && (
+				</View>
+				<View style={{ flex: 1, display: page === "allergens" ? "flex" : "none" }}>
 					<AllergenScreen
 						foodLog={childLog}
 						onNavigate={setPage}
@@ -1628,7 +1629,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						}}
 						onAllergenCheckIn={handleAllergenCheckIn}
 					/>
-				)}
+				</View>
 				{page === "children" && (
 					<ChildrenScreen
 						children={children}
