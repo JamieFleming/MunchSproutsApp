@@ -170,49 +170,57 @@ export function DashboardScreen({
 			{child ? (
 				<TouchableOpacity
 					onPress={() => onNavigate("childDetail")}
-					activeOpacity={0.92}
-					style={{ backgroundColor: C.primaryPurple, borderRadius: 24, padding: 22, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-					<View style={{ flex: 1 }}>
-						<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", fontWeight: "600", marginBottom: 4 }}>Tracking for</Text>
-						<Text style={{ fontSize: 30, fontWeight: "800", color: "#ffffff" }}>{child.name}</Text>
-						{weeks !== null && (
-							<View style={{ flexDirection: "row", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-								<View style={{ backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}>
-									<Text style={{ fontSize: 12, color: "#ffffff", fontWeight: "700" }}>{weeks} weeks</Text>
-								</View>
-								<View style={{ backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}>
-									<Text style={{ fontSize: 12, color: "#ffffff", fontWeight: "700" }}>{months} months</Text>
-								</View>
-								{latestWeight && (
-									<View style={{ backgroundColor: "rgba(255,255,255,0.25)", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}>
-										<Text style={{ fontSize: 12, color: "#ffffff", fontWeight: "700" }}>
-											{formatWeight(latestWeight.value_kg, weightPreference)}
-										</Text>
+					activeOpacity={0.88}
+					style={{ backgroundColor: C.primaryPurple, borderRadius: 24, padding: 22, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.18)" }}>
+					{/* Top row: name + photo */}
+					<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+						<View style={{ flex: 1 }}>
+							<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", fontWeight: "600", marginBottom: 4 }}>Tracking for</Text>
+							<Text style={{ fontSize: 30, fontWeight: "800", color: "#ffffff" }}>{child.name}</Text>
+							{weeks !== null && (
+								<View style={{ flexDirection: "row", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+									<View style={{ backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}>
+										<Text style={{ fontSize: 12, color: "#ffffff", fontWeight: "700" }}>{weeks} weeks</Text>
 									</View>
-								)}
-							</View>
-						)}
-						{child.weaningStart && <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", marginTop: 6 }}>Weaning since {formatDate(child.weaningStart)}</Text>}
-					</View>
-					<TouchableOpacity onPress={() => onNavigate("children")} activeOpacity={0.8} style={{ position: "relative" }}>
-						{child.photoUri ? (
-							<View style={{ width: 72, height: 72, borderRadius: 36, overflow: "hidden", borderWidth: 3, borderColor: "rgba(255,255,255,0.4)" }}>
-								<Image source={{ uri: child.photoUri }} style={{ width: 72, height: 72 }} resizeMode="cover" />
-							</View>
-						) : (
-							<Svg width={64} height={64} viewBox="0 0 64 64">
-								<Circle cx="32" cy="32" r="30" fill="rgba(255,255,255,0.15)" />
-								<Circle cx="32" cy="28" r="16" fill="rgba(255,255,255,0.25)" />
-								<Circle cx="24" cy="26" r="3"  fill="rgba(255,255,255,0.8)" />
-								<Circle cx="40" cy="26" r="3"  fill="rgba(255,255,255,0.8)" />
-								<Path d="M26 34 Q32 39 38 34" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-								<Path d="M14 44 Q32 56 50 44" stroke="rgba(255,255,255,0.25)" strokeWidth="3" strokeLinecap="round" fill="none" />
-							</Svg>
-						)}
-						<View style={{ position: "absolute", bottom: 0, right: 0, width: 22, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" }}>
-							<Icon name="edit" size={11} color="#ffffff" />
+									<View style={{ backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}>
+										<Text style={{ fontSize: 12, color: "#ffffff", fontWeight: "700" }}>{months} months</Text>
+									</View>
+									{latestWeight && (
+										<View style={{ backgroundColor: "rgba(255,255,255,0.25)", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}>
+											<Text style={{ fontSize: 12, color: "#ffffff", fontWeight: "700" }}>
+												{formatWeight(latestWeight.value_kg, weightPreference)}
+											</Text>
+										</View>
+									)}
+								</View>
+							)}
+							{child.weaningStart && <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", marginTop: 6 }}>Weaning since {formatDate(child.weaningStart)}</Text>}
 						</View>
-					</TouchableOpacity>
+						<TouchableOpacity onPress={() => onNavigate("children")} activeOpacity={0.8} style={{ position: "relative", marginLeft: 14 }}>
+							{child.photoUri ? (
+								<View style={{ width: 72, height: 72, borderRadius: 36, overflow: "hidden", borderWidth: 3, borderColor: "rgba(255,255,255,0.4)" }}>
+									<Image source={{ uri: child.photoUri }} style={{ width: 72, height: 72 }} resizeMode="cover" />
+								</View>
+							) : (
+								<Svg width={64} height={64} viewBox="0 0 64 64">
+									<Circle cx="32" cy="32" r="30" fill="rgba(255,255,255,0.15)" />
+									<Circle cx="32" cy="28" r="16" fill="rgba(255,255,255,0.25)" />
+									<Circle cx="24" cy="26" r="3"  fill="rgba(255,255,255,0.8)" />
+									<Circle cx="40" cy="26" r="3"  fill="rgba(255,255,255,0.8)" />
+									<Path d="M26 34 Q32 39 38 34" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+									<Path d="M14 44 Q32 56 50 44" stroke="rgba(255,255,255,0.25)" strokeWidth="3" strokeLinecap="round" fill="none" />
+								</Svg>
+							)}
+							<View style={{ position: "absolute", bottom: 0, right: 0, width: 22, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" }}>
+								<Icon name="edit" size={11} color="#ffffff" />
+							</View>
+						</TouchableOpacity>
+					</View>
+					{/* Tap hint */}
+					<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "flex-end", marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.15)", gap: 4 }}>
+						<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: "600" }}>View full profile</Text>
+						<Icon name="chevRight" size={12} color="rgba(255,255,255,0.7)" />
+					</View>
 				</TouchableOpacity>
 			) : (
 				<View style={[s.card, { alignItems: "center", paddingVertical: 28 }]}>
