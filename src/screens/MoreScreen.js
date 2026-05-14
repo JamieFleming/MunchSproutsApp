@@ -1028,18 +1028,21 @@ export function MoreScreen({
 							<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontWeight: "600" }}>Manage subscription</Text>
 						</TouchableOpacity>
 					</View>
-					<Text style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", textAlign: "center", paddingTop: 8, paddingHorizontal: 8, lineHeight: 14 }}>
+					<Text style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", textAlign: "center", paddingTop: 8, paddingHorizontal: 8, lineHeight: 15 }}>
 						{upgradePlan === "lifetime"
 							? "One-time payment. No subscription, no renewal."
-							: `Subscription ${upgradePlan === "yearly" ? "renews annually at £19.99" : "renews monthly at £2.99"} unless cancelled at least 24 hours before the end of the current period. Manage or cancel in your Apple ID settings.`}
+							: `Munch Sprouts Pro ${upgradePlan === "yearly" ? "(yearly)" : "(monthly)"} automatically renews at ${upgradePlan === "yearly" ? "£19.99/year" : "£2.99/month"} unless cancelled at least 24 hours before the end of the current period. Manage or cancel in your Apple ID settings.`}
 					</Text>
-					<View style={{ flexDirection: "row", justifyContent: "center", gap: 16, paddingTop: 6 }}>
-						<TouchableOpacity onPress={() => Linking.openURL(LEGAL_URLS.privacy)}>
-							<Text style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: "500" }}>Privacy Policy</Text>
+					{/* Required by Apple 3.1.2(c): visible, tappable legal links on the paywall */}
+					<View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingTop: 10, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.1)", marginTop: 8 }}>
+						<TouchableOpacity onPress={() => Linking.openURL(LEGAL_URLS.privacy)} activeOpacity={0.7}
+							style={{ paddingVertical: 4, paddingHorizontal: 6 }}>
+							<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", fontWeight: "600", textDecorationLine: "underline" }}>Privacy Policy</Text>
 						</TouchableOpacity>
-						<Text style={{ fontSize: 11, color: "rgba(255,255,255,0.15)", fontWeight: "500" }}>·</Text>
-						<TouchableOpacity onPress={() => Linking.openURL(LEGAL_URLS.terms)}>
-							<Text style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: "500" }}>Terms of Use</Text>
+						<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: "600" }}>·</Text>
+						<TouchableOpacity onPress={() => Linking.openURL(LEGAL_URLS.terms)} activeOpacity={0.7}
+							style={{ paddingVertical: 4, paddingHorizontal: 6 }}>
+							<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", fontWeight: "600", textDecorationLine: "underline" }}>Terms of Use</Text>
 						</TouchableOpacity>
 					</View>
 				</View>
