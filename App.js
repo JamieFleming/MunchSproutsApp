@@ -1833,6 +1833,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						onManageSharing={handleManageSharing}
 						foodLog={childLog}
 						bottleLog={childBottleLog}
+						weightLog={childWeightLog}
 						childName={activeChild?.name ?? null}
 					/>
 				</SafeAreaView>

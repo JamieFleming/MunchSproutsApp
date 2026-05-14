@@ -111,13 +111,92 @@ function buildMilkGraph(bottleLog) {
 	</div>`;
 }
 
-// opts = { food: bool, milk: bool, allergens: bool }
-async function exportFoodLogAsPDF(foodLog, childName, bottleLog = [], opts = { food: true, milk: true, allergens: true }) {
+// Build an inline SVG line graph of weight over time
+function buildWeightGraph(weightLog, weightPreference = "kg") {
+	const toDisplay = (value_kg) => {
+		if (weightPreference === "lbs") return parseFloat((value_kg * 2.20462).toFixed(1));
+		if (weightPreference === "stone") return parseFloat((value_kg / 6.35029).toFixed(2));
+		return parseFloat(value_kg.toFixed(2));
+	};
+	const unit = weightPreference === "lbs" ? "lbs" : weightPreference === "stone" ? "st" : "kg";
+
+	// One entry per date — use most recent if duplicates
+	const dayMap = {};
+	weightLog.forEach((w) => {
+		if (!w.date || w.value_kg == null) return;
+		if (!dayMap[w.date] || w.date >= dayMap[w.date].date) dayMap[w.date] = w;
+	});
+	const dates = Object.keys(dayMap).sort();
+	if (dates.length < 2) return ""; // need at least 2 points
+
+	const values = dates.map((d) => toDisplay(dayMap[d].value_kg));
+	const maxVal = Math.max(...values);
+	const minVal = Math.min(...values);
+	const range  = maxVal - minVal || 0.1;
+
+	// SVG canvas
+	const W = 520, H = 140, padL = 48, padR = 16, padT = 14, padB = 28;
+	const plotW = W - padL - padR;
+	const plotH = H - padT - padB;
+	const n     = dates.length;
+
+	const px = (i) => padL + (i / (n - 1)) * plotW;
+	const py = (v) => padT + (1 - (v - minVal) / range) * plotH;
+
+	// Y-axis labels (3 ticks)
+	const mid = parseFloat(((minVal + maxVal) / 2).toFixed(2));
+	const yTicks = [minVal, mid, maxVal];
+	const yAxisSvg = yTicks.map((v) =>
+		`<text x="${padL - 5}" y="${py(v) + 4}" text-anchor="end" font-size="9" fill="#8a7aaa">${v}</text>
+		 <line x1="${padL}" y1="${py(v)}" x2="${W - padR}" y2="${py(v)}" stroke="#ece8f9" stroke-width="1"/>`,
+	).join("");
+
+	// X-axis date labels — show up to 8, evenly spaced
+	const step = Math.max(1, Math.ceil(n / 8));
+	const xLabelsSvg = dates
+		.map((d, i) => ({ d, i }))
+		.filter(({ i }) => i % step === 0 || i === n - 1)
+		.map(({ d, i }) =>
+			`<text x="${px(i)}" y="${H - 4}" text-anchor="middle" font-size="9" fill="#8a7aaa">${d.slice(5)}</text>`,
+		).join("");
+
+	// Area fill polygon
+	const areaPoints = [
+		`${px(0)},${padT + plotH}`,
+		...dates.map((d, i) => `${px(i)},${py(values[i])}`),
+		`${px(n - 1)},${padT + plotH}`,
+	].join(" ");
+
+	// Polyline
+	const linePoints = dates.map((d, i) => `${px(i)},${py(values[i])}`).join(" ");
+
+	// Dots + value labels
+	const dotsSvg = dates.map((d, i) => {
+		const showLabel = n <= 10 || i % step === 0 || i === n - 1;
+		return `<circle cx="${px(i)}" cy="${py(values[i])}" r="3.5" fill="#9b7fe8" stroke="#fff" stroke-width="1.5"/>
+			${showLabel ? `<text x="${px(i)}" y="${py(values[i]) - 7}" text-anchor="middle" font-size="8" fill="#9b7fe8" font-weight="700">${values[i]}</text>` : ""}`;
+	}).join("");
+
+	return `<div style="margin:12px 0 18px;background:#f5f2ff;border-radius:12px;padding:14px 16px;">
+		<div style="font-size:11px;font-weight:700;color:#7b5ea7;margin-bottom:8px;">Weight over time (${unit})</div>
+		<svg width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+			${yAxisSvg}
+			<polygon points="${areaPoints}" fill="rgba(155,127,232,0.12)"/>
+			<polyline points="${linePoints}" fill="none" stroke="#9b7fe8" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+			${dotsSvg}
+			${xLabelsSvg}
+		</svg>
+	</div>`;
+}
+
+// opts = { food: bool, milk: bool, allergens: bool, weight: bool }
+async function exportFoodLogAsPDF(foodLog, childName, bottleLog = [], weightLog = [], weightPreference = "kg", opts = { food: true, milk: true, allergens: true, weight: true }) {
 	const hasFood      = opts.food      && foodLog.length   > 0;
 	const hasMilk      = opts.milk      && bottleLog.length > 0;
 	const hasAllergens = opts.allergens && foodLog.length   > 0;
+	const hasWeight    = opts.weight    && weightLog.length > 1;
 
-	if (!hasFood && !hasMilk && !hasAllergens) {
+	if (!hasFood && !hasMilk && !hasAllergens && !hasWeight) {
 		Alert.alert("Nothing to export", "There's no data for the selected sections. Add some entries first.");
 		return;
 	}
@@ -151,6 +230,24 @@ async function exportFoodLogAsPDF(foodLog, childName, bottleLog = [], opts = { f
 		const totalMl    = bottleLog.reduce((sum, b) => sum + toMl(b.amount, b.unit), 0);
 		statItems.push(`<div class="stat" style="background:#d4e8f5;"><div class="stat-val" style="color:#2a5f8f;">${totalFeeds}</div><div class="stat-lbl" style="color:#2a5f8f;">Total Feeds</div></div>`);
 		statItems.push(`<div class="stat" style="background:#d4e8f5;"><div class="stat-val" style="color:#2a5f8f;">${totalMl} ml</div><div class="stat-lbl" style="color:#2a5f8f;">Total Milk</div></div>`);
+	}
+	// Weight summary stat
+	if (hasWeight) {
+		const toDisplay = (v) => {
+			if (weightPreference === "lbs") return parseFloat((v * 2.20462).toFixed(1));
+			if (weightPreference === "stone") return parseFloat((v / 6.35029).toFixed(2));
+			return parseFloat(v.toFixed(2));
+		};
+		const unit = weightPreference === "lbs" ? "lbs" : weightPreference === "stone" ? "st" : "kg";
+		const sorted = [...weightLog].filter((w) => w.value_kg != null).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+		if (sorted.length >= 2) {
+			const first = toDisplay(sorted[0].value_kg);
+			const last  = toDisplay(sorted[sorted.length - 1].value_kg);
+			const diff  = parseFloat((last - first).toFixed(2));
+			const sign  = diff >= 0 ? "+" : "";
+			statItems.push(`<div class="stat" style="background:#ede8f7;"><div class="stat-val" style="color:#7b5ea7;">${last} ${unit}</div><div class="stat-lbl" style="color:#7b5ea7;">Latest weight</div></div>`);
+			statItems.push(`<div class="stat" style="background:#ede8f7;"><div class="stat-val" style="color:#9b7fe8;">${sign}${diff} ${unit}</div><div class="stat-lbl" style="color:#9b7fe8;">Total gain</div></div>`);
+		}
 	}
 	// Allergen summary always shown if food log available
 	if (foodLog.length > 0) {
@@ -256,6 +353,39 @@ async function exportFoodLogAsPDF(foodLog, childName, bottleLog = [], opts = { f
 		milkHtml = `<div class="section-title">Milk &amp; Bottle Feeds (${totalFeeds} feeds · ${totalMl} ml)</div>${graph}${dayTables}`;
 	}
 
+	// ── Weight section + line graph ───────────────────────────────────────────
+	let weightHtml = "";
+	if (hasWeight) {
+		const toDisplay = (v) => {
+			if (weightPreference === "lbs") return parseFloat((v * 2.20462).toFixed(1));
+			if (weightPreference === "stone") return parseFloat((v / 6.35029).toFixed(2));
+			return parseFloat(v.toFixed(2));
+		};
+		const unit = weightPreference === "lbs" ? "lbs" : weightPreference === "stone" ? "st" : "kg";
+		const sorted = [...weightLog]
+			.filter((w) => w.value_kg != null && w.date)
+			.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+
+		const graph = buildWeightGraph(weightLog, weightPreference);
+
+		const rows = sorted.map((w, i) =>
+			`<tr style="background:${i % 2 === 0 ? "#f5f2ff" : "#fff"}">
+				<td style="padding:8px 12px;font-size:12px;color:#8a7aaa;">${formatDate(w.date)}</td>
+				<td style="padding:8px 12px;font-size:13px;font-weight:700;color:#7b5ea7;">${toDisplay(w.value_kg)} ${unit}</td>
+			</tr>`,
+		).join("");
+
+		weightHtml = `<div class="section-title">Weight Tracker (${sorted.length} recording${sorted.length !== 1 ? "s" : ""})</div>
+			${graph}
+			<table style="width:100%;border-collapse:collapse;border-radius:10px;overflow:hidden;border:2px solid #ece8f9;">
+				<thead><tr style="background:#f3f0fa;">
+					<th style="padding:8px 12px;text-align:left;font-size:10px;color:#8a7aaa;">Date</th>
+					<th style="padding:8px 12px;text-align:left;font-size:10px;color:#8a7aaa;">Weight</th>
+				</tr></thead>
+				<tbody>${rows}</tbody>
+			</table>`;
+	}
+
 	// ── Allergen section ──────────────────────────────────────────────────────
 	let allergenHtml = "";
 	if (hasAllergens) {
@@ -306,6 +436,7 @@ async function exportFoodLogAsPDF(foodLog, childName, bottleLog = [], opts = { f
 		${headerHtml}
 		<p class="subtitle">Report${childName ? ` — ${childName}` : ""} &nbsp;·&nbsp; Generated ${formatDate(new Date().toISOString().split("T")[0])}</p>
 		${topStats}
+		${weightHtml}
 		${milkHtml}
 		${foodHtml}
 		${allergenHtml}
@@ -392,7 +523,7 @@ export function MoreScreen({
 	bottleRemindersEnabled = false, bottleReminderTimes = [],
 	onToggleBottleReminders, onAddBottleReminderTime, onRemoveBottleReminderTime,
 	onLogout, onDeleteAccount, onUpgradePro, onRestorePurchases,
-	onManageSharing, foodLog = [], bottleLog = [], childName,
+	onManageSharing, foodLog = [], bottleLog = [], weightLog = [], childName,
 }) {
 	const { C, theme, setTheme } = useTheme();
 	const s = useStyles();
@@ -1027,10 +1158,11 @@ export function MoreScreen({
 						"Export as PDF",
 						"What would you like to include?",
 						[
-							{ text: "Everything",    onPress: () => exportFoodLogAsPDF(foodLog, childName, bottleLog, { food: true,  milk: true,  allergens: true  }) },
-							{ text: "Food Log",      onPress: () => exportFoodLogAsPDF(foodLog, childName, bottleLog, { food: true,  milk: false, allergens: false }) },
-							{ text: "Milk & Bottles",onPress: () => exportFoodLogAsPDF(foodLog, childName, bottleLog, { food: false, milk: true,  allergens: false }) },
-							{ text: "Allergens Only",onPress: () => exportFoodLogAsPDF(foodLog, childName, bottleLog, { food: false, milk: false, allergens: true  }) },
+							{ text: "Everything",    onPress: () => exportFoodLogAsPDF(foodLog, childName, bottleLog, weightLog, weightPreference, { food: true,  milk: true,  allergens: true,  weight: true  }) },
+							{ text: "Food Log",      onPress: () => exportFoodLogAsPDF(foodLog, childName, bottleLog, weightLog, weightPreference, { food: true,  milk: false, allergens: false, weight: false }) },
+							{ text: "Milk & Bottles",onPress: () => exportFoodLogAsPDF(foodLog, childName, bottleLog, weightLog, weightPreference, { food: false, milk: true,  allergens: false, weight: false }) },
+							{ text: "Weight",        onPress: () => exportFoodLogAsPDF(foodLog, childName, bottleLog, weightLog, weightPreference, { food: false, milk: false, allergens: false, weight: true  }) },
+							{ text: "Allergens Only",onPress: () => exportFoodLogAsPDF(foodLog, childName, bottleLog, weightLog, weightPreference, { food: false, milk: false, allergens: true,  weight: false }) },
 							{ text: "Cancel", style: "cancel" },
 						],
 					)
