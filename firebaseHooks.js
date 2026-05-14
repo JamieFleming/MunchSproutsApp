@@ -144,6 +144,43 @@ export async function signInWithGoogle(idToken) {
 	return user;
 }
 
+// SIGN IN WITH APPLE
+export async function signInWithApple(identityToken, nonce, fullName) {
+	if (!identityToken) throw new Error("No Apple identity token provided.");
+
+	// OAuthProvider lives in firebase/auth — import dynamically to keep tree-shaking happy
+	const { OAuthProvider } = await import("firebase/auth");
+	const provider = new OAuthProvider("apple.com");
+	const credential = provider.credential({ idToken: identityToken, rawNonce: nonce });
+	const result = await signInWithCredential(auth, credential);
+	const { user } = result;
+
+	// Build a display name from Apple's one-time fullName object
+	const displayName = [fullName?.givenName, fullName?.familyName]
+		.filter(Boolean)
+		.join(" ") || null;
+
+	// Create or patch Firestore user doc
+	const userRef = doc(db, "users", user.uid);
+	const snap    = await getDoc(userRef);
+	if (!snap.exists()) {
+		await setDoc(userRef, {
+			email:     user.email ?? null,
+			name:      displayName,
+			plan:      "free",
+			createdAt: serverTimestamp(),
+		});
+	} else {
+		// Backfill name/email if Apple provided them (first sign-in only)
+		const updates = {};
+		if (displayName && !snap.data().name) updates.name  = displayName;
+		if (user.email  && !snap.data().email) updates.email = user.email;
+		if (Object.keys(updates).length) await updateDoc(userRef, updates);
+	}
+
+	return user;
+}
+
 // SIGN OUT
 export async function logOut() {
 	await signOut(auth);

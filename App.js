@@ -1586,6 +1586,7 @@ function MainApp({ user, isPro: isPropPro }) {
 						onUpgradePro={handleUpgradePro}
 						onToggleFav={handleToggleRecipeFav}
 						onLogRecipe={handleLogRecipe}
+						onRestorePurchases={handleRestorePurchases}
 						user={user}
 						jumpToRecipeId={jumpToRecipeId}
 						onJumpHandled={() => setJumpToRecipeId(null)}

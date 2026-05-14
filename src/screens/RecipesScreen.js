@@ -1,12 +1,17 @@
 import React, { useState, useRef } from "react";
 import {
 	View, Text, TextInput, TouchableOpacity, ScrollView,
-	Modal, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Image,
+	Modal, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Image, Linking,
 } from "react-native";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "../../firebase";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon, CategoryIcon } from "../components/Icon";
+
+const LEGAL_URLS = {
+	privacy: "https://munchsproutsapp.com/privacy",
+	terms:   "https://munchsproutsapp.com/terms",
+};
 
 // ── Small shared components ───────────────────────────────────────────────────
 
@@ -224,7 +229,7 @@ function RecipeCard({ r, isOpen, isSaved, isPro, onToggle, onToggleFav, onLogRec
 
 const EMPTY_SUGGEST = { title: "", category: "", ageGroup: "", time: "", description: "", ingredients: "", steps: "" };
 
-export function RecipesScreen({ isPro, recipes, favouriteRecipeIds, onUpgradePro, onToggleFav, onLogRecipe, user, jumpToRecipeId = null, onJumpHandled }) {
+export function RecipesScreen({ isPro, recipes, favouriteRecipeIds, onUpgradePro, onToggleFav, onLogRecipe, onRestorePurchases, user, jumpToRecipeId = null, onJumpHandled }) {
 	const { C } = useTheme();
 	const s = useStyles();
 
@@ -372,6 +377,24 @@ export function RecipesScreen({ isPro, recipes, favouriteRecipeIds, onUpgradePro
 							</>
 						)}
 					</TouchableOpacity>
+					<View style={{ flexDirection: "row", justifyContent: "center", gap: 20, paddingTop: 10 }}>
+						<TouchableOpacity onPress={onRestorePurchases}>
+							<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontWeight: "600" }}>Restore purchase</Text>
+						</TouchableOpacity>
+						<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: "600" }}>·</Text>
+						<TouchableOpacity onPress={() => Linking.openURL("https://apps.apple.com/account/subscriptions")}>
+							<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontWeight: "600" }}>Manage subscription</Text>
+						</TouchableOpacity>
+					</View>
+					<View style={{ flexDirection: "row", justifyContent: "center", gap: 16, paddingTop: 6 }}>
+						<TouchableOpacity onPress={() => Linking.openURL(LEGAL_URLS.privacy)}>
+							<Text style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: "500" }}>Privacy Policy</Text>
+						</TouchableOpacity>
+						<Text style={{ fontSize: 11, color: "rgba(255,255,255,0.15)", fontWeight: "500" }}>·</Text>
+						<TouchableOpacity onPress={() => Linking.openURL(LEGAL_URLS.terms)}>
+							<Text style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: "500" }}>Terms of Use</Text>
+						</TouchableOpacity>
+					</View>
 				</View>
 			)}
 

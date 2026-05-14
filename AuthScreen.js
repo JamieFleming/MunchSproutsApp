@@ -11,15 +11,23 @@ import {
 	Alert,
 	ScrollView,
 	ActivityIndicator,
+	Linking,
 } from "react-native";
 import Svg, { Path, Circle } from "react-native-svg";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import Constants from "expo-constants";
-import { signIn, signUp, sendPasswordReset, signInWithGoogle } from "./firebaseHooks";
+import { signIn, signUp, sendPasswordReset, signInWithGoogle, signInWithApple } from "./firebaseHooks";
+import * as AppleAuthentication from "expo-apple-authentication";
+import * as Crypto from "expo-crypto";
 import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID, GOOGLE_ANDROID_CLIENT_ID } from "./firebase";
 
 WebBrowser.maybeCompleteAuthSession();
+
+const LEGAL_URLS = {
+	privacy: "https://munchsproutsapp.com/privacy",
+	terms:   "https://munchsproutsapp.com/terms",
+};
 
 // "storeClient" = running inside Expo Go
 const isExpoGo = Constants.executionEnvironment === "storeClient";
@@ -92,8 +100,44 @@ export default function AuthScreen() {
 	const [confirm, setConfirm] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [googleLoading, setGoogleLoading] = useState(false);
+	const [appleLoading, setAppleLoading] = useState(false);
 	const [showPassword, setShowPassword] = useState(false);
 	const [showConfirm, setShowConfirm] = useState(false);
+
+	// ── Apple Sign-In ──
+	const handleAppleSignIn = async () => {
+		try {
+			setAppleLoading(true);
+
+			// Generate a random nonce and its SHA-256 hash (required by Firebase)
+			const rawNonce = Array.from({ length: 32 }, () =>
+				Math.floor(Math.random() * 36).toString(36)).join("");
+			const hashedNonce = await Crypto.digestStringAsync(
+				Crypto.CryptoDigestAlgorithm.SHA256,
+				rawNonce,
+			);
+
+			const credential = await AppleAuthentication.signInAsync({
+				requestedScopes: [
+					AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+					AppleAuthentication.AppleAuthenticationScope.EMAIL,
+				],
+				nonce: hashedNonce,
+			});
+
+			await signInWithApple(
+				credential.identityToken,
+				rawNonce,           // Firebase needs the raw (unhashed) nonce
+				credential.fullName,
+			);
+		} catch (e) {
+			if (e.code !== "ERR_REQUEST_CANCELED") {
+				Alert.alert("Apple Sign-In Failed", e.message || "Could not sign in with Apple.");
+			}
+		} finally {
+			setAppleLoading(false);
+		}
+	};
 
 	// ── Google OAuth via expo-auth-session ──
 	const [request, response, promptAsync] = Google.useAuthRequest({
@@ -458,6 +502,17 @@ export default function AuthScreen() {
 						)}
 					</TouchableOpacity>
 
+					{/* ── Apple Sign-In (iOS only) ── */}
+					{Platform.OS === "ios" && (
+						<AppleAuthentication.AppleAuthenticationButton
+							buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+							buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+							cornerRadius={14}
+							style={styles.btnApple}
+							onPress={handleAppleSignIn}
+						/>
+					)}
+
 					<TouchableOpacity
 						onPress={() => {
 							setMode((m) => (m === "signin" ? "signup" : "signin"));
@@ -499,6 +554,15 @@ export default function AuthScreen() {
 					Your data is stored securely and privately.{"\n"}
 					Sign in on any device to access your logs.
 				</Text>
+				<View style={{ flexDirection: "row", justifyContent: "center", gap: 16, marginTop: 4 }}>
+					<TouchableOpacity onPress={() => Linking.openURL(LEGAL_URLS.privacy)}>
+						<Text style={styles.legalLink}>Privacy Policy</Text>
+					</TouchableOpacity>
+					<Text style={styles.legalDivider}>·</Text>
+					<TouchableOpacity onPress={() => Linking.openURL(LEGAL_URLS.terms)}>
+						<Text style={styles.legalLink}>Terms of Use</Text>
+					</TouchableOpacity>
+				</View>
 			</ScrollView>
 		</KeyboardAvoidingView>
 	);
@@ -641,6 +705,11 @@ const styles = StyleSheet.create({
 		fontWeight: "700",
 		color: C.textCharcoal,
 	},
+	btnApple: {
+		width: "100%",
+		height: 50,
+		borderRadius: 14,
+	},
 	passwordRules: {
 		backgroundColor: "#f9f7ff",
 		borderRadius: 10,
@@ -717,5 +786,14 @@ const styles = StyleSheet.create({
 		fontSize: 12,
 		color: C.mutedText,
 		lineHeight: 18,
+	},
+	legalLink: {
+		fontSize: 11,
+		color: C.primaryPurple,
+		fontWeight: "500",
+	},
+	legalDivider: {
+		fontSize: 11,
+		color: C.mutedText,
 	},
 });
