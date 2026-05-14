@@ -9,8 +9,8 @@ import { useTheme, useStyles } from "../ThemeContext";
 import { Icon, CategoryIcon } from "../components/Icon";
 
 const LEGAL_URLS = {
-	privacy: "https://munchsproutsapp.com/privacy",
-	terms:   "https://munchsproutsapp.com/terms",
+	privacy: "https://www.munchsprouts.co.uk/privacy-policy",
+	terms:   "https://www.munchsprouts.co.uk/terms-of-use",
 };
 
 // ── Small shared components ───────────────────────────────────────────────────

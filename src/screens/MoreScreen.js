@@ -19,8 +19,8 @@ const SCREEN_W = Dimensions.get("window").width;
 const THUMB_SIZE = (SCREEN_W - 56) / 3;
 
 const LEGAL_URLS = {
-	privacy: "https://munchsproutsapp.com/privacy",
-	terms:   "https://munchsproutsapp.com/terms",
+	privacy: "https://www.munchsprouts.co.uk/privacy-policy",
+	terms:   "https://www.munchsprouts.co.uk/terms-of-use",
 };
 
 // ── PDF export ────────────────────────────────────────────────────────────────

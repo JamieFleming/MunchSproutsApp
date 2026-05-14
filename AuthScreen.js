@@ -25,8 +25,8 @@ import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID, GOOGLE_ANDROID_CLIENT_ID } 
 WebBrowser.maybeCompleteAuthSession();
 
 const LEGAL_URLS = {
-	privacy: "https://munchsproutsapp.com/privacy",
-	terms:   "https://munchsproutsapp.com/terms",
+	privacy: "https://www.munchsprouts.co.uk/privacy-policy",
+	terms:   "https://www.munchsprouts.co.uk/terms-of-use",
 };
 
 // "storeClient" = running inside Expo Go
