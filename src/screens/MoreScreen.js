@@ -190,10 +190,12 @@ function buildWeightGraph(weightLog, weightPreference = "kg") {
 }
 
 // opts = { food: bool, milk: bool, allergens: bool, weight: bool }
-async function exportFoodLogAsPDF(foodLog, childName, bottleLog = [], weightLog = [], weightPreference = "kg", opts = { food: true, milk: true, allergens: true, weight: true }) {
-	const hasFood      = opts.food      && foodLog.length   > 0;
+// allergenLog defaults to foodLog — pass full history when food is date-filtered
+async function exportFoodLogAsPDF(foodLog, childName, bottleLog = [], weightLog = [], weightPreference = "kg", opts = { food: true, milk: true, allergens: true, weight: true }, allergenLog = null) {
+	const aLog = allergenLog || foodLog; // full-history source for allergens
+	const hasFood      = opts.food      && foodLog.length > 0;
 	const hasMilk      = opts.milk      && bottleLog.length > 0;
-	const hasAllergens = opts.allergens && foodLog.length   > 0;
+	const hasAllergens = opts.allergens && aLog.length    > 0;
 	const hasWeight    = opts.weight    && weightLog.length > 1;
 
 	if (!hasFood && !hasMilk && !hasAllergens && !hasWeight) {
@@ -204,7 +206,7 @@ async function exportFoodLogAsPDF(foodLog, childName, bottleLog = [], weightLog 
 	const toMl = (amount, unit) => { const n = parseFloat(amount) || 0; return unit === "oz" ? Math.round(n * 29.5735) : Math.round(n); };
 
 	// ── Allergen summary (always computed so we can show it in top stats) ─────
-	const allergenStatuses = ALLERGENS.map((al) => allergenStatus(al.value, foodLog));
+	const allergenStatuses = ALLERGENS.map((al) => allergenStatus(al.value, aLog));
 	const allergenTried    = allergenStatuses.filter((s) => s.label !== "Not Tried").length;
 	const allergenInProg   = allergenStatuses.filter((s) => s.label === "⏳ In Progress").length;
 	const allergenSafe     = allergenStatuses.filter((s) => s.label === "✅ Safe").length;
@@ -249,8 +251,8 @@ async function exportFoodLogAsPDF(foodLog, childName, bottleLog = [], weightLog 
 			statItems.push(`<div class="stat" style="background:#ede8f7;"><div class="stat-val" style="color:#9b7fe8;">${sign}${diff} ${unit}</div><div class="stat-lbl" style="color:#9b7fe8;">Total gain</div></div>`);
 		}
 	}
-	// Allergen summary always shown if food log available
-	if (foodLog.length > 0) {
+	// Allergen summary always shown if full allergen log available
+	if (aLog.length > 0) {
 		statItems.push(`<div class="stat" style="background:#ede8f7;"><div class="stat-val" style="color:#7b5ea7;">${allergenTried}/${ALLERGENS.length}</div><div class="stat-lbl" style="color:#7b5ea7;">Allergens tried</div></div>`);
 		if (allergenInProg > 0)
 			statItems.push(`<div class="stat" style="background:#fff3e0;"><div class="stat-val" style="color:#d4860a;">${allergenInProg}</div><div class="stat-lbl" style="color:#d4860a;">In progress</div></div>`);
@@ -390,8 +392,8 @@ async function exportFoodLogAsPDF(foodLog, childName, bottleLog = [], weightLog 
 	let allergenHtml = "";
 	if (hasAllergens) {
 		const rows = ALLERGENS.map((al) => {
-			const st      = allergenStatus(al.value, foodLog);
-			const entries = foodLog.filter((e) => Array.isArray(e.allergens) && e.allergens.includes(al.value));
+			const st      = allergenStatus(al.value, aLog);
+			const entries = aLog.filter((e) => Array.isArray(e.allergens) && e.allergens.includes(al.value));
 			const lastDate = entries.length
 				? formatDate([...entries].sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0].date)
 				: "—";
@@ -680,15 +682,15 @@ export function MoreScreen({
 	};
 
 	const handleExport = async () => {
-		const { from, to }     = getExportDateRange();
-		const filteredFood     = filterByDateRange(foodLog,   from, to);
-		const filteredMilk     = filterByDateRange(bottleLog, from, to);
-		const filteredWeight   = filterByDateRange(weightLog, from, to);
+		const { from, to } = getExportDateRange();
+		// Food & milk are scoped to the date range; weight & allergens always use full history
+		const filteredFood = filterByDateRange(foodLog,   from, to);
+		const filteredMilk = filterByDateRange(bottleLog, from, to);
 		const opts = {
-			food:      exportFood      && filteredFood.length   > 0,
-			milk:      exportMilk      && filteredMilk.length   > 0,
-			weight:    exportWeight    && filteredWeight.length  > 1,
-			allergens: exportAllergens && filteredFood.length   > 0,
+			food:      exportFood      && filteredFood.length > 0,
+			milk:      exportMilk      && filteredMilk.length > 0,
+			weight:    exportWeight    && weightLog.length    > 1,
+			allergens: exportAllergens && foodLog.length      > 0,
 		};
 		if (!opts.food && !opts.milk && !opts.weight && !opts.allergens) {
 			Alert.alert("Nothing to export", "No data found for the selected date range and sections.");
@@ -697,12 +699,13 @@ export function MoreScreen({
 		setExportLoading(true);
 		setShowExportModal(false);
 		await exportFoodLogAsPDF(
-			exportFood      ? filteredFood   : [],
+			exportFood   ? filteredFood : [],  // date-filtered
 			childName,
-			exportMilk      ? filteredMilk  : [],
-			exportWeight    ? filteredWeight : [],
+			exportMilk   ? filteredMilk : [],  // date-filtered
+			exportWeight ? weightLog    : [],  // full history
 			weightPreference,
 			opts,
+			exportAllergens ? foodLog : null,  // full history for allergens
 		);
 		setExportLoading(false);
 	};
