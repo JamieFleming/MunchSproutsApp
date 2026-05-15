@@ -355,9 +355,21 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [] }) 
 	}
 
 	// ── Render ──────────────────────────────────────────────────────────────
+	//
+	// KAV wraps the ENTIRE screen so the ScrollView can shrink and the input
+	// bar stays visible above the keyboard. Wrapping only the input bar (the
+	// previous approach) doesn't work because the ScrollView outside the KAV
+	// can't compress, causing it to overlap the input area.
+	//
+	// On iOS  → behavior="padding" adds bottom padding equal to keyboard height.
+	// On Android → the system handles window resizing (adjustResize manifest
+	//              flag set by Expo), so KAV behaviour is left as undefined.
 	return (
-		<View style={{ flex: 1, backgroundColor: C.screen }}>
-
+		<KeyboardAvoidingView
+			style={{ flex: 1, backgroundColor: C.screen }}
+			behavior={Platform.OS === "ios" ? "padding" : undefined}
+			keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+		>
 			{/* Action bar */}
 			<View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10 }}>
 				<TouchableOpacity onPress={() => { Keyboard.dismiss(); setShowRecipes(true); }} activeOpacity={0.85}
@@ -377,17 +389,15 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [] }) 
 				)}
 			</View>
 
-			{/* List */}
+			{/* List — flex:1 so it compresses when keyboard appears */}
 			{items.length === 0 ? (
 				<EmptyState hasChecked={false} />
 			) : (
-				<ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-					{/* Unchecked items */}
+				<ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 					{unchecked.map((item) => (
 						<ItemRow key={item.id} item={item} onToggle={toggleItem} onRemove={removeItem} />
 					))}
 
-					{/* Checked items separator */}
 					{checked.length > 0 && (
 						<View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 10 }}>
 							<View style={{ flex: 1, height: 1, backgroundColor: C.borderLight }} />
@@ -399,41 +409,38 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [] }) 
 						</View>
 					)}
 
-					{/* Checked items */}
 					{checked.map((item) => (
 						<ItemRow key={item.id} item={item} onToggle={toggleItem} onRemove={removeItem} />
 					))}
 				</ScrollView>
 			)}
 
-			{/* Sticky add bar */}
-			<KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
-				<View style={{ backgroundColor: C.white, borderTopWidth: 1, borderTopColor: C.borderLight, paddingHorizontal: 14, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 8 }}>
-					<TextInput
-						ref={nameRef}
-						value={newName}
-						onChangeText={setNewName}
-						onSubmitEditing={addItem}
-						returnKeyType="done"
-						placeholder="Add an item…"
-						placeholderTextColor={C.mutedText}
-						style={{ flex: 1, fontSize: 15, color: C.textCharcoal, backgroundColor: C.bgPurple, borderRadius: 12, paddingHorizontal: 13, paddingVertical: 11, fontWeight: "500" }}
-					/>
-					<TextInput
-						value={newQty}
-						onChangeText={setNewQty}
-						onSubmitEditing={addItem}
-						returnKeyType="done"
-						placeholder="Qty"
-						placeholderTextColor={C.mutedText}
-						style={{ width: 68, fontSize: 14, color: C.textCharcoal, backgroundColor: C.bgPurple, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 11, fontWeight: "500", textAlign: "center" }}
-					/>
-					<TouchableOpacity onPress={addItem} activeOpacity={0.85}
-						style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: C.primaryPurple, alignItems: "center", justifyContent: "center" }}>
-						<Icon name="plus" size={22} color="#fff" />
-					</TouchableOpacity>
-				</View>
-			</KeyboardAvoidingView>
+			{/* Sticky input bar — sits directly inside KAV, always above keyboard */}
+			<View style={{ backgroundColor: C.white, borderTopWidth: 1, borderTopColor: C.borderLight, paddingHorizontal: 14, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 8 }}>
+				<TextInput
+					ref={nameRef}
+					value={newName}
+					onChangeText={setNewName}
+					onSubmitEditing={addItem}
+					returnKeyType="done"
+					placeholder="Add an item…"
+					placeholderTextColor={C.mutedText}
+					style={{ flex: 1, fontSize: 15, color: C.textCharcoal, backgroundColor: C.bgPurple, borderRadius: 12, paddingHorizontal: 13, paddingVertical: 11, fontWeight: "500" }}
+				/>
+				<TextInput
+					value={newQty}
+					onChangeText={setNewQty}
+					onSubmitEditing={addItem}
+					returnKeyType="done"
+					placeholder="Qty"
+					placeholderTextColor={C.mutedText}
+					style={{ width: 68, fontSize: 14, color: C.textCharcoal, backgroundColor: C.bgPurple, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 11, fontWeight: "500", textAlign: "center" }}
+				/>
+				<TouchableOpacity onPress={addItem} activeOpacity={0.85}
+					style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: C.primaryPurple, alignItems: "center", justifyContent: "center" }}>
+					<Icon name="plus" size={22} color="#fff" />
+				</TouchableOpacity>
+			</View>
 
 			{/* Recipe picker modal */}
 			<RecipePickerModal
@@ -442,6 +449,6 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [] }) 
 				onClose={() => setShowRecipes(false)}
 				onAddIngredients={addFromRecipe}
 			/>
-		</View>
+		</KeyboardAvoidingView>
 	);
 }
