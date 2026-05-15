@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
-	View, Text, TextInput, TouchableOpacity, FlatList, Modal,
-	ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator,
+	View, Text, TextInput, TouchableOpacity, Modal,
+	ScrollView, Platform, ActivityIndicator,
 	Keyboard, Animated,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon } from "../components/Icon";
 
@@ -281,13 +282,29 @@ function ProGate({ onUpgradePro }) {
 
 export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [] }) {
 	const { C } = useTheme();
+	const insets = useSafeAreaInsets();
 
 	const [items,        setItems]        = useState([]);
 	const [loading,      setLoading]      = useState(true);
 	const [newName,      setNewName]      = useState("");
 	const [newQty,       setNewQty]       = useState("");
 	const [showRecipes,  setShowRecipes]  = useState(false);
+	const [kbPadding,    setKbPadding]    = useState(0);
 	const nameRef = useRef(null);
+
+	// ── Keyboard avoidance (iOS) ────────────────────────────────────────────
+	// keyboardWillShow gives the exact keyboard height including the suggestion
+	// bar. We subtract the tab bar height so only the portion that overlaps the
+	// content area is compensated for.
+	useEffect(() => {
+		if (Platform.OS !== "ios") return;
+		const TAB_BAR_HEIGHT = 49 + insets.bottom; // content + safe-area bottom
+		const show = Keyboard.addListener("keyboardWillShow", (e) => {
+			setKbPadding(Math.max(0, e.endCoordinates.height - TAB_BAR_HEIGHT));
+		});
+		const hide = Keyboard.addListener("keyboardWillHide", () => setKbPadding(0));
+		return () => { show.remove(); hide.remove(); };
+	}, [insets.bottom]);
 
 	// ── Load from Firestore ─────────────────────────────────────────────────
 	useEffect(() => {
@@ -356,20 +373,14 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [] }) 
 
 	// ── Render ──────────────────────────────────────────────────────────────
 	//
-	// KAV wraps the ENTIRE screen so the ScrollView can shrink and the input
-	// bar stays visible above the keyboard. Wrapping only the input bar (the
-	// previous approach) doesn't work because the ScrollView outside the KAV
-	// can't compress, causing it to overlap the input area.
-	//
-	// On iOS  → behavior="padding" adds bottom padding equal to keyboard height.
-	// On Android → the system handles window resizing (adjustResize manifest
-	//              flag set by Expo), so KAV behaviour is left as undefined.
+	// We use keyboard listeners + paddingBottom instead of KeyboardAvoidingView.
+	// KAV's keyboardVerticalOffset must equal the exact pixel distance from the
+	// physical screen top to the KAV top, which varies by device and is hard to
+	// know statically. The listener approach reads the real keyboard height
+	// (incl. suggestion bar) and subtracts the tab bar height to get precisely
+	// how much of the content area is overlapped — no guesswork needed.
 	return (
-		<KeyboardAvoidingView
-			style={{ flex: 1, backgroundColor: C.screen }}
-			behavior={Platform.OS === "ios" ? "padding" : undefined}
-			keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-		>
+		<View style={{ flex: 1, backgroundColor: C.screen, paddingBottom: kbPadding }}>
 			{/* Action bar */}
 			<View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10 }}>
 				<TouchableOpacity onPress={() => { Keyboard.dismiss(); setShowRecipes(true); }} activeOpacity={0.85}
@@ -449,6 +460,6 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [] }) 
 				onClose={() => setShowRecipes(false)}
 				onAddIngredients={addFromRecipe}
 			/>
-		</KeyboardAvoidingView>
+		</View>
 	);
 }
