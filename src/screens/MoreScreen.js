@@ -979,8 +979,8 @@ export function MoreScreen({
 							{ icon: "⏰", label: "Meal time tracking",        sub: "Log breakfast, lunch, dinner & more" },
 							{ icon: "📋", label: "Symptom tracking",          sub: "Log symptoms alongside bottle feeds" },
 							{ icon: "📄", label: "PDF export",                sub: "Download full reports" },
+							{ icon: "🛒", label: "Shopping list",             sub: "Build lists & import from recipes" },
 							{ icon: "📅", label: "Meal planner",              sub: "Coming soon", soon: true },
-							{ icon: "🛒", label: "Shopping list",             sub: "Coming soon", soon: true },
 							{ icon: "📊", label: "Insights & trends",         sub: "Coming soon", soon: true },
 						].map(({ icon, label, sub, soon }) => (
 							<View key={label} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>

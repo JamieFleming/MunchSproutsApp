@@ -63,6 +63,7 @@ import { AllergenScreen } from "./src/screens/AllergenScreen";
 import { ChildrenScreen } from "./src/screens/ChildrenScreen";
 import { BottleScreen } from "./src/screens/BottleScreen";
 import { ChildDetailScreen } from "./src/screens/ChildDetailScreen";
+import { ShoppingListScreen } from "./src/screens/ShoppingListScreen";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { setupNotifications, onNotificationTapped, clearBadge, scheduleBottleReminders, cancelBottleReminders } from "./src/notificationService";
 import { Icon } from "./src/components/Icon";
@@ -504,21 +505,23 @@ function MilestoneModal({ milestones, onClose }) {
 // ── Main App ──────────────────────────────────────────────────────────────────
 
 const NAV = [
-	{ id: "dashboard", icon: "home", label: "Home" },
-	{ id: "log", icon: "list", label: "Foods" },
-	{ id: "bottle", icon: "bottle", label: "Bottles" },
-	{ id: "recipes", icon: "chef", label: "Recipes" },
-	{ id: "allergens", icon: "shield", label: "Allergens" },
+	{ id: "dashboard", icon: "home",    label: "Home"     },
+	{ id: "log",       icon: "list",    label: "Foods"    },
+	{ id: "bottle",    icon: "bottle",  label: "Bottles"  },
+	{ id: "recipes",   icon: "chef",    label: "Recipes"  },
+	{ id: "allergens", icon: "shield",  label: "Allergens"},
+	{ id: "shopping",  icon: "cart",    label: "Shopping" },
 ];
 
 const PAGE_TITLES = {
 	dashboard: "Dashboard",
-	log: "Food Log",
-	add: "Log Food",
-	bottle: "Bottle Log",
-	recipes: "Recipes",
+	log:       "Food Log",
+	add:       "Log Food",
+	bottle:    "Bottle Log",
+	recipes:   "Recipes",
 	allergens: "Allergens",
-	children: "Children",
+	shopping:  "Shopping List",
+	children:  "Children",
 };
 
 function MainApp({ user, userDoc, isPro: isPropPro }) {
@@ -1630,6 +1633,14 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						onAllergenCheckIn={handleAllergenCheckIn}
 					/>
 				</View>
+				<View style={{ flex: 1, display: page === "shopping" ? "flex" : "none" }}>
+					<ShoppingListScreen
+						user={user}
+						isPro={isPro}
+						onUpgradePro={handleUpgradePro}
+						recipes={recipes}
+					/>
+				</View>
 				{page === "children" && (
 					<ChildrenScreen
 						children={children}
@@ -1703,7 +1714,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 			</View>
 
 			{/* Floating Add Button */}
-			{page !== "add" && (
+			{page !== "add" && page !== "shopping" && (
 				<TouchableOpacity
 					onPress={() => {
 						if (requireChild()) return;
