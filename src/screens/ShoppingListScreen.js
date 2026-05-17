@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
-	View, Text, TextInput, TouchableOpacity, Modal,
+	View, Text, TextInput, TouchableOpacity, Modal, Alert,
 	ScrollView, Platform, ActivityIndicator,
 	Keyboard, Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon } from "../components/Icon";
+import { parseIngredient } from "../helpers";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -148,7 +149,9 @@ function RecipePickerModal({ visible, recipes, onClose, onAddIngredients }) {
 						<View style={{ flexDirection: "row", alignItems: "center", marginBottom: 14 }}>
 							{step === "ingredients" && (
 								<TouchableOpacity onPress={() => setStep("recipes")} style={{ marginRight: 10, padding: 4 }}>
-									<Icon name="chevRight" size={20} color={C.mutedText} style={{ transform: [{ rotate: "180deg" }] }} />
+									<View style={{ transform: [{ rotate: "180deg" }] }}>
+										<Icon name="chevRight" size={20} color={C.mutedText} />
+									</View>
 								</TouchableOpacity>
 							)}
 							<View style={{ flex: 1 }}>
@@ -280,7 +283,7 @@ function ProGate({ onUpgradePro }) {
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
-export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [] }) {
+export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], visible = true }) {
 	const { C } = useTheme();
 	const insets = useSafeAreaInsets();
 
@@ -311,6 +314,12 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [] }) 
 		if (!user?.uid || !isPro) { setLoading(false); return; }
 		loadItems(user.uid).then((saved) => { setItems(saved); setLoading(false); });
 	}, [user?.uid, isPro]);
+
+	// Reload whenever the screen becomes visible (e.g. after adding items from RecipesScreen)
+	useEffect(() => {
+		if (!visible || !user?.uid || !isPro) return;
+		loadItems(user.uid).then(setItems);
+	}, [visible]);
 
 	// ── Save helper (called after every mutation) ───────────────────────────
 	const save = useCallback((newItems) => {
@@ -347,10 +356,26 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [] }) 
 		save(next);
 	};
 
+	const clearAll = () => {
+		Alert.alert(
+			"Clear entire list?",
+			"This will remove all items, including ones not yet ticked off.",
+			[
+				{ text: "Cancel", style: "cancel" },
+				{
+					text: "Clear all",
+					style: "destructive",
+					onPress: () => { setItems([]); save([]); },
+				},
+			],
+		);
+	};
+
 	const addFromRecipe = (recipeId, recipeTitle, ingredients) => {
-		const newItems = ingredients.map((ing) => ({
-			id: genId(), name: ing, quantity: "", checked: false, recipeId, recipeTitle,
-		}));
+		const newItems = ingredients.map((ing) => {
+			const { name, quantity } = parseIngredient(ing);
+			return { id: genId(), name, quantity, checked: false, recipeId, recipeTitle };
+		});
 		const next = [...newItems, ...items];
 		setItems(next);
 		save(next);
@@ -396,6 +421,13 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [] }) 
 						style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#fde8e8", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9 }}>
 						<Icon name="trash" size={14} color="#c0392b" />
 						<Text style={{ fontSize: 13, fontWeight: "700", color: "#c0392b" }}>Clear done ({checked.length})</Text>
+					</TouchableOpacity>
+				)}
+				{items.length > 0 && (
+					<TouchableOpacity onPress={clearAll} activeOpacity={0.8}
+						style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#fde8e8", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9 }}>
+						<Icon name="trash" size={14} color="#c0392b" />
+						<Text style={{ fontSize: 13, fontWeight: "700", color: "#c0392b" }}>Clear all</Text>
 					</TouchableOpacity>
 				)}
 			</View>

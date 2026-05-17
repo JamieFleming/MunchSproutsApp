@@ -57,13 +57,12 @@ import {
 import { LoadingScreen } from "./src/screens/LoadingScreen";
 import { DashboardScreen } from "./src/screens/DashboardScreen";
 import { LogScreen } from "./src/screens/LogScreen";
-import { RecipesScreen } from "./src/screens/RecipesScreen";
 import { MoreScreen } from "./src/screens/MoreScreen";
 import { AllergenScreen } from "./src/screens/AllergenScreen";
 import { ChildrenScreen } from "./src/screens/ChildrenScreen";
 import { BottleScreen } from "./src/screens/BottleScreen";
 import { ChildDetailScreen } from "./src/screens/ChildDetailScreen";
-import { ShoppingListScreen } from "./src/screens/ShoppingListScreen";
+import { MealsHubScreen } from "./src/screens/MealsHubScreen";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { setupNotifications, onNotificationTapped, clearBadge, scheduleBottleReminders, cancelBottleReminders } from "./src/notificationService";
 import { Icon } from "./src/components/Icon";
@@ -508,9 +507,8 @@ const NAV = [
 	{ id: "dashboard", icon: "home",    label: "Home"     },
 	{ id: "log",       icon: "list",    label: "Foods"    },
 	{ id: "bottle",    icon: "bottle",  label: "Bottles"  },
-	{ id: "recipes",   icon: "chef",    label: "Recipes"  },
+	{ id: "meals",     icon: "chef",    label: "Meals"    },
 	{ id: "allergens", icon: "shield",  label: "Allergens"},
-	{ id: "shopping",  icon: "cart",    label: "Shopping" },
 ];
 
 const PAGE_TITLES = {
@@ -518,9 +516,8 @@ const PAGE_TITLES = {
 	log:       "Food Log",
 	add:       "Log Food",
 	bottle:    "Bottle Log",
-	recipes:   "Recipes",
+	meals:     "Meals",
 	allergens: "Allergens",
-	shopping:  "Shopping List",
 	children:  "Children",
 };
 
@@ -565,6 +562,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 	}, [user]);
 
 	const [page, setPage] = useState("dashboard");
+	const [mealsResetKey, setMealsResetKey] = useState(0);
 	const [jumpToRecipeId, setJumpToRecipeId] = useState(null);
 	const [foodLog, setFoodLog] = useState([]);
 	const [children, setChildren] = useState([]);
@@ -1526,7 +1524,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						}}
 						onNavigateToRecipe={(id) => {
 							setJumpToRecipeId(id);
-							setPage("recipes");
+							setPage("meals");
 						}}
 						onNavigateFiltered={(pg, filter, openKey) => {
 							setLogFilter(filter);
@@ -1583,8 +1581,8 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						</ScrollView>
 					</KeyboardAvoidingView>
 				)}
-				<View style={{ flex: 1, display: page === "recipes" ? "flex" : "none" }}>
-					<RecipesScreen
+				<View style={{ flex: 1, display: page === "meals" ? "flex" : "none" }}>
+					<MealsHubScreen
 						isPro={isPro}
 						recipes={recipes}
 						favouriteRecipeIds={favouriteRecipeIds}
@@ -1595,6 +1593,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						user={user}
 						jumpToRecipeId={jumpToRecipeId}
 						onJumpHandled={() => setJumpToRecipeId(null)}
+						resetKey={mealsResetKey}
 					/>
 				</View>
 				<View style={{ flex: 1, display: page === "bottle" ? "flex" : "none" }}>
@@ -1631,14 +1630,6 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 							setPage("add");
 						}}
 						onAllergenCheckIn={handleAllergenCheckIn}
-					/>
-				</View>
-				<View style={{ flex: 1, display: page === "shopping" ? "flex" : "none" }}>
-					<ShoppingListScreen
-						user={user}
-						isPro={isPro}
-						onUpgradePro={handleUpgradePro}
-						recipes={recipes}
 					/>
 				</View>
 				{page === "children" && (
@@ -1681,7 +1672,13 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 					return (
 						<TouchableOpacity
 							key={n.id}
-							onPress={() => setPage(n.id)}
+							onPress={() => {
+								if (n.id === "meals" && page === "meals") {
+									// Already on Meals — reset hub to top level
+									setMealsResetKey((k) => k + 1);
+								}
+								setPage(n.id);
+							}}
 							style={s.navItem}
 							activeOpacity={0.8}>
 							<View
@@ -1714,7 +1711,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 			</View>
 
 			{/* Floating Add Button */}
-			{page !== "add" && page !== "shopping" && (
+			{page !== "add" && page !== "meals" && (
 				<TouchableOpacity
 					onPress={() => {
 						if (requireChild()) return;

@@ -7,7 +7,9 @@
       "Read(//tmp/**)",
       "Bash(pip3 install *)",
       "Bash(python3 -c \"from PIL import Image; print\\('ok'\\)\")",
-      "Bash(npx expo *)"
+      "Bash(npx expo *)",
+      "Bash(npm install *)",
+      "Bash(eas update *)"
     ]
   }
 }

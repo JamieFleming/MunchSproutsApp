@@ -1,5 +1,6 @@
-import { Alert } from "react-native";
+import { Alert, Platform } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
 import { REACTIONS, MONTHS } from "./constants";
 
 /**
@@ -339,8 +340,8 @@ export async function pickImageAsBase64(aspect = [4, 3]) {
 		mediaTypes: ["images"],
 		allowsEditing: true,
 		aspect,
-		quality: 0.7,
-		base64: false, // Return file URI — base64 causes Hermes blob errors on upload
+		quality: 0.6,
+		base64: false,
 		exif: false,
 	});
 
@@ -349,5 +350,105 @@ export async function pickImageAsBase64(aspect = [4, 3]) {
 	const asset = result.assets[0];
 	if (!asset.uri) return null;
 
-	return asset.uri; // Local file URI (file:// on iOS, content:// on Android)
+	// Android returns a content:// URI which can cause TransactionTooLargeException
+	// when the OS serialises the Activity's saved-instance-state bundle as the
+	// image-picker Activity launches.  Copying to a local file:// URI in the app
+	// cache avoids passing a content-provider reference through the Binder IPC.
+	if (Platform.OS === "android") {
+		try {
+			const localUri = `${FileSystem.cacheDirectory}picked_${Date.now()}.jpg`;
+			await FileSystem.copyAsync({ from: asset.uri, to: localUri });
+			return localUri;
+		} catch (e) {
+			console.warn("[pickImage] cache copy failed, using original URI:", e?.message);
+		}
+	}
+
+	return asset.uri;
+}
+
+/**
+ * parseIngredient(raw)
+ *
+ * Splits a free-text recipe ingredient string into a clean { name, quantity }.
+ *
+ * Examples:
+ *   "1 ripe avocado"          → { name: "Avocado",          quantity: "1"       }
+ *   "1 tsp cinnamon"          → { name: "Cinnamon",         quantity: "1 tsp"   }
+ *   "2 tbsp olive oil"        → { name: "Olive oil",        quantity: "2 tbsp"  }
+ *   "100g sweet potato"       → { name: "Sweet potato",     quantity: "100 g"   }
+ *   "2 large free-range eggs" → { name: "Free-range eggs",  quantity: "2"       }
+ *   "A pinch of salt"         → { name: "Salt",             quantity: "1 pinch" }
+ *   "2 cloves of garlic"      → { name: "Garlic",           quantity: "2 cloves"}
+ *   "Black pepper, to taste"  → { name: "Black pepper",     quantity: ""        }
+ */
+export function parseIngredient(raw) {
+	// ── 1. Normalise unicode fractions ───────────────────────────────────────
+	let s = (raw || "").trim()
+		.replace(/½/g, "1/2").replace(/¼/g, "1/4").replace(/¾/g, "3/4")
+		.replace(/⅓/g, "1/3").replace(/⅔/g, "2/3").replace(/⅛/g, "1/8")
+		.replace(/⅜/g, "3/8").replace(/⅝/g, "5/8").replace(/⅞/g, "7/8");
+
+	// ── 2. Extract leading numeric quantity ──────────────────────────────────
+	// Matches: "1", "2.5", "1/2", "1 1/2"
+	const qtyMatch = s.match(/^(\d+\.?\d*(?:\s*\/\s*\d+)?(?:\s+\d+\/\d+)?)/);
+	let qty = "";
+	if (qtyMatch) {
+		qty = qtyMatch[1].trim();
+		s   = s.slice(qtyMatch[1].length).trim();
+	} else {
+		// "a" / "an" → treat as quantity 1
+		const aMatch = s.match(/^an?\s+/i);
+		if (aMatch) { qty = "1"; s = s.slice(aMatch[0].length).trim(); }
+	}
+
+	// ── 3. Extract measurement unit ──────────────────────────────────────────
+	const UNIT_RE = new RegExp(
+		"^(tablespoons?|tbsps?|teaspoons?|tsps?" +
+		"|cups?|fl\\.?\\s*oz|fluid\\s+ounces?|ounces?|oz" +
+		"|pounds?|lbs?|lb|kilograms?|kg|grams?|g(?=[\\s,]|$)" +
+		"|milligrams?|mg|millilitres?|milliliters?|ml" +
+		"|litres?|liters?|l(?=[\\s,]|$)" +
+		"|handfuls?|bunches?|bunch|cloves?|sprigs?|heads?" +
+		"|pinch(?:es)?|dash(?:es)?|cans?|bags?|slices?" +
+		"|pieces?|pcs?|sticks?|sheets?)",
+		"i",
+	);
+	let unit = "";
+	const unitMatch = s.match(UNIT_RE);
+	if (unitMatch) { unit = unitMatch[1]; s = s.slice(unitMatch[1].length).trim(); }
+
+	// ── 4. Strip "of" / "of the" connector ──────────────────────────────────
+	s = s.replace(/^of\s+(the\s+)?/i, "").trim();
+
+	// ── 5. Drop trailing parenthetical notes e.g. "(about 2 cups)" ──────────
+	s = s.replace(/\s*\([^)]*\)/g, "").trim();
+
+	// ── 6. Trim at first comma — "avocado, mashed" → "avocado" ─────────────
+	const ci = s.indexOf(",");
+	if (ci > 0) s = s.slice(0, ci).trim();
+
+	// ── 7. Strip "to taste", "as needed", "optional" etc. ───────────────────
+	s = s.replace(/\s*(to taste|as needed|if desired|optional)\b.*/i, "").trim();
+
+	// ── 8. Remove common descriptive words ───────────────────────────────────
+	const DESCRIPTORS = [
+		"ripe", "unripe", "fresh", "freshly", "frozen", "dried", "cooked", "raw",
+		"peeled", "unpeeled", "deseeded", "seeded", "pitted", "stoned",
+		"roughly", "finely", "thinly", "thickly", "lightly", "coarsely",
+		"chopped", "diced", "sliced", "grated", "minced", "crushed", "ground",
+		"halved", "quartered", "cubed", "shredded", "mashed", "pureed", "puréed",
+		"blended", "softened", "melted", "beaten", "sifted", "roasted", "toasted",
+		"large", "medium", "small", "whole",
+	];
+	for (const d of DESCRIPTORS) {
+		s = s.replace(new RegExp(`\\b${d}\\b\\s*`, "gi"), "");
+	}
+	s = s.replace(/\s+/g, " ").trim();
+
+	// ── 9. Capitalise first letter ────────────────────────────────────────────
+	const name     = s ? s[0].toUpperCase() + s.slice(1) : (raw || "").trim();
+	const quantity = unit ? (qty ? `${qty} ${unit}` : unit) : qty;
+
+	return { name, quantity };
 }

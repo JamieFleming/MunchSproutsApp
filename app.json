@@ -56,7 +56,8 @@
 					"color": "#9b7fe8",
 					"sounds": []
 				}
-			]
+			],
+			"./plugins/withDisableActivitySaveState"
 		],
 		"extra": {
 			"eas": {

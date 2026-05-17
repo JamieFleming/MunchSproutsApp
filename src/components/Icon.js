@@ -431,6 +431,14 @@ export function Icon({ name, size = 18, color }) {
 				<Circle cx="12" cy="20" r="1" fill={color} stroke="none" />
 			</Svg>
 		),
+		sparkle: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				<Path {...p} fill={color} fillOpacity={0.15} d="M12 2l2.09 6.26L20 9l-5.91 1.74L12 17l-2.09-6.26L4 9l5.91-1.74L12 2z" />
+				<Path {...p} d="M12 2l2.09 6.26L20 9l-5.91 1.74L12 17l-2.09-6.26L4 9l5.91-1.74L12 2z" />
+				<Path {...p} d="M5 3l.9 2.1L8 6l-2.1.9L5 9l-.9-2.1L2 6l2.1-.9L5 3z" />
+				<Path {...p} d="M19 15l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1z" />
+			</Svg>
+		),
 		cart: (
 			<Svg width={size} height={size} viewBox="0 0 24 24">
 				<Path {...p} d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />

@@ -104,7 +104,6 @@ export default function AuthScreen() {
 	const [appleAvailable, setAppleAvailable] = useState(false);
 	const [AppleAuth,      setAppleAuth]      = useState(null);
 	const [showPassword, setShowPassword] = useState(false);
-	const [showConfirm, setShowConfirm] = useState(false);
 
 	// ── Apple Sign-In — load native module lazily so the app doesn't crash on
 	//    binaries that don't have expo-apple-authentication compiled in yet ──
@@ -124,7 +123,6 @@ export default function AuthScreen() {
 		try {
 			setAppleLoading(true);
 
-			// Generate a random nonce and its SHA-256 hash (required by Firebase)
 			const rawNonce = Array.from({ length: 32 }, () =>
 				Math.floor(Math.random() * 36).toString(36)).join("");
 
@@ -145,7 +143,7 @@ export default function AuthScreen() {
 				credential.identityToken,
 				rawNonce,
 				credential.fullName,
-				credential.email,   // Apple only provides this on first-ever sign-in
+				credential.email,
 			);
 		} catch (e) {
 			if (e.code !== "ERR_REQUEST_CANCELED") {
@@ -155,6 +153,8 @@ export default function AuthScreen() {
 			setAppleLoading(false);
 		}
 	};
+	const [showConfirm, setShowConfirm] = useState(false);
+
 
 	// ── Google OAuth via expo-auth-session ──
 	const [request, response, promptAsync] = Google.useAuthRequest({

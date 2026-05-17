@@ -81,7 +81,7 @@ function FeaturedCard({ recipe, isPro, onPress }) {
 
 // ── Recipe card (collapsed + expanded) ───────────────────────────────────────
 
-function RecipeCard({ r, isOpen, isSaved, isPro, onToggle, onToggleFav, onLogRecipe }) {
+function RecipeCard({ r, isOpen, isSaved, isPro, onToggle, onToggleFav, onLogRecipe, onAddToList }) {
 	const { C } = useTheme();
 	const s = useStyles();
 	const effectiveLocked = r.locked && !isPro;
@@ -211,6 +211,13 @@ function RecipeCard({ r, isOpen, isSaved, isPro, onToggle, onToggleFav, onLogRec
 							<Text style={{ fontWeight: "700", fontSize: 13, color: C.white }}>Log This</Text>
 						</TouchableOpacity>
 					</View>
+					{!!onAddToList && (
+						<TouchableOpacity onPress={onAddToList} activeOpacity={0.8}
+							style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#dbeafe", borderRadius: 12, paddingVertical: 12, marginTop: 10 }}>
+							<Icon name="cart" size={16} color="#1d4ed8" />
+							<Text style={{ fontWeight: "700", fontSize: 13, color: "#1d4ed8" }}>Add to Shopping List</Text>
+						</TouchableOpacity>
+					)}
 				</View>
 			)}
 
@@ -229,23 +236,50 @@ function RecipeCard({ r, isOpen, isSaved, isPro, onToggle, onToggleFav, onLogRec
 
 const EMPTY_SUGGEST = { title: "", category: "", ageGroup: "", time: "", description: "", ingredients: "", steps: "" };
 
-export function RecipesScreen({ isPro, recipes, favouriteRecipeIds, onUpgradePro, onToggleFav, onLogRecipe, onRestorePurchases, user, jumpToRecipeId = null, onJumpHandled }) {
+export function RecipesScreen({ isPro, recipes, favouriteRecipeIds, onUpgradePro, onToggleFav, onLogRecipe, onRestorePurchases, user, jumpToRecipeId = null, onJumpHandled, onAddToShoppingList }) {
 	const { C } = useTheme();
 	const s = useStyles();
 
-	const [expandedId,      setExpandedId]      = useState(null);
-	const [filterAge,       setFilterAge]       = useState("all");
-	const [searchQuery,     setSearchQuery]     = useState("");
-	const [upgradeLoading,  setUpgradeLoading]  = useState(false);
-	const [upgradePlan,     setUpgradePlan]     = useState("monthly");
-	const [showSuggest,     setShowSuggest]     = useState(false);
-	const [suggestForm,     setSuggestForm]     = useState(EMPTY_SUGGEST);
-	const [suggestSent,     setSuggestSent]     = useState(false);
-	const [suggestLoading,  setSuggestLoading]  = useState(false);
+	const [expandedId,         setExpandedId]         = useState(null);
+	const [filterAge,          setFilterAge]          = useState("all");
+	const [searchQuery,        setSearchQuery]        = useState("");
+	const [upgradeLoading,     setUpgradeLoading]     = useState(false);
+	const [upgradePlan,        setUpgradePlan]        = useState("monthly");
+	const [showSuggest,        setShowSuggest]        = useState(false);
+	const [suggestForm,        setSuggestForm]        = useState(EMPTY_SUGGEST);
+	const [suggestSent,        setSuggestSent]        = useState(false);
+	const [suggestLoading,     setSuggestLoading]     = useState(false);
+	// Shopping list ingredient picker
+	const [shopPickerRecipe,   setShopPickerRecipe]   = useState(null);
+	const [shopPickerChecked,  setShopPickerChecked]  = useState({});
+	const [shopPickerLoading,  setShopPickerLoading]  = useState(false);
 
 	const scrollViewRef  = useRef(null);
 	const cardPositions  = useRef({});
 	const setSF = (k, v) => setSuggestForm((p) => ({ ...p, [k]: v }));
+
+	// Shopping list picker helpers
+	const openShopPicker = (recipe) => {
+		const init = {};
+		(recipe.ingredients || []).forEach((_, i) => { init[i] = true; });
+		setShopPickerChecked(init);
+		setShopPickerRecipe(recipe);
+	};
+
+	const handleShopPickerAdd = async () => {
+		if (!shopPickerRecipe || !onAddToShoppingList) return;
+		const selected = (shopPickerRecipe.ingredients || []).filter((_, i) => shopPickerChecked[i]);
+		if (selected.length === 0) return;
+		setShopPickerLoading(true);
+		try {
+			await onAddToShoppingList(shopPickerRecipe.id, shopPickerRecipe.title, selected);
+			setShopPickerRecipe(null); // close modal — navigation to shopping handled by MealsHubScreen
+		} catch (e) {
+			Alert.alert("Couldn't add items", e?.message || "Please check your connection and try again.");
+		} finally {
+			setShopPickerLoading(false);
+		}
+	};
 
 	const handleSuggestSubmit = async () => {
 		if (!suggestForm.title || !suggestForm.description || !suggestForm.ingredients || !suggestForm.steps) {
@@ -294,6 +328,7 @@ export function RecipesScreen({ isPro, recipes, favouriteRecipeIds, onUpgradePro
 	}, [jumpToRecipeId]);
 
 	return (
+		<>
 		<ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingBottom: 24 }}>
 
 			{/* Pro upgrade banner */}
@@ -533,9 +568,96 @@ export function RecipesScreen({ isPro, recipes, favouriteRecipeIds, onUpgradePro
 						onToggle={() => toggle(r.id, r.locked)}
 						onToggleFav={() => onToggleFav(r.id)}
 						onLogRecipe={() => onLogRecipe(r)}
+						onAddToList={onAddToShoppingList && !(r.locked && !isPro) ? () => openShopPicker(r) : null}
 					/>
 				</View>
 			))}
 		</ScrollView>
+
+		{/* ── Shopping list ingredient picker modal ── */}
+		<Modal
+			visible={!!shopPickerRecipe}
+			transparent
+			animationType="slide"
+			onRequestClose={() => !shopPickerLoading && setShopPickerRecipe(null)}>
+			<View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" }}>
+				<View style={{ backgroundColor: C.screen, borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: "85%", paddingBottom: 34 }}>
+
+					{/* Handle + header */}
+					<View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
+						<View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: C.borderLight, alignSelf: "center", marginBottom: 16 }} />
+						<View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}>
+							<View style={{ flex: 1 }}>
+								<Text style={{ fontSize: 18, fontWeight: "800", color: C.textCharcoal }}>{shopPickerRecipe?.title}</Text>
+								<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>Choose ingredients to add to your shopping list</Text>
+							</View>
+							<TouchableOpacity
+								onPress={() => { if (!shopPickerLoading) setShopPickerRecipe(null); }}
+								style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center" }}>
+								<Icon name="close" size={15} color={C.mutedText} />
+							</TouchableOpacity>
+						</View>
+
+						{/* Select all / none */}
+						<View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+							{[
+								{ label: "Select all",  action: () => { const a = {}; (shopPickerRecipe?.ingredients || []).forEach((_, i) => { a[i] = true; }); setShopPickerChecked(a); } },
+								{ label: "Clear all",   action: () => setShopPickerChecked({}) },
+							].map(({ label, action }) => (
+								<TouchableOpacity key={label} onPress={action} activeOpacity={0.75}
+									style={{ backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}>
+									<Text style={{ fontSize: 12, fontWeight: "700", color: C.primaryPurple }}>{label}</Text>
+								</TouchableOpacity>
+							))}
+						</View>
+					</View>
+
+					{/* Ingredient list */}
+					<ScrollView style={{ paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
+						{(shopPickerRecipe?.ingredients || []).map((ing, i) => (
+							<TouchableOpacity
+								key={i}
+								onPress={() => setShopPickerChecked((p) => ({ ...p, [i]: !p[i] }))}
+								activeOpacity={0.8}
+								style={{ flexDirection: "row", alignItems: "center", backgroundColor: C.white, borderRadius: 12, marginBottom: 8, paddingHorizontal: 14, paddingVertical: 13, gap: 12 }}>
+								<View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: shopPickerChecked[i] ? C.primaryPurple : C.borderLight, backgroundColor: shopPickerChecked[i] ? C.primaryPurple : "transparent", alignItems: "center", justifyContent: "center" }}>
+									{shopPickerChecked[i] && <Icon name="check" size={12} color="#fff" />}
+								</View>
+								<Text style={{ flex: 1, fontSize: 14, color: C.textCharcoal, fontWeight: "500" }}>{ing}</Text>
+							</TouchableOpacity>
+						))}
+						<View style={{ height: 20 }} />
+					</ScrollView>
+
+					{/* Add button */}
+					{(() => {
+						const selectedCount = Object.values(shopPickerChecked).filter(Boolean).length;
+						return (
+							<View style={{ paddingHorizontal: 20, paddingTop: 10 }}>
+								<TouchableOpacity
+									onPress={handleShopPickerAdd}
+									disabled={selectedCount === 0 || shopPickerLoading}
+									activeOpacity={0.85}
+									style={{ backgroundColor: selectedCount === 0 ? C.borderLight : "#1d4ed8", borderRadius: 16, paddingVertical: 15, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}>
+									{shopPickerLoading ? (
+										<ActivityIndicator color="#fff" />
+									) : (
+										<>
+											<Icon name="cart" size={18} color="#fff" />
+											<Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>
+												{selectedCount > 0
+													? `Add ${selectedCount} item${selectedCount !== 1 ? "s" : ""} to Shopping List`
+													: "Select at least one ingredient"}
+											</Text>
+										</>
+									)}
+								</TouchableOpacity>
+							</View>
+						);
+					})()}
+				</View>
+			</View>
+		</Modal>
+		</>
 	);
 }

@@ -398,7 +398,7 @@ export function DashboardScreen({
 								<Text style={{ fontSize: 13, fontWeight: "700", color: C.primaryPurple }}>View Recipe</Text>
 								<Icon name="chevRight" size={13} color={C.primaryPurple} />
 							</View>
-							<TouchableOpacity onPress={(e) => { e.stopPropagation?.(); onNavigate("recipes"); }} activeOpacity={0.75} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 }}>
+							<TouchableOpacity onPress={(e) => { e.stopPropagation?.(); onNavigate("meals"); }} activeOpacity={0.75} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 }}>
 								<Icon name="chef" size={13} color={C.primaryPurple} />
 								<Text style={{ fontSize: 12, fontWeight: "700", color: C.primaryPurple }}>More Recipes</Text>
 							</TouchableOpacity>
