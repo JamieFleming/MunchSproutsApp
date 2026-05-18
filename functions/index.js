@@ -1,38 +1,46 @@
 /**
- * MunchSprouts — generateInsights Cloud Function
+ * MunchSprouts Cloud Functions
  *
- * Receives a computed data payload from the app, generates personalised
- * AI narrative insights using Gemini Flash, caches the result in Firestore
- * for 24 hours, and returns the text to the client.
+ * Uses Vertex AI (Gemini) which authenticates via the Cloud Function's
+ * service account — no API key required, billed through the Firebase
+ * project's existing billing account.
  *
  * Deploy: firebase deploy --only functions
- * Set key: firebase functions:secrets:set GEMINI_API_KEY
+ * Requires: Vertex AI API enabled at console.cloud.google.com
  */
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { defineSecret }       = require("firebase-functions/params");
 const { initializeApp }      = require("firebase-admin/app");
-const { getFirestore }        = require("firebase-admin/firestore");
-const { GoogleGenerativeAI }  = require("@google/generative-ai");
+const { getFirestore }       = require("firebase-admin/firestore");
+const { VertexAI }           = require("@google-cloud/vertexai");
 
 initializeApp();
 
-const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
+const PROJECT  = "munchsprouts";
+const LOCATION = "europe-west2";
+const MODEL    = "gemini-2.0-flash-001";
 
-// ── Cache TTL — regenerate after 24 hours ────────────────────────────────────
+const vertex = new VertexAI({ project: PROJECT, location: LOCATION });
+
+// ── Shared helper: strip markdown fences Gemini sometimes adds ───────────────
+function cleanJson(text) {
+	return text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/, "").trim();
+}
+
+// ── Cache TTL — regenerate insights after 24 hours ───────────────────────────
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
-// ── Build the prompt ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// generateInsights
+// ─────────────────────────────────────────────────────────────────────────────
 
-function buildPrompt(data) {
+function buildInsightsPrompt(data) {
 	const {
 		childName, ageMonths, nutrition, trends,
 		milestones, allergenProgress, growth,
 	} = data;
 
-	const ageLabel = ageMonths != null
-		? `${ageMonths} months old`
-		: "age unknown";
+	const ageLabel = ageMonths != null ? `${ageMonths} months old` : "age unknown";
 
 	const allergenLine = allergenProgress.count > 0
 		? `Allergens introduced so far: ${allergenProgress.introduced.join(", ")}.` +
@@ -45,19 +53,11 @@ function buildPrompt(data) {
 		? `Milestones achieved: ${milestones.achieved.join(", ")}.`
 		: "No milestones completed yet.";
 
-	const nextMilestoneLine = milestones.next
-		? `Next milestone to aim for: "${milestones.next.label}".`
-		: "All tracked milestones completed!";
-
 	const trendLine = trends.thisWeekCount === 0
 		? "No foods logged this week."
 		: `This week: ${trends.thisWeekCount} food entries (${trends.uniqueFoodsThis} unique foods).` +
-		  (trends.lastWeekCount > 0
-			? ` Last week: ${trends.lastWeekCount} entries. Trend: ${trends.trend}.`
-			: "") +
-		  (trends.newFoods.length
-			? ` New foods tried this week: ${trends.newFoods.join(", ")}.`
-			: "");
+		  (trends.lastWeekCount > 0 ? ` Last week: ${trends.lastWeekCount} entries. Trend: ${trends.trend}.` : "") +
+		  (trends.newFoods.length ? ` New foods tried: ${trends.newFoods.join(", ")}.` : "");
 
 	const growthLine = growth.entryCount < 2
 		? "Not enough weight entries to assess growth trend yet."
@@ -74,85 +74,60 @@ Most tried foods: ${nutrition.topFoods.join(", ") || "none yet"}
 ${trendLine}
 ${allergenLine}
 ${milestoneLine}
-${nextMilestoneLine}
+${milestones.next ? `Next milestone: "${milestones.next.label}".` : "All tracked milestones completed!"}
 ${growthLine}
 
-Write exactly 3 insights as a JSON object with these keys:
-- "nutrition": one insight about food variety and nutrition (1-2 sentences, specific to the data above)
-- "progress": one insight about weaning progress and milestones (1-2 sentences)
-- "nextSteps": one practical, actionable suggestion for this week (1-2 sentences)
-
-Rules:
-- Use ${childName}'s name naturally (not in every sentence)
-- Be warm, specific, and encouraging — never alarming
-- Base suggestions on NHS/BLW guidelines for ${ageLabel}
-- Keep each insight under 50 words
-- Return ONLY valid JSON, no markdown, no extra text`;
+Return ONLY a JSON object with exactly these keys (no markdown, no extra text):
+{
+  "nutrition": "one insight about food variety (1-2 sentences, under 50 words)",
+  "progress": "one insight about weaning progress and milestones (1-2 sentences, under 50 words)",
+  "nextSteps": "one practical actionable suggestion for this week (1-2 sentences, under 50 words)"
 }
 
-// ── Cloud Function ───────────────────────────────────────────────────────────
+Rules: use ${childName}'s name naturally, be warm and encouraging, base on NHS/BLW guidelines.`;
+}
 
 exports.generateInsights = onCall(
-	{ secrets: [GEMINI_API_KEY], region: "europe-west2" },
+	{ region: "europe-west2" },
 	async (request) => {
-		// ── Auth guard ───────────────────────────────────────────────────────
-		if (!request.auth) {
-			throw new HttpsError("unauthenticated", "Must be signed in.");
-		}
+		if (!request.auth) throw new HttpsError("unauthenticated", "Must be signed in.");
 
 		const uid     = request.auth.uid;
 		const payload = request.data;
-
-		if (!payload || !payload.childName) {
-			throw new HttpsError("invalid-argument", "Missing insight payload.");
-		}
+		if (!payload?.childName) throw new HttpsError("invalid-argument", "Missing payload.");
 
 		const childId  = payload.childId || "default";
 		const db       = getFirestore();
 		const cacheRef = db.doc(`users/${uid}/insights/${childId}`);
 
-		// ── Check cache ──────────────────────────────────────────────────────
-		const cacheSnap = await cacheRef.get();
-		if (cacheSnap.exists) {
-			const cached = cacheSnap.data();
+		// Check cache
+		const snap = await cacheRef.get();
+		if (snap.exists) {
+			const cached = snap.data();
 			const age    = Date.now() - (cached.generatedAt?.toMillis?.() || 0);
 			if (age < CACHE_TTL_MS && cached.insights) {
-				console.log(`[insights] cache hit for ${uid}/${childId} (${Math.round(age / 60000)}m old)`);
 				return { insights: cached.insights, cached: true };
 			}
 		}
 
-		// ── Call Gemini ──────────────────────────────────────────────────────
-		const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
-		const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-		const prompt = buildPrompt(payload);
+		// Call Gemini via Vertex AI
+		const model  = vertex.getGenerativeModel({ model: MODEL });
+		const prompt = buildInsightsPrompt(payload);
 
 		let insights;
 		try {
 			const result   = await model.generateContent(prompt);
-			const text     = result.response.text().trim();
-			// Strip markdown code fences if Gemini adds them
-			const jsonText = text.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
-			insights       = JSON.parse(jsonText);
-
-			// Validate shape
+			const text     = result.response.candidates[0].content.parts[0].text.trim();
+			insights       = JSON.parse(cleanJson(text));
 			if (!insights.nutrition || !insights.progress || !insights.nextSteps) {
-				throw new Error("Unexpected response shape");
+				throw new Error("Unexpected shape");
 			}
 		} catch (err) {
 			console.error("[insights] Gemini error:", err.message);
-			// Graceful fallback — return rule-based defaults rather than crashing
 			insights = buildFallbackInsights(payload);
 		}
 
-		// ── Cache result ─────────────────────────────────────────────────────
-		await cacheRef.set({
-			insights,
-			generatedAt: new Date(),
-			ageMonths:   payload.ageMonths,
-		});
-
+		await cacheRef.set({ insights, generatedAt: new Date(), ageMonths: payload.ageMonths });
 		return { insights, cached: false };
 	},
 );
@@ -165,7 +140,7 @@ const FREE_DAILY_LIMIT = 3;
 const PRO_DAILY_LIMIT  = 10;
 
 function todayKey() {
-	return new Date().toISOString().split("T")[0]; // YYYY-MM-DD in UTC
+	return new Date().toISOString().split("T")[0];
 }
 
 const MEAL_IDEAS_SYSTEM_PROMPT = `You are the Smart Meal Ideas assistant for Munch Sprouts, a baby feeding and baby-led weaning app for parents.
@@ -185,37 +160,24 @@ IMPORTANT SAFETY RULES:
 - Avoid recommending multiple new foods together where possible.
 - Keep meals realistic for busy parents.
 - Use simple ingredients and preparation methods.
-- Keep prep quick and practical.
-- Never provide medical advice.
-- Never diagnose allergies or feeding problems.
+- Never provide medical advice or diagnose allergies.
 - Always remain supportive, calm and family-friendly.
 
 GOALS:
 - Suggest meals based on foods the baby already likes.
 - Gently encourage variety and introduce new foods safely.
-- Help reduce food waste using familiar ingredients.
 - Suggest balanced meals where possible.
 - Recommend age-appropriate textures.
 - Make feeding feel easier and less overwhelming.
 
 MEAL IDEA RULES:
-- Recipes should generally use familiar foods plus optionally one gentle new food.
-- Prioritise familiar accepted foods.
-- Avoid overcomplicated recipes.
+- Use familiar foods plus optionally one gentle new food.
 - Keep ingredient lists short (4-6 items max).
 - Prefer practical family ingredients.
-- Suggestions should feel realistic and achievable.
+- Avoid overcomplicated recipes.
 
-OUTPUT RULES:
-- Return concise structured JSON only.
-- Do not use markdown.
-- Do not include explanations outside JSON.
-- Do not include conversational filler.
-- Return exactly 3 meal ideas.
-- Keep responses compact.
-- Always include a "disclaimer" field in your response.
-
-JSON FORMAT — return this exact structure:
+OUTPUT: Return ONLY valid JSON, no markdown, no extra text.
+Return exactly this structure:
 {
   "meals": [
     {
@@ -234,119 +196,101 @@ JSON FORMAT — return this exact structure:
 }`;
 
 exports.generateMealIdeas = onCall(
-	{ secrets: [GEMINI_API_KEY], region: "europe-west2" },
+	{ region: "europe-west2" },
 	async (request) => {
-		// ── Auth guard ───────────────────────────────────────────────────────
-		if (!request.auth) {
-			throw new HttpsError("unauthenticated", "Must be signed in.");
-		}
+		if (!request.auth) throw new HttpsError("unauthenticated", "Must be signed in.");
 
 		const uid     = request.auth.uid;
 		const payload = request.data;
-
 		if (!payload || payload.ageMonths == null) {
-			throw new HttpsError("invalid-argument", "Missing meal ideas payload.");
+			throw new HttpsError("invalid-argument", "Missing payload.");
 		}
 
 		const isPro = payload.isPro === true;
 		const limit = isPro ? PRO_DAILY_LIMIT : FREE_DAILY_LIMIT;
 		const db    = getFirestore();
 
-		// ── Daily rate limit ─────────────────────────────────────────────────
-		const today      = todayKey();
-		const usageRef   = db.doc(`users/${uid}/mealIdeasUsage/${today}`);
-		const usageSnap  = await usageRef.get();
-		const usageCount = usageSnap.exists ? (usageSnap.data().count || 0) : 0;
+		// Rate limit
+		const today     = todayKey();
+		const usageRef  = db.doc(`users/${uid}/mealIdeasUsage/${today}`);
+		const usageSnap = await usageRef.get();
+		const used      = usageSnap.exists ? (usageSnap.data().count || 0) : 0;
 
-		if (usageCount >= limit) {
+		if (used >= limit) {
 			return {
 				error:   "daily_limit_reached",
-				used:    usageCount,
+				used,
 				limit,
 				message: isPro
 					? `You've reached today's limit of ${limit} Smart Meal Ideas. Try again tomorrow.`
-					: `You've reached today's limit of ${limit} Smart Meal Ideas. Upgrade to Pro for up to ${PRO_DAILY_LIMIT} ideas per day.`,
+					: `You've reached today's limit of ${limit} free ideas today. Upgrade to Pro for up to ${PRO_DAILY_LIMIT} per day.`,
 			};
 		}
 
-		// ── Build user context prompt ────────────────────────────────────────
-		const {
-			ageMonths, mealType, textureLevel,
-			likedFoods, dislikedFoods,
-			allergensSafe, allergensAvoid,
-			foodsTried, childName,
-		} = payload;
-
+		// Build user prompt
 		const userPrompt = JSON.stringify({
-			ageMonths,
-			mealType:      mealType || "any",
-			textureLevel:  textureLevel || "age-appropriate",
-			childName:     childName || "Baby",
-			likedFoods:    (likedFoods   || []).slice(0, 20),
-			dislikedFoods: (dislikedFoods|| []).slice(0, 10),
-			allergensSafe: allergensSafe || [],
-			allergensAvoid:allergensAvoid|| [],
-			foodsTried:    (foodsTried   || []).slice(0, 30),
+			ageMonths:      payload.ageMonths,
+			mealType:       payload.mealType || "any",
+			textureLevel:   payload.textureLevel || "age-appropriate",
+			childName:      payload.childName || "Baby",
+			likedFoods:     (payload.likedFoods    || []).slice(0, 20),
+			dislikedFoods:  (payload.dislikedFoods  || []).slice(0, 10),
+			allergensSafe:  payload.allergensSafe  || [],
+			allergensAvoid: payload.allergensAvoid || [],
+			allergensNotTried: payload.allergensNotTried || [],
+			foodsTried:     (payload.foodsTried    || []).slice(0, 30),
 		});
 
-		// ── Call Gemini ──────────────────────────────────────────────────────
-		const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
-		const model = genAI.getGenerativeModel({
-			model: "gemini-2.0-flash",
-			systemInstruction: MEAL_IDEAS_SYSTEM_PROMPT,
+		// Call Gemini via Vertex AI with system instruction
+		const model = vertex.getGenerativeModel({
+			model: MODEL,
+			systemInstruction: { parts: [{ text: MEAL_IDEAS_SYSTEM_PROMPT }] },
 		});
 
-		let result;
+		let meals, disclaimer;
 		try {
-			const response = await model.generateContent(userPrompt);
-			const text     = response.response.text().trim();
-			const jsonText = text.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
-			result         = JSON.parse(jsonText);
-
-			if (!result.meals || !Array.isArray(result.meals)) {
-				throw new Error("Unexpected response shape");
-			}
+			const response = await model.generateContent({
+				contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+			});
+			const text   = response.response.candidates[0].content.parts[0].text.trim();
+			const result = JSON.parse(cleanJson(text));
+			if (!result.meals || !Array.isArray(result.meals)) throw new Error("Bad shape");
+			meals      = result.meals;
+			disclaimer = result.disclaimer;
 		} catch (err) {
 			console.error("[mealIdeas] Gemini error:", err.message);
 			throw new HttpsError("internal", "Could not generate meal ideas. Please try again.");
 		}
 
-		// ── Increment usage counter ──────────────────────────────────────────
-		await usageRef.set({ count: usageCount + 1, date: today }, { merge: true });
+		// Increment usage
+		await usageRef.set({ count: used + 1, date: today }, { merge: true });
 
 		return {
-			meals:      result.meals,
-			disclaimer: result.disclaimer || "Smart Meal Ideas are for inspiration only and are not medical advice. Always follow safe weaning guidance and speak to a healthcare professional regarding allergies or feeding concerns.",
-			used:       usageCount + 1,
+			meals,
+			disclaimer: disclaimer || "Smart Meal Ideas are for inspiration only and are not medical advice. Always follow safe weaning guidance and speak to a healthcare professional regarding allergies or feeding concerns.",
+			used:  used + 1,
 			limit,
 		};
 	},
 );
 
-// ── Fallback when Gemini is unavailable / rate-limited ───────────────────────
+// ── Fallback insights when Gemini unavailable ────────────────────────────────
 
 function buildFallbackInsights(data) {
 	const { childName, nutrition, milestones, trends } = data;
-
-	const nutritionText = nutrition.score >= 70
-		? `${childName} is trying a great variety of foods across ${nutrition.categoriesFound.length} food groups — keep it up!`
-		: nutrition.missingCategories.length
-		? `Try introducing some ${nutrition.missingCategories[0].toLowerCase()} this week to boost ${childName}'s food variety.`
-		: `${childName} is building a good range of foods. Keep offering new tastes regularly.`;
-
-	const progressText = milestones.achieved.length
-		? `${childName} has reached ${milestones.achieved.length} weaning milestone${milestones.achieved.length > 1 ? "s" : ""} — wonderful progress!`
-		: "You're just getting started — every new food is a milestone in itself!";
-
-	const nextText = milestones.next
-		? milestones.next.tip
-		: trends.thisWeekCount === 0
-		? "Try logging some meals this week to start tracking weaning progress."
-		: "Keep offering a wide range of foods and textures — consistency is key!";
-
 	return {
-		nutrition:  nutritionText,
-		progress:   progressText,
-		nextSteps:  nextText,
+		nutrition: nutrition.score >= 70
+			? `${childName} is trying a great variety across ${nutrition.categoriesFound.length} food groups — keep it up!`
+			: nutrition.missingCategories.length
+			? `Try introducing some ${nutrition.missingCategories[0].toLowerCase()} this week to boost variety.`
+			: `${childName} is building a good range of foods. Keep offering new tastes regularly.`,
+		progress: milestones.achieved.length
+			? `${childName} has reached ${milestones.achieved.length} weaning milestone${milestones.achieved.length > 1 ? "s" : ""} — wonderful progress!`
+			: "You're just getting started — every new food is a milestone in itself!",
+		nextSteps: milestones.next
+			? milestones.next.tip
+			: trends.thisWeekCount === 0
+			? "Try logging some meals this week to start tracking weaning progress."
+			: "Keep offering a wide range of foods and textures — consistency is key!",
 	};
 }
