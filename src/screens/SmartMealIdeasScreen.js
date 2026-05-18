@@ -61,12 +61,17 @@ function deriveFoodContext(foodLog) {
 	// Remove allergensSafe items that also appear in avoid
 	allergensAvoid.forEach((a) => allergensSafe.delete(a));
 
+	const ALL_ALLERGENS = ["gluten", "dairy", "eggs", "peanuts", "tree nuts", "fish", "shellfish", "soy", "sesame"];
+	const allergensTried = new Set([...allergensSafe, ...allergensAvoid]);
+	const allergensNotTried = ALL_ALLERGENS.filter((a) => !allergensTried.has(a));
+
 	return {
-		likedFoods:     [...new Set(likedFoods)],
-		dislikedFoods:  [...new Set(dislikedFoods)],
-		allergensSafe:  [...allergensSafe],
-		allergensAvoid: [...allergensAvoid],
-		foodsTried:     [...foodsTried],
+		likedFoods:       [...new Set(likedFoods)],
+		dislikedFoods:    [...new Set(dislikedFoods)],
+		allergensSafe:    [...allergensSafe],
+		allergensAvoid:   [...allergensAvoid],
+		allergensNotTried,
+		foodsTried:       [...foodsTried],
 	};
 }
 
@@ -292,8 +297,8 @@ export function SmartMealIdeasScreen({ child, foodLog = [], user, isPro, onUpgra
 			const fn        = httpsCallable(functions, "generateMealIdeas");
 
 			const result = await fn({
-				childName:      child?.name || "Baby",
-				ageMonths,
+				childName:         child?.name || "Baby",
+				ageMonths:         ageMonths ?? 6,
 				mealType,
 				textureLevel,
 				isPro,
@@ -359,10 +364,14 @@ export function SmartMealIdeasScreen({ child, foodLog = [], user, isPro, onUpgra
 				</Text>
 				<View style={{ gap: 5 }}>
 					{[
-						{ icon: "baby",     label: `Age: ${ageMonths != null ? `${ageMonths} months` : "unknown"} · ${textureLevel}` },
-						{ icon: "check",    label: foodContext.likedFoods.length > 0 ? `${foodContext.likedFoods.length} liked foods` : "No liked foods logged yet" },
-						{ icon: "shield",   label: foodContext.allergensAvoid.length > 0 ? `Avoiding: ${foodContext.allergensAvoid.join(", ")}` : "No allergens to avoid" },
-						{ icon: "list",     label: `${foodContext.foodsTried.length} foods tried so far` },
+						{ icon: "baby",    label: `Age: ${ageMonths != null ? `${ageMonths} months` : "unknown"} · ${textureLevel}` },
+						{ icon: "check",   label: foodContext.likedFoods.length > 0 ? `${foodContext.likedFoods.length} liked foods` : "No liked foods logged yet" },
+						{ icon: "list",    label: `${foodContext.foodsTried.length} foods tried so far` },
+						foodContext.allergensAvoid.length > 0
+							? { icon: "alert",  label: `Avoiding (reaction): ${foodContext.allergensAvoid.join(", ")}` }
+							: foodContext.allergensNotTried.length > 0
+							? { icon: "shield", label: `Not yet tried: ${foodContext.allergensNotTried.join(", ")}` }
+							: { icon: "shield", label: "All 9 allergens introduced ✓" },
 					].map((row, i) => (
 						<View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
 							<Icon name={row.icon} size={12} color={C.primaryPurple} />

@@ -124,7 +124,7 @@ exports.generateInsights = onCall(
 
 		// ── Call Gemini ──────────────────────────────────────────────────────
 		const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
-		const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+		const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 		const prompt = buildPrompt(payload);
 
@@ -292,7 +292,7 @@ exports.generateMealIdeas = onCall(
 		// ── Call Gemini ──────────────────────────────────────────────────────
 		const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
 		const model = genAI.getGenerativeModel({
-			model: "gemini-1.5-flash",
+			model: "gemini-2.0-flash",
 			systemInstruction: MEAL_IDEAS_SYSTEM_PROMPT,
 		});
 
