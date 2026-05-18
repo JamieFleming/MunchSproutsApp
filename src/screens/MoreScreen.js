@@ -536,7 +536,7 @@ export function MoreScreen({
 	const [showSharing,        setShowSharing]        = useState(false);
 	const [showSupport,        setShowSupport]        = useState(false);
 	const [showGallery,        setShowGallery]        = useState(false);
-	const [profilePhoto,       setProfilePhoto]       = useState("");
+	const [profilePhoto,       setProfilePhoto]       = useState(userDoc?.photoURL || "");
 	const [lightboxPhoto,      setLightboxPhoto]      = useState(null);
 	const [showTimePicker,     setShowTimePicker]     = useState(false);
 	const [pickerHour,         setPickerHour]         = useState(7);   // 1–12
@@ -710,16 +710,10 @@ export function MoreScreen({
 		setExportLoading(false);
 	};
 
+	// Sync photo from userDoc (live onSnapshot) — covers initial load and updates
 	useEffect(() => {
-		if (!user?.uid) return;
-		import("firebase/firestore").then(({ doc: fsDoc, getDoc }) =>
-			import("../../firebase").then(({ db }) =>
-				getDoc(fsDoc(db, "users", user.uid)).then((snap) => {
-					if (snap.exists() && snap.data().photoURL) setProfilePhoto(snap.data().photoURL);
-				}),
-			),
-		);
-	}, [user?.uid]);
+		if (userDoc?.photoURL) setProfilePhoto(userDoc.photoURL);
+	}, [userDoc?.photoURL]);
 
 	const handlePickProfilePhoto = async () => {
 		const uri = await pickImageAsBase64([1, 1]);
