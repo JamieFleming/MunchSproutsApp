@@ -1591,6 +1591,8 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						onLogRecipe={handleLogRecipe}
 						onRestorePurchases={handleRestorePurchases}
 						user={user}
+						activeChild={activeChild}
+						childFoodLog={childLog}
 						jumpToRecipeId={jumpToRecipeId}
 						onJumpHandled={() => setJumpToRecipeId(null)}
 						resetKey={mealsResetKey}

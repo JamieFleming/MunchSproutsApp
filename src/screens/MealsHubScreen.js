@@ -6,6 +6,7 @@ import { Icon } from "../components/Icon";
 import { parseIngredient } from "../helpers";
 import { RecipesScreen } from "./RecipesScreen";
 import { ShoppingListScreen } from "./ShoppingListScreen";
+import { SmartMealIdeasScreen } from "./SmartMealIdeasScreen";
 
 // ── Firestore helper — writes items directly to the shopping list doc ─────────
 
@@ -343,10 +344,9 @@ function MealsHub({ onNavigate, isPro }) {
 				iconBg="#fdf4ff"
 				iconColor="#9333ea"
 				accentColor="#9333ea"
-				title="AI Meal Ideas"
-				subtitle="Suggestions based on your log."
-				badge="Coming Soon"
-				disabled
+				title="Smart Meal Ideas"
+				subtitle="AI-powered ideas based on your child's food log."
+				onPress={() => onNavigate("mealIdeas")}
 			/>
 		</ScrollView>
 	);
@@ -390,6 +390,9 @@ export function MealsHubScreen({
 	recipes,
 	user,
 	onUpgradePro,
+	// child context for Smart Meal Ideas
+	activeChild,
+	childFoodLog,
 	// RecipesScreen
 	favouriteRecipeIds,
 	onToggleFav,
@@ -401,7 +404,7 @@ export function MealsHubScreen({
 	resetKey,
 }) {
 	const { C } = useTheme();
-	const [view, setView] = useState("hub"); // "hub" | "recipes" | "shopping"
+	const [view, setView] = useState("hub"); // "hub" | "recipes" | "shopping" | "mealIdeas"
 
 	// Tapping Meals nav tab while already on Meals → return to hub
 	useEffect(() => {
@@ -430,7 +433,7 @@ export function MealsHubScreen({
 			{/* Back breadcrumb — only in sub-pages */}
 			{view !== "hub" && (
 				<BackBreadcrumb
-					label="Meals"
+					label={view === "mealIdeas" ? "Smart Meal Ideas" : "Meals"}
 					onBack={() => {
 						if (view === "recipes" && jumpToRecipeId) onJumpHandled?.();
 						setView("hub");
@@ -470,6 +473,19 @@ export function MealsHubScreen({
 					visible={view === "shopping"}
 				/>
 			</View>
+
+			{/* Smart Meal Ideas sub-page */}
+			{view === "mealIdeas" && (
+				<View style={{ flex: 1 }}>
+					<SmartMealIdeasScreen
+						child={activeChild}
+						foodLog={childFoodLog}
+						user={user}
+						isPro={isPro}
+						onUpgradePro={onUpgradePro}
+					/>
+				</View>
+			)}
 		</View>
 	);
 }

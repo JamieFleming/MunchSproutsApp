@@ -113,7 +113,7 @@ exports.generateInsights = onCall(
 
 		// ── Check cache ──────────────────────────────────────────────────────
 		const cacheSnap = await cacheRef.get();
-		if (cacheSnap.exists()) {
+		if (cacheSnap.exists) {
 			const cached = cacheSnap.data();
 			const age    = Date.now() - (cached.generatedAt?.toMillis?.() || 0);
 			if (age < CACHE_TTL_MS && cached.insights) {
@@ -154,6 +154,172 @@ exports.generateInsights = onCall(
 		});
 
 		return { insights, cached: false };
+	},
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// generateMealIdeas
+// ─────────────────────────────────────────────────────────────────────────────
+
+const FREE_DAILY_LIMIT = 3;
+const PRO_DAILY_LIMIT  = 10;
+
+function todayKey() {
+	return new Date().toISOString().split("T")[0]; // YYYY-MM-DD in UTC
+}
+
+const MEAL_IDEAS_SYSTEM_PROMPT = `You are the Smart Meal Ideas assistant for Munch Sprouts, a baby feeding and baby-led weaning app for parents.
+
+Your role is to generate SAFE, SIMPLE, REALISTIC and AGE-APPROPRIATE meal ideas for babies and toddlers based on the child's feeding history, likes/dislikes, allergens and foods already introduced.
+
+IMPORTANT SAFETY RULES:
+- Prioritise safety and practicality over creativity.
+- Only suggest foods suitable for the baby's age and texture stage.
+- Never suggest choking hazards.
+- Never suggest whole nuts, popcorn, marshmallows, whole grapes, hard raw vegetables or unsafe textures.
+- Never suggest honey under 12 months.
+- Never suggest excessive salt or sugar.
+- Never suggest unsafe or undercooked egg, meat or fish.
+- Never suggest allergens listed in allergensAvoid.
+- Only introduce ONE new allergen at a time when appropriate.
+- Avoid recommending multiple new foods together where possible.
+- Keep meals realistic for busy parents.
+- Use simple ingredients and preparation methods.
+- Keep prep quick and practical.
+- Never provide medical advice.
+- Never diagnose allergies or feeding problems.
+- Always remain supportive, calm and family-friendly.
+
+GOALS:
+- Suggest meals based on foods the baby already likes.
+- Gently encourage variety and introduce new foods safely.
+- Help reduce food waste using familiar ingredients.
+- Suggest balanced meals where possible.
+- Recommend age-appropriate textures.
+- Make feeding feel easier and less overwhelming.
+
+MEAL IDEA RULES:
+- Recipes should generally use familiar foods plus optionally one gentle new food.
+- Prioritise familiar accepted foods.
+- Avoid overcomplicated recipes.
+- Keep ingredient lists short (4-6 items max).
+- Prefer practical family ingredients.
+- Suggestions should feel realistic and achievable.
+
+OUTPUT RULES:
+- Return concise structured JSON only.
+- Do not use markdown.
+- Do not include explanations outside JSON.
+- Do not include conversational filler.
+- Return exactly 3 meal ideas.
+- Keep responses compact.
+- Always include a "disclaimer" field in your response.
+
+JSON FORMAT — return this exact structure:
+{
+  "meals": [
+    {
+      "title": "",
+      "mealType": "",
+      "ageGroup": "",
+      "description": "",
+      "whySuggested": "",
+      "newFood": "",
+      "ingredients": [],
+      "steps": [],
+      "allergens": []
+    }
+  ],
+  "disclaimer": "Smart Meal Ideas are for inspiration only and are not medical advice. Always follow safe weaning guidance and speak to a healthcare professional regarding allergies or feeding concerns."
+}`;
+
+exports.generateMealIdeas = onCall(
+	{ secrets: [GEMINI_API_KEY], region: "europe-west2" },
+	async (request) => {
+		// ── Auth guard ───────────────────────────────────────────────────────
+		if (!request.auth) {
+			throw new HttpsError("unauthenticated", "Must be signed in.");
+		}
+
+		const uid     = request.auth.uid;
+		const payload = request.data;
+
+		if (!payload || payload.ageMonths == null) {
+			throw new HttpsError("invalid-argument", "Missing meal ideas payload.");
+		}
+
+		const isPro = payload.isPro === true;
+		const limit = isPro ? PRO_DAILY_LIMIT : FREE_DAILY_LIMIT;
+		const db    = getFirestore();
+
+		// ── Daily rate limit ─────────────────────────────────────────────────
+		const today      = todayKey();
+		const usageRef   = db.doc(`users/${uid}/mealIdeasUsage/${today}`);
+		const usageSnap  = await usageRef.get();
+		const usageCount = usageSnap.exists ? (usageSnap.data().count || 0) : 0;
+
+		if (usageCount >= limit) {
+			return {
+				error:   "daily_limit_reached",
+				used:    usageCount,
+				limit,
+				message: isPro
+					? `You've reached today's limit of ${limit} Smart Meal Ideas. Try again tomorrow.`
+					: `You've reached today's limit of ${limit} Smart Meal Ideas. Upgrade to Pro for up to ${PRO_DAILY_LIMIT} ideas per day.`,
+			};
+		}
+
+		// ── Build user context prompt ────────────────────────────────────────
+		const {
+			ageMonths, mealType, textureLevel,
+			likedFoods, dislikedFoods,
+			allergensSafe, allergensAvoid,
+			foodsTried, childName,
+		} = payload;
+
+		const userPrompt = JSON.stringify({
+			ageMonths,
+			mealType:      mealType || "any",
+			textureLevel:  textureLevel || "age-appropriate",
+			childName:     childName || "Baby",
+			likedFoods:    (likedFoods   || []).slice(0, 20),
+			dislikedFoods: (dislikedFoods|| []).slice(0, 10),
+			allergensSafe: allergensSafe || [],
+			allergensAvoid:allergensAvoid|| [],
+			foodsTried:    (foodsTried   || []).slice(0, 30),
+		});
+
+		// ── Call Gemini ──────────────────────────────────────────────────────
+		const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
+		const model = genAI.getGenerativeModel({
+			model: "gemini-1.5-flash",
+			systemInstruction: MEAL_IDEAS_SYSTEM_PROMPT,
+		});
+
+		let result;
+		try {
+			const response = await model.generateContent(userPrompt);
+			const text     = response.response.text().trim();
+			const jsonText = text.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
+			result         = JSON.parse(jsonText);
+
+			if (!result.meals || !Array.isArray(result.meals)) {
+				throw new Error("Unexpected response shape");
+			}
+		} catch (err) {
+			console.error("[mealIdeas] Gemini error:", err.message);
+			throw new HttpsError("internal", "Could not generate meal ideas. Please try again.");
+		}
+
+		// ── Increment usage counter ──────────────────────────────────────────
+		await usageRef.set({ count: usageCount + 1, date: today }, { merge: true });
+
+		return {
+			meals:      result.meals,
+			disclaimer: result.disclaimer || "Smart Meal Ideas are for inspiration only and are not medical advice. Always follow safe weaning guidance and speak to a healthcare professional regarding allergies or feeding concerns.",
+			used:       usageCount + 1,
+			limit,
+		};
 	},
 );
 
