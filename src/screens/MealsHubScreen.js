@@ -278,7 +278,7 @@ function RowCard({
 
 // ── Hub view ──────────────────────────────────────────────────────────────────
 
-function MealsHub({ onNavigate, isPro }) {
+function MealsHub({ onNavigate, isPro, onUpgradePro }) {
 	const { C } = useTheme();
 	return (
 		<ScrollView
@@ -341,12 +341,13 @@ function MealsHub({ onNavigate, isPro }) {
 			</View>
 			<HubCard
 				icon="sparkle"
-				iconBg="#fdf4ff"
-				iconColor="#9333ea"
-				accentColor="#9333ea"
+				iconBg={isPro ? "#fdf4ff" : "#fef9c3"}
+				iconColor={isPro ? "#9333ea" : "#c8920a"}
+				accentColor={isPro ? "#9333ea" : "#c8920a"}
 				title="Smart Meal Ideas"
-				subtitle="AI-powered ideas based on your child's food log."
-				onPress={() => onNavigate("mealIdeas")}
+				subtitle={isPro ? "AI-powered ideas based on your child's food log." : "Upgrade to Pro to unlock."}
+				badge={isPro ? null : "Pro"}
+				onPress={isPro ? () => onNavigate("mealIdeas") : onUpgradePro}
 			/>
 		</ScrollView>
 	);
@@ -443,7 +444,7 @@ export function MealsHubScreen({
 
 			{/* Hub */}
 			<View style={{ flex: 1, display: view === "hub" ? "flex" : "none" }}>
-				<MealsHub onNavigate={setView} isPro={isPro} />
+				<MealsHub onNavigate={setView} isPro={isPro} onUpgradePro={onUpgradePro} />
 			</View>
 
 			{/* Recipes sub-page */}
