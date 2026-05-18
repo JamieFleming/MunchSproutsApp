@@ -17,8 +17,8 @@ const { VertexAI }           = require("@google-cloud/vertexai");
 initializeApp();
 
 const PROJECT  = "munchsprouts";
-const LOCATION = "europe-west2";
-const MODEL    = "gemini-2.0-flash-001";
+const LOCATION = "us-central1";
+const MODEL    = "gemini-1.5-flash-002";
 
 const vertex = new VertexAI({ project: PROJECT, location: LOCATION });
 
