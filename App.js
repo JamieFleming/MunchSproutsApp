@@ -1652,6 +1652,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						foodLog={childLog}
 						weightPreference={weightPreference}
 						isPro={isPro}
+						user={user}
 						onUpgradePro={handleUpgradePro}
 						onBack={() => setPage(childDetailFrom)}
 						onEdit={editChild}

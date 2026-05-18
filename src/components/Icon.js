@@ -467,6 +467,36 @@ export function Icon({ name, size = 18, color }) {
 				<Path {...p} d="M15 6 C13 10 13 13 15 13 H19 C21 13 21 10 19 6" />
 			</Svg>
 		),
+		trendUp: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				<Polyline {...p} points="23 6 13.5 15.5 8.5 10.5 1 18" />
+				<Polyline {...p} points="17 6 23 6 23 12" />
+			</Svg>
+		),
+		trendDown: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				<Polyline {...p} points="23 18 13.5 8.5 8.5 13.5 1 6" />
+				<Polyline {...p} points="17 18 23 18 23 12" />
+			</Svg>
+		),
+		minus: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				<Line {...p} x1="5" y1="12" x2="19" y2="12" />
+			</Svg>
+		),
+		leaf: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				<Path {...p} d="M17 8C8 10 5.9 16.17 3.82 19.34c-.35.53.07 1.21.7 1.15C8.26 20.14 16 19 19 13c-3 3-6.5 3.88-9.77 3.88" />
+				<Path {...p} d="M19 13c2-2 3-5 3-8-3 0-6 1-8 3" />
+			</Svg>
+		),
+		refresh: (
+			<Svg width={size} height={size} viewBox="0 0 24 24">
+				<Path {...p} d="M23 4v6h-6" />
+				<Path {...p} d="M1 20v-6h6" />
+				<Path {...p} d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+			</Svg>
+		),
 	};
 	return icons[name] || null;
 }

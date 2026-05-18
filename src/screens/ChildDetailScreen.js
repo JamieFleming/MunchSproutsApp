@@ -9,6 +9,7 @@ import { Icon } from "../components/Icon";
 import { ZoomableImage } from "../components/ZoomableImage";
 import { DateField } from "../components/DatePickerModal";
 import { calcAgeWeeks, calcAgeMonths, formatDate, toMl, formatWeight, pickImageAsBase64 } from "../helpers";
+import { SmartInsightsSection } from "../components/SmartInsightsSection";
 
 const SCREEN_W = Dimensions.get("window").width;
 // Card has 18px padding each side; photos have 4px gaps; screen cards are full-width
@@ -407,6 +408,7 @@ export function ChildDetailScreen({
 	foodLog = [],
 	weightPreference = "lbs",
 	isPro = false,
+	user,
 	onUpgradePro,
 	onBack,
 	onEdit,
@@ -604,46 +606,26 @@ export function ChildDetailScreen({
 					</ProLock>
 				)}
 
-				{/* ── Smart Insights (Pro, coming soon) ── */}
+				{/* ── Smart Insights (Pro) ── */}
 				{isPro ? (
 					<View style={[s.card, { gap: 14 }]}>
-						<View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-							<View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: "#ede8f7", alignItems: "center", justifyContent: "center" }}>
-								<Icon name="starFill" size={20} color="#7c3aed" />
-							</View>
-							<View style={{ flex: 1 }}>
-								<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-									<Text style={{ fontWeight: "800", fontSize: 16, color: C.primaryPinkDark }}>Smart Insights</Text>
-									<View style={{ backgroundColor: C.primaryPurple, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
-										<Text style={{ fontSize: 9, fontWeight: "800", color: "#fff", textTransform: "uppercase", letterSpacing: 0.5 }}>Coming Soon</Text>
-									</View>
-								</View>
-								<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>AI-powered growth & nutrition insights</Text>
-							</View>
-						</View>
-						<View style={{ backgroundColor: C.bgPurple, borderRadius: 14, padding: 14, gap: 10 }}>
-							{[
-								"Personalised growth trajectory based on WHO standards",
-								"Nutrition variety score and trend analysis",
-								"Weaning milestone progress and next steps",
-							].map((text, i) => (
-								<View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
-									<View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.primaryPurple, marginTop: 5 }} />
-									<Text style={{ fontSize: 13, color: C.mutedText, flex: 1 }}>{text}</Text>
-								</View>
-							))}
-						</View>
+						<SmartInsightsSection
+							child={child}
+							foodLog={foodLog}
+							weightLog={weightLog}
+							user={user}
+						/>
 					</View>
 				) : (
 					<ProLock title="Smart Insights" onUpgradePro={onUpgradePro}>
 						<View style={[s.card, { opacity: 0.35, gap: 14 }]}>
 							<View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
 								<View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: "#ede8f7", alignItems: "center", justifyContent: "center" }}>
-									<Icon name="starFill" size={20} color="#7c3aed" />
+									<Icon name="sparkle" size={20} color="#7c3aed" />
 								</View>
 								<View>
 									<Text style={{ fontWeight: "800", fontSize: 16, color: C.primaryPinkDark }}>Smart Insights</Text>
-									<Text style={{ fontSize: 12, color: C.mutedText }}>Coming Soon</Text>
+									<Text style={{ fontSize: 12, color: C.mutedText }}>AI-powered growth &amp; nutrition insights</Text>
 								</View>
 							</View>
 							<View style={{ backgroundColor: C.bgPurple, borderRadius: 14, height: 80 }} />
