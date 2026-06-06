@@ -25,7 +25,9 @@
       "Bash(atrm 2)",
       "Bash(atq)",
       "Bash(atrm 3)",
-      "Bash(node scripts/sendPushNotification.js)"
+      "Bash(node scripts/sendPushNotification.js)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\)['expo']; print\\('version:', d['version']\\); print\\('buildNumber:', d['ios']['buildNumber']\\); print\\('versionCode:', d['android']['versionCode']\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('engines:', d.get\\('engines',{}\\)\\); print\\('firebase-functions:', d.get\\('dependencies',{}\\).get\\('firebase-functions','?'\\)\\)\")"
     ]
   }
 }

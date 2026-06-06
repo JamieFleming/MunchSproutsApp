@@ -3,7 +3,8 @@ import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase";
-import { REACTIONS, MONTHS } from "./constants";
+import { REACTIONS, MONTHS, ALLERGENS } from "./constants";
+import { CATEGORY_THRESHOLDS, TOTAL_FOOD_MILESTONES, ALLERGEN_MILESTONES } from "./milestones";
 
 /**
  * Weekly featured recipe rotation.
@@ -244,17 +245,9 @@ export function formatWeight(valueKg, unit = "lbs") {
 	return oz === 0 ? `${lb}lb` : `${lb}lb ${oz}oz`;
 }
 
-// ── Milestone thresholds ───────────────────────────────────────────────────
-const MILESTONE_THRESHOLDS = [
-	{ count: 1,  icon: "star",        color: "#c49a10", bg: "#fef6d4" },
-	{ count: 5,  icon: "starFill",    color: "#9b7fe8", bg: "#ede8f7" },
-	{ count: 10, icon: "shieldCheck", color: "#3db87a", bg: "#e6f7ef" },
-	{ count: 25, icon: "crown",       color: "#e87a1a", bg: "#fde8d4" },
-];
-
 /**
  * Returns a map of { [entryId]: milestone[] } where each milestone has:
- *   { type, label, icon, color, bg, category?, count? }
+ *   { type, label, icon, color, bg, category?, count?, isAllergen?, allergenEmoji? }
  */
 export function computeMilestones(foodLog) {
 	const sorted = [...foodLog]
@@ -268,6 +261,7 @@ export function computeMilestones(foodLog) {
 	const result = {};
 	const seenEver = new Set();
 	const seenPerCat = {};
+	const seenAllergens = new Set();
 
 	for (const entry of sorted) {
 		const food = normalize(entry.name);
@@ -292,13 +286,27 @@ export function computeMilestones(foodLog) {
 		}
 		seenEver.add(food);
 
+		// Total unique food milestones (10 / 25 / 50 / 100)
+		const prevSize = seenEver.size - 1;
+		for (const tm of TOTAL_FOOD_MILESTONES) {
+			if (prevSize < tm.count && seenEver.size >= tm.count) {
+				badges.push({
+					type: `total_${tm.count}`,
+					label: tm.label,
+					icon: tm.icon,
+					color: tm.color,
+					bg: tm.bg,
+				});
+			}
+		}
+
 		// Per-category milestones (only on the first log of each unique food name per category)
 		for (const cat of cats) {
 			if (!seenPerCat[cat]) seenPerCat[cat] = new Set();
 			if (!seenPerCat[cat].has(food)) {
 				seenPerCat[cat].add(food);
 				const n = seenPerCat[cat].size;
-				const threshold = MILESTONE_THRESHOLDS.find((t) => t.count === n);
+				const threshold = CATEGORY_THRESHOLDS.find((t) => t.count === n);
 				if (threshold) {
 					badges.push({
 						type: `${n}_${cat}`,
@@ -313,10 +321,74 @@ export function computeMilestones(foodLog) {
 			}
 		}
 
+		// Allergen milestones — first time each allergen is logged
+		for (const allergenValue of (entry.allergens || [])) {
+			if (!seenAllergens.has(allergenValue)) {
+				seenAllergens.add(allergenValue);
+				const cfg = ALLERGEN_MILESTONES.find((m) => m.allergenValue === allergenValue);
+				if (cfg) {
+					badges.push({
+						type: cfg.type,
+						label: cfg.label,
+						icon: cfg.icon,
+						color: cfg.color,
+						bg: cfg.bg,
+						isAllergen: true,
+						allergenEmoji: cfg.emoji,
+					});
+				}
+			}
+		}
+
 		if (badges.length) result[entry.id] = badges;
 	}
 
 	return result;
+}
+
+/**
+ * Returns raw stats used for the milestone progress display in the child profile.
+ * { totalUnique, perCategory: { [cat]: count }, allergensTried: string[] }
+ */
+export function computeMilestoneStats(foodLog) {
+	const sorted = [...foodLog]
+		.filter((e) => e.id && e.name)
+		.sort((a, b) => {
+			const da = `${a.date || "1970-01-01"}T${a.time || "00:00"}`;
+			const db = `${b.date || "1970-01-01"}T${b.time || "00:00"}`;
+			return da.localeCompare(db);
+		});
+
+	const seenEver = new Set();
+	const seenPerCat = {};
+	const allergensTried = new Set();
+
+	for (const entry of sorted) {
+		const food = normalize(entry.name);
+		const cats =
+			Array.isArray(entry.categories) && entry.categories.length
+				? entry.categories
+				: entry.category
+					? [entry.category]
+					: [];
+
+		seenEver.add(food);
+		for (const cat of cats) {
+			if (!seenPerCat[cat]) seenPerCat[cat] = new Set();
+			seenPerCat[cat].add(food);
+		}
+		for (const allergen of (entry.allergens || [])) {
+			allergensTried.add(allergen);
+		}
+	}
+
+	return {
+		totalUnique: seenEver.size,
+		perCategory: Object.fromEntries(
+			Object.entries(seenPerCat).map(([k, v]) => [k, v.size]),
+		),
+		allergensTried: [...allergensTried],
+	};
 }
 
 export function buildHours() {

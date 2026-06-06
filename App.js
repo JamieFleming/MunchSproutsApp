@@ -395,6 +395,19 @@ function AddMenuSheet({ visible, onClose, onFood, onBottle, onWeight, insets }) 
 
 function MilestoneModal({ milestones, onClose }) {
 	const { C } = useTheme();
+	const isAllergenCelebration = (milestones || []).some((m) => m.isAllergen);
+	const headerEmoji =
+		isAllergenCelebration && milestones?.length === 1 && milestones[0].allergenEmoji
+			? milestones[0].allergenEmoji
+			: "🎉";
+	const headerBg = isAllergenCelebration && milestones?.length === 1
+		? milestones[0].bg
+		: C.bgPurple;
+	const title = isAllergenCelebration ? "New Allergen Introduced!" : "Milestone Unlocked!";
+	const subtitle = isAllergenCelebration
+		? "Amazing work introducing a new allergen safely!"
+		: "You're doing amazing — keep exploring new foods!";
+
 	return (
 		<Modal
 			visible={!!milestones}
@@ -426,12 +439,12 @@ function MilestoneModal({ milestones, onClose }) {
 							width: 72,
 							height: 72,
 							borderRadius: 36,
-							backgroundColor: C.bgPurple,
+							backgroundColor: headerBg,
 							alignItems: "center",
 							justifyContent: "center",
 							marginBottom: 16,
 						}}>
-						<Text style={{ fontSize: 36 }}>🎉</Text>
+						<Text style={{ fontSize: 36 }}>{headerEmoji}</Text>
 					</View>
 					<Text
 						style={{
@@ -441,7 +454,7 @@ function MilestoneModal({ milestones, onClose }) {
 							marginBottom: 6,
 							textAlign: "center",
 						}}>
-						Milestone Unlocked!
+						{title}
 					</Text>
 					<Text
 						style={{
@@ -450,7 +463,7 @@ function MilestoneModal({ milestones, onClose }) {
 							marginBottom: 20,
 							textAlign: "center",
 						}}>
-						You're doing amazing — keep exploring new foods!
+						{subtitle}
 					</Text>
 					<View style={{ width: "100%", gap: 10, marginBottom: 24 }}>
 						{(milestones || []).map((m) => (
@@ -473,7 +486,11 @@ function MilestoneModal({ milestones, onClose }) {
 										alignItems: "center",
 										justifyContent: "center",
 									}}>
-									<Icon name={m.icon} size={20} color={m.color} />
+									{m.isAllergen && m.allergenEmoji ? (
+										<Text style={{ fontSize: 20 }}>{m.allergenEmoji}</Text>
+									) : (
+										<Icon name={m.icon} size={20} color={m.color} />
+									)}
 								</View>
 								<Text
 									style={{
@@ -894,7 +911,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 					? `Added "${form.name}"`
 					: `"${form.name}" attempt #${existing.length + 1}`,
 			);
-			if (existing.length === 0 && isPro) {
+			if (existing.length === 0) {
 				const ms = computeMilestones([...childLog, newEntry]);
 				const triggered = ms[newId] || [];
 				if (triggered.length > 0) setMilestoneAlert(triggered);
@@ -1639,7 +1656,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						initialFilter={logFilter}
 						initialOpenKey={logOpenKey}
 						initialAllergenFilter={logAllergenFilter}
-						milestones={isPro ? computeMilestones(childLog) : {}}
+						milestones={computeMilestones(childLog)}
 						userMap={userMap}
 						currentUserId={user.uid}
 						onEdit={setEditEntry}

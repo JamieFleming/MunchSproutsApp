@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
 	View, Text, TouchableOpacity, ScrollView, Modal, TextInput,
 	Image, Platform, Dimensions, Alert, KeyboardAvoidingView,
@@ -8,8 +8,10 @@ import { useTheme, useStyles } from "../ThemeContext";
 import { Icon } from "../components/Icon";
 import { ZoomableImage } from "../components/ZoomableImage";
 import { DateField } from "../components/DatePickerModal";
-import { calcAgeWeeks, calcAgeMonths, formatDate, toMl, formatWeight, pickImageAsBase64 } from "../helpers";
+import { calcAgeWeeks, calcAgeMonths, formatDate, toMl, formatWeight, pickImageAsBase64, computeMilestoneStats } from "../helpers";
 import { SmartInsightsSection } from "../components/SmartInsightsSection";
+import { ALLERGENS, CATEGORIES } from "../constants";
+import { CATEGORY_THRESHOLDS, TOTAL_FOOD_MILESTONES, ALLERGEN_MILESTONES } from "../milestones";
 
 const SCREEN_W = Dimensions.get("window").width;
 // Card has 18px padding each side; photos have 4px gaps; screen cards are full-width
@@ -134,6 +136,197 @@ function ProLock({ title, onUpgradePro, children }) {
 					style={{ backgroundColor: "#2d1f5e", borderRadius: 12, paddingHorizontal: 24, paddingVertical: 11, marginTop: 4 }}>
 					<Text style={{ color: "#f5c842", fontWeight: "800", fontSize: 13 }}>Unlock with Pro</Text>
 				</TouchableOpacity>
+			</View>
+		</View>
+	);
+}
+
+// ── Circular progress ring ─────────────────────────────────────────────────────
+
+function CircleProgress({ size, strokeWidth, progress, color, trackColor }) {
+	const r = (size - strokeWidth) / 2;
+	const circ = 2 * Math.PI * r;
+	const offset = circ * (1 - Math.min(Math.max(progress, 0), 1));
+	const c = size / 2;
+	return (
+		<Svg width={size} height={size} style={{ transform: [{ rotate: "-90deg" }] }}>
+			<Circle cx={c} cy={c} r={r} fill="none" stroke={trackColor} strokeWidth={strokeWidth} />
+			{progress > 0 && (
+				<Circle
+					cx={c} cy={c} r={r}
+					fill="none"
+					stroke={color}
+					strokeWidth={strokeWidth}
+					strokeDasharray={`${circ} ${circ}`}
+					strokeDashoffset={offset}
+					strokeLinecap="round"
+				/>
+			)}
+		</Svg>
+	);
+}
+
+// ── Single milestone circle item ───────────────────────────────────────────────
+
+function MilestoneCircle({ size = 60, emoji, icon, iconColor, label, achieved, progress = 0, color = "#9b7fe8", bg = "#ede8f7" }) {
+	const GREY = "#d1d5db";
+	const ringColor = achieved ? color : GREY;
+	const trackColor = achieved ? color + "28" : "#f3f4f6";
+	const prog = achieved ? 1 : Math.max(progress, 0);
+	const innerR = (size - 10) / 2;
+
+	return (
+		<View style={{ alignItems: "center", width: size + 16 }}>
+			<View style={{ width: size, height: size }}>
+				<CircleProgress size={size} strokeWidth={5} progress={prog} color={ringColor} trackColor={trackColor} />
+				{/* Center fill */}
+				<View style={{
+					position: "absolute",
+					top: 5, left: 5,
+					width: size - 10, height: size - 10,
+					borderRadius: innerR,
+					backgroundColor: achieved ? bg : "#f9fafb",
+					alignItems: "center", justifyContent: "center",
+				}}>
+					{emoji ? (
+						<Text style={{ fontSize: Math.round(size * 0.35), opacity: achieved ? 1 : 0.35 }}>{emoji}</Text>
+					) : (
+						<Icon name={icon || "star"} size={Math.round(size * 0.3)} color={achieved ? (iconColor || color) : GREY} />
+					)}
+				</View>
+				{/* Gold star badge when achieved */}
+				{achieved && (
+					<View style={{
+						position: "absolute", top: -2, right: -2,
+						width: 18, height: 18, borderRadius: 9,
+						backgroundColor: "#f5c842",
+						alignItems: "center", justifyContent: "center",
+						borderWidth: 1.5, borderColor: "#fff",
+					}}>
+						<Icon name="star" size={9} color="#2d1f5e" />
+					</View>
+				)}
+			</View>
+			<Text style={{
+				fontSize: 10, fontWeight: "700",
+				color: achieved ? color : GREY,
+				textAlign: "center", marginTop: 5,
+				maxWidth: size + 16,
+			}} numberOfLines={2}>{label}</Text>
+		</View>
+	);
+}
+
+// ── Milestones section ─────────────────────────────────────────────────────────
+
+function MilestonesSection({ foodLog }) {
+	const { C } = useTheme();
+	const s = useStyles();
+
+	const stats = useMemo(() => computeMilestoneStats(foodLog), [foodLog]);
+	const { totalUnique, perCategory, allergensTried } = stats;
+
+	const totalProgress = useMemo(() =>
+		TOTAL_FOOD_MILESTONES.map((m, i) => {
+			const achieved = totalUnique >= m.count;
+			const prevCount = i === 0 ? 0 : TOTAL_FOOD_MILESTONES[i - 1].count;
+			const progress = achieved ? 1 : Math.max((totalUnique - prevCount) / (m.count - prevCount), 0);
+			return { ...m, achieved, progress };
+		}), [totalUnique]);
+
+	const catProgress = useMemo(() =>
+		CATEGORIES.map((cat) => {
+			const n = perCategory[cat.value] || 0;
+			const achievedTiers = CATEGORY_THRESHOLDS.filter((t) => n >= t.count);
+			const nextTier = CATEGORY_THRESHOLDS.find((t) => n < t.count);
+			const topTier = achievedTiers[achievedTiers.length - 1] || null;
+			const prevCount = topTier ? topTier.count : 0;
+			const nextCount = nextTier ? nextTier.count : CATEGORY_THRESHOLDS[CATEGORY_THRESHOLDS.length - 1].count;
+			const progress = nextTier
+				? Math.max((n - prevCount) / (nextCount - prevCount), 0)
+				: 1;
+			return { ...cat, n, achieved: achievedTiers.length > 0, topTier, progress };
+		}), [perCategory]);
+
+	const allergenProgress = useMemo(() =>
+		ALLERGEN_MILESTONES.map((m) => ({
+			...m,
+			achieved: allergensTried.includes(m.allergenValue),
+		})), [allergensTried]);
+
+	const nextTotalMilestone = TOTAL_FOOD_MILESTONES.find((m) => totalUnique < m.count);
+
+	return (
+		<View style={s.card}>
+			<View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
+				<Text style={{ fontSize: 20 }}>🏆</Text>
+				<Text style={s.sectionTitle}>Milestones</Text>
+			</View>
+			<Text style={{ fontSize: 12, color: C.mutedText, marginBottom: 20 }}>
+				{totalUnique === 0
+					? "Start logging foods to earn milestones!"
+					: nextTotalMilestone
+						? `${totalUnique} unique food${totalUnique !== 1 ? "s" : ""} tried · ${nextTotalMilestone.count - totalUnique} until next milestone`
+						: `${totalUnique} unique foods tried · All food milestones unlocked! 🎉`}
+			</Text>
+
+			{/* Food Explorer */}
+			<Text style={{ fontSize: 11, fontWeight: "800", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 12 }}>
+				Food Explorer
+			</Text>
+			<View style={{ flexDirection: "row", justifyContent: "space-around", marginBottom: 24 }}>
+				{totalProgress.map((m) => (
+					<MilestoneCircle
+						key={m.count}
+						size={62}
+						icon={m.icon}
+						iconColor={m.color}
+						label={m.label}
+						achieved={m.achieved}
+						progress={m.progress}
+						color={m.color}
+						bg={m.bg}
+					/>
+				))}
+			</View>
+
+			{/* Allergen Introductions */}
+			<Text style={{ fontSize: 11, fontWeight: "800", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 12 }}>
+				Allergen Introductions
+			</Text>
+			<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 24, justifyContent: "space-around" }}>
+				{allergenProgress.map((m) => (
+					<MilestoneCircle
+						key={m.allergenValue}
+						size={56}
+						emoji={m.emoji}
+						label={m.allergenValue}
+						achieved={m.achieved}
+						progress={m.achieved ? 1 : 0}
+						color={m.color}
+						bg={m.bg}
+					/>
+				))}
+			</View>
+
+			{/* Category Champions */}
+			<Text style={{ fontSize: 11, fontWeight: "800", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 12 }}>
+				Category Champions
+			</Text>
+			<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "space-around" }}>
+				{catProgress.map((cat) => (
+					<MilestoneCircle
+						key={cat.value}
+						size={56}
+						icon={cat.topTier?.icon || "star"}
+						iconColor={cat.topTier?.color || cat.color}
+						label={`${cat.value}${cat.n > 0 ? ` · ${cat.n}` : ""}`}
+						achieved={cat.achieved}
+						progress={cat.progress}
+						color={cat.topTier?.color || cat.color}
+						bg={cat.topTier?.bg || cat.bg}
+					/>
+				))}
 			</View>
 		</View>
 	);
@@ -633,6 +826,9 @@ export function ChildDetailScreen({
 						</View>
 					</ProLock>
 				)}
+
+				{/* ── Milestones ── */}
+				<MilestonesSection foodLog={foodLog} />
 
 				{/* ── Photo Gallery (Pro) ── */}
 				{isPro ? (

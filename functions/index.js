@@ -378,6 +378,138 @@ exports.generateInviteCode = onCall(async (request) => {
 // Validates an invite code and grants the calling user access to that child.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// generateWeeklyMealPlan
+// AI-powered 7-day meal plan generation. Pro only, 1 generation per day.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const DAY_KEYS_PLAN = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
+const MEAL_KEYS_PLAN = ["breakfast","lunch","dinner","snacks"];
+
+const WEEKLY_PLAN_SYSTEM = `You are MunchSprouts Weekly Meal Planner — an expert baby weaning assistant following NHS guidelines precisely.
+
+Generate a personalised meal plan (up to 7 days) for a baby or toddler.
+
+REQUIREMENTS:
+- Each day in daysToGenerate MUST have exactly ONE item in each slot: breakfast, lunch, dinner, snacks
+- Days NOT in daysToGenerate should still appear in the JSON but with empty arrays for all meal slots
+- All meals must be age-appropriate, safe, and varied
+- Distribute protein, vegetables, fruit, grains, and dairy across the week for nutritional balance
+- Keep meals practical: 10–25 minutes prep, 4–7 ingredients max
+
+LEFTOVER OPTIMISATION (important!):
+- Cleverly reuse ingredients across days to reduce waste and save time
+- Examples: Monday dinner uses salmon → Tuesday lunch uses leftover salmon in rice bowl
+- Mark reused-ingredient meals with "isLeftover": true
+- Include the source in the title: "Leftover Salmon Rice Bowl", "Chicken & Veggie Pasta (from Sunday's roast)"
+- Aim for at least 2–3 leftover connections across the week
+
+PANTRY PRIORITY:
+- If pantry items are provided, incorporate them into meals where appropriate
+
+CUSTOM PREFERENCES (apply when provided):
+- additionalPreferences: Incorporate these food style/type preferences where natural and safe
+- dislikedFoods: Avoid these foods this week (in addition to allergensAvoid)
+
+SAFETY (never break these):
+- Never suggest whole grapes, whole nuts, hard raw carrot/apple chunks, popcorn, or any choking hazard
+- Never add salt, sugar, honey (for under 12 months), or artificial sweeteners
+- Never suggest allergens listed in allergensAvoid
+- Age-appropriate textures: under 8m = smooth/soft mashed or soft finger foods; 8–10m = mashed with soft lumps; 10–12m = soft chopped; 12m+ = family foods chopped small
+- Never provide medical advice or diagnose allergies
+
+LIKEDFOODS: Incorporate preferred foods where natural and safe.
+
+Return ONLY valid JSON — no markdown fences, no extra text:
+{
+  "plan": {
+    "monday":    {"breakfast":[{"title":"","description":"","ingredients":[],"category":"","isLeftover":false}],"lunch":[...],"dinner":[...],"snacks":[...]},
+    "tuesday":   {"breakfast":[...],"lunch":[...],"dinner":[...],"snacks":[...]},
+    "wednesday": {"breakfast":[...],"lunch":[...],"dinner":[...],"snacks":[...]},
+    "thursday":  {"breakfast":[...],"lunch":[...],"dinner":[...],"snacks":[...]},
+    "friday":    {"breakfast":[...],"lunch":[...],"dinner":[...],"snacks":[...]},
+    "saturday":  {"breakfast":[...],"lunch":[...],"dinner":[...],"snacks":[...]},
+    "sunday":    {"breakfast":[...],"lunch":[...],"dinner":[...],"snacks":[...]}
+  },
+  "leftoverSummary": "Brief 1–2 sentence description of the leftover strategy used this week",
+  "disclaimer": "Meal plans are AI-generated suggestions for inspiration only. Always follow safe weaning guidance and consult a healthcare professional regarding allergies or feeding concerns."
+}`;
+
+exports.generateWeeklyMealPlan = onCall(
+	{ secrets: [OPENAI_API_KEY], region: "europe-west2" },
+	async (request) => {
+		if (!request.auth) throw new HttpsError("unauthenticated", "Must be signed in.");
+
+		const uid     = request.auth.uid;
+		const payload = request.data;
+
+		if (payload.isPro !== true) {
+			throw new HttpsError("permission-denied", "Weekly Meal Planner requires a Pro subscription.");
+		}
+		if (!payload?.ageMonths && payload?.ageMonths !== 0) {
+			throw new HttpsError("invalid-argument", "Missing child age.");
+		}
+
+		// Rate limit: 1 generation per day
+		const db       = getFirestore();
+		const today    = todayKey();
+		const usageRef = db.doc(`users/${uid}/weeklyPlanUsage/${today}`);
+		const usageSnap = await usageRef.get();
+		if (usageSnap.exists && (usageSnap.data().count || 0) >= 1) {
+			throw new HttpsError("resource-exhausted", "daily_limit — You've already generated a meal plan today. Come back tomorrow!");
+		}
+
+		const userMessage = JSON.stringify({
+			ageMonths:             payload.ageMonths,
+			childName:             payload.childName || "Baby",
+			allergensAvoid:        payload.allergensAvoid || [],
+			likedFoods:            (payload.likedFoods            || []).slice(0, 20),
+			pantryItems:           (payload.pantryItems           || []).slice(0, 30),
+			daysToGenerate:        payload.daysToGenerate         || DAY_KEYS_PLAN,
+			additionalPreferences: payload.additionalPreferences  || "",
+			dislikedFoods:         (payload.dislikedFoods         || []).slice(0, 20),
+		});
+
+		const openai = new OpenAI({ apiKey: OPENAI_API_KEY.value() });
+		let plan, leftoverSummary, disclaimer;
+
+		try {
+			const res    = await openai.chat.completions.create({
+				model:       MODEL,
+				temperature: 0.75,
+				messages: [
+					{ role: "system", content: WEEKLY_PLAN_SYSTEM },
+					{ role: "user",   content: userMessage },
+				],
+			});
+			const result = JSON.parse(cleanJson(res.choices[0].message.content.trim()));
+			if (!result.plan || !result.plan.monday) throw new Error("Bad shape");
+
+			// Validate all 7 days and 4 meal slots exist
+			const validatedPlan = {};
+			DAY_KEYS_PLAN.forEach((day) => {
+				validatedPlan[day] = {};
+				MEAL_KEYS_PLAN.forEach((meal) => {
+					validatedPlan[day][meal] = Array.isArray(result.plan[day]?.[meal])
+						? result.plan[day][meal]
+						: [];
+				});
+			});
+
+			plan           = validatedPlan;
+			leftoverSummary = result.leftoverSummary || "";
+			disclaimer     = result.disclaimer || "Meal plans are AI-generated suggestions for inspiration only.";
+		} catch (err) {
+			console.error("[weeklyPlan] OpenAI error:", err.message);
+			throw new HttpsError("internal", "Could not generate meal plan. Please try again.");
+		}
+
+		await usageRef.set({ count: 1, date: today }, { merge: true });
+
+		return { plan, leftoverSummary, disclaimer };
+	},
+);
+
 exports.joinViaInviteCode = onCall(async (request) => {
 	const uid   = request.auth?.uid;
 	const email = request.auth?.token?.email || "";

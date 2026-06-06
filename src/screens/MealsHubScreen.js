@@ -7,6 +7,7 @@ import { parseIngredient } from "../helpers";
 import { RecipesScreen } from "./RecipesScreen";
 import { ShoppingListScreen } from "./ShoppingListScreen";
 import { SmartMealIdeasScreen } from "./SmartMealIdeasScreen";
+import { MealPlannerScreen } from "./MealPlannerScreen";
 
 // ── Firestore helper — writes items directly to the shopping list doc ─────────
 
@@ -336,9 +337,8 @@ function MealsHub({ onNavigate, isPro, onUpgradePro }) {
 					iconColor="#16a34a"
 					accentColor="#16a34a"
 					title="Meal Planner"
-					subtitle="Plan your week at a glance."
-					badge="Coming Soon"
-					disabled
+					subtitle="Plan your week, track food exposure & get AI suggestions."
+					onPress={() => onNavigate("mealPlanner")}
 				/>
 			</View>
 			<HubCard
@@ -415,7 +415,7 @@ export function MealsHubScreen({
 	resetKey,
 }) {
 	const { C } = useTheme();
-	const [view, setView] = useState("hub"); // "hub" | "recipes" | "shopping" | "mealIdeas"
+	const [view, setView] = useState("hub"); // "hub" | "recipes" | "shopping" | "mealIdeas" | "mealPlanner"
 
 	// Tapping Meals nav tab while already on Meals → return to hub
 	useEffect(() => {
@@ -454,7 +454,11 @@ export function MealsHubScreen({
 			{/* Back breadcrumb — only in sub-pages */}
 			{view !== "hub" && (
 				<BackBreadcrumb
-					label={view === "mealIdeas" ? "Smart Meal Ideas" : "Meals"}
+					label={
+						view === "mealIdeas"    ? "Smart Meal Ideas"
+						: view === "mealPlanner" ? "Meal Planner"
+						: "Meals"
+					}
 					onBack={() => {
 						if (view === "recipes" && jumpToRecipeId) onJumpHandled?.();
 						setView("hub");
@@ -513,6 +517,22 @@ export function MealsHubScreen({
 					onUpgradePro={onUpgradePro}
 					onAddToShoppingList={handleAddToShoppingListNoNav}
 					onLogRecipe={onLogRecipe}
+				/>
+			</View>
+
+			{/* Meal Planner sub-page */}
+			<View
+				style={{ flex: 1, display: view === "mealPlanner" ? "flex" : "none" }}>
+				<MealPlannerScreen
+					user={user}
+					isPro={isPro}
+					onUpgradePro={onUpgradePro}
+					activeChild={activeChild}
+					recipes={recipes}
+					smartRecipes={smartRecipes}
+					onAddToShoppingList={handleAddToShoppingListNoNav}
+					onNavigateToShopping={() => setView("shopping")}
+					childFoodLog={childFoodLog}
 				/>
 			</View>
 		</View>
