@@ -1240,24 +1240,40 @@ export function MoreScreen({
 
 								{/* ── Date range ── */}
 								<Text style={{ fontSize: 11, fontWeight: "700", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Date Range</Text>
-								<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+								<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
 									{[
 										{ key: "7d",     label: "Last 7 days"  },
-										{ key: "30d",    label: "Last 30 days" },
-										{ key: "3m",     label: "3 months"     },
-										{ key: "6m",     label: "6 months"     },
-										{ key: "all",    label: "All time"     },
-										{ key: "custom", label: "Custom"       },
-									].map(({ key, label }) => {
+										{ key: "30d",    label: "Last 30 days", proOnly: true },
+										{ key: "3m",     label: "3 months",     proOnly: true },
+										{ key: "6m",     label: "6 months",     proOnly: true },
+										{ key: "all",    label: "All time",     proOnly: true },
+										{ key: "custom", label: "Custom",       proOnly: true },
+									].map(({ key, label, proOnly }) => {
+										const locked = proOnly && !isPro;
 										const active = exportRange === key;
 										return (
-											<TouchableOpacity key={key} onPress={() => setExportRange(key)} activeOpacity={0.75}
-												style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: active ? C.primaryPurple : C.bgPurple, borderWidth: 1.5, borderColor: active ? C.primaryPurple : "transparent" }}>
+											<TouchableOpacity key={key} onPress={() => locked ? onUpgradePro?.() : setExportRange(key)} activeOpacity={0.75}
+												style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: active ? C.primaryPurple : C.bgPurple, borderWidth: 1.5, borderColor: active ? C.primaryPurple : "transparent", opacity: locked ? 0.55 : 1 }}>
 												<Text style={{ fontSize: 13, fontWeight: "700", color: active ? "#fff" : C.mutedText }}>{label}</Text>
+												{locked && (
+													<View style={{ backgroundColor: "#f5c84233", borderRadius: 999, paddingHorizontal: 5, paddingVertical: 1 }}>
+														<Text style={{ fontSize: 9, fontWeight: "800", color: "#c8920a" }}>PRO</Text>
+													</View>
+												)}
 											</TouchableOpacity>
 										);
 									})}
 								</View>
+								{!isPro && (
+									<TouchableOpacity onPress={onUpgradePro} activeOpacity={0.85}
+										style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#fef9c3", borderRadius: 10, padding: 10, marginBottom: 14, borderWidth: 1, borderColor: "#f5c84240" }}>
+										<Icon name="crown" size={13} color="#c8920a" />
+										<Text style={{ flex: 1, fontSize: 12, color: "#c8920a", fontWeight: "600" }}>
+											Upgrade to Pro to export more than 7 days
+										</Text>
+										<Icon name="chevRight" size={12} color="#c8920a" />
+									</TouchableOpacity>
+								)}
 
 								{/* Custom date inputs */}
 								{exportRange === "custom" && (
@@ -1360,25 +1376,25 @@ export function MoreScreen({
 
 			{/* Gallery */}
 			<MoreRow
-				icon="Camera" iconBg={C.bgPurple}
+				icon="Camera" iconBg={isPro ? C.bgPurple : C.bgPurple}
 				label="Photo Gallery"
-				sublabel={`${photoEntries.length} food photo${photoEntries.length !== 1 ? "s" : ""} saved`}
-				onPress={() => setShowGallery(true)}
-			/>
-
-			{/* Data Export */}
-			<SectionLabel mt={4}>Data</SectionLabel>
-			<MoreRow
-				icon="pdf" iconBg={isPro ? "#ede8f7" : C.bgPurple}
-				label="Export as PDF"
-				sublabel={isPro ? "Download your food, milk & allergen data as a PDF" : "Pro feature — upgrade to unlock"}
+				sublabel={isPro ? `${photoEntries.length} food photo${photoEntries.length !== 1 ? "s" : ""} saved` : "Pro feature — view photos attached to food entries"}
 				color={isPro ? undefined : C.mutedText}
-				onPress={isPro ? () => setShowExportModal(true) : onUpgradePro}
+				onPress={isPro ? () => setShowGallery(true) : onUpgradePro}
 				right={isPro ? undefined : (
 					<View style={{ backgroundColor: C.warningStroke, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
 						<Text style={{ fontSize: 10, fontWeight: "700", color: C.white }}>PRO</Text>
 					</View>
 				)}
+			/>
+
+			{/* Data Export */}
+			<SectionLabel mt={4}>Data</SectionLabel>
+			<MoreRow
+				icon="pdf" iconBg="#ede8f7"
+				label="Export as PDF"
+				sublabel={isPro ? "Download your food, milk & allergen data as a PDF" : "Last 7 days free · Upgrade Pro for full history"}
+				onPress={() => { if (!isPro) setExportRange("7d"); setShowExportModal(true); }}
 			/>
 
 			{/* Account — password/sign-out moved into profile edit modal (tap the card above) */}

@@ -1,47 +1,67 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import { useTheme } from "../ThemeContext";
 import { Icon } from "../components/Icon";
 import { parseIngredient } from "../helpers";
 import { RecipesScreen } from "./RecipesScreen";
-import { ShoppingListScreen } from "./ShoppingListScreen";
+import { ShoppingListScreen, loadAllLists } from "./ShoppingListScreen";
 import { SmartMealIdeasScreen } from "./SmartMealIdeasScreen";
 import { MealPlannerScreen } from "./MealPlannerScreen";
 
-// ── Firestore helper — writes items directly to the shopping list doc ─────────
+// ── Firestore helper — writes items to a specific list ────────────────────────
 
 const genId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
-async function appendToShoppingList(
-	userId,
-	childId,
-	recipeId,
-	recipeTitle,
-	ingredients,
-) {
+async function appendToShoppingList(userId, list, recipeId, recipeTitle, ingredients, addedByName) {
 	const { doc, getDoc, setDoc } = await import("firebase/firestore");
 	const { db } = await import("../../firebase");
-	const ref = childId
-		? doc(db, "children", childId, "lists", "shopping")
-		: doc(db, "users", userId, "lists", "shopping");
+	const ref = list.isShared && list.childId
+		? doc(db, "children", list.childId, "lists", list.id)
+		: doc(db, "users", userId, "lists", list.id);
 	const snap = await getDoc(ref);
 	const existing = snap.exists() ? snap.data().items || [] : [];
 	const newItems = ingredients.map((ing) => {
 		const { name, quantity } = parseIngredient(ing);
-		return {
-			id: genId(),
-			name,
-			quantity,
-			checked: false,
-			recipeId,
-			recipeTitle,
-		};
+		return { id: genId(), name, quantity, checked: false, recipeId, recipeTitle, addedBy: userId, addedByName };
 	});
-	await setDoc(
-		ref,
-		{ items: [...newItems, ...existing], updatedAt: new Date().toISOString() },
-		{ merge: true },
+	await setDoc(ref, { items: [...newItems, ...existing], updatedAt: new Date().toISOString() }, { merge: true });
+}
+
+// ── ListPickerModal — used by recipe/meal add flows ────────────────────────────
+
+function ListPickerModal({ visible, lists, loading, onSelect, onClose }) {
+	const { C } = useTheme();
+	return (
+		<Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+			<TouchableOpacity style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)" }} activeOpacity={1} onPress={onClose} />
+			<View style={{ backgroundColor: C.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 8, paddingBottom: 40 }}>
+				<View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: C.borderLight, alignSelf: "center", marginBottom: 16 }} />
+				<Text style={{ fontSize: 17, fontWeight: "800", color: C.textCharcoal, paddingHorizontal: 20, marginBottom: 8 }}>
+					Add to which list?
+				</Text>
+				{loading ? (
+					<View style={{ paddingVertical: 24, alignItems: "center" }}>
+						<ActivityIndicator color={C.primaryPurple} />
+					</View>
+				) : lists.map((list) => (
+					<TouchableOpacity
+						key={list.id}
+						onPress={() => onSelect(list)}
+						activeOpacity={0.8}
+						style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
+						<View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: list.isShared ? "#d4eef5" : C.bgPurple, alignItems: "center", justifyContent: "center" }}>
+							<Icon name={list.isShared ? "users" : "cart"} size={17} color={list.isShared ? "#2a5f8f" : C.primaryPurple} />
+						</View>
+						<View style={{ flex: 1 }}>
+							<Text style={{ fontSize: 15, fontWeight: "700", color: C.textCharcoal }}>{list.name}</Text>
+							{list.isShared && <Text style={{ fontSize: 11, color: "#2a5f8f", marginTop: 1 }}>Shared with family</Text>}
+						</View>
+						<Icon name="chevRight" size={15} color={C.mutedText} />
+					</TouchableOpacity>
+				))}
+			</View>
+		</Modal>
 	);
 }
 
@@ -322,16 +342,12 @@ function MealsHub({ onNavigate, isPro, onUpgradePro }) {
 			<View style={{ flexDirection: "row", gap: 14 }}>
 				<HubCard
 					icon="cart"
-					iconBg={isPro ? "#dbeafe" : "#fef9c3"}
-					iconColor={isPro ? "#1d4ed8" : "#c8920a"}
-					accentColor={isPro ? "#1d4ed8" : "#c8920a"}
+					iconBg="#dbeafe"
+					iconColor="#1d4ed8"
+					accentColor="#1d4ed8"
 					title="Shopping List"
-					subtitle={
-						isPro
-							? "Add items and import ingredients from recipes."
-							: "Upgrade to Pro to unlock."
-					}
-					badge={isPro ? null : "Pro"}
+					subtitle={isPro ? "Multiple lists · share with family · import from recipes." : "Build your list and import ingredients from recipes."}
+					badge={isPro ? "Pro" : null}
 					onPress={() => onNavigate("shopping")}
 				/>
 				<HubCard
@@ -420,6 +436,12 @@ export function MealsHubScreen({
 	const { C } = useTheme();
 	const [view, setView] = useState("hub"); // "hub" | "recipes" | "shopping" | "mealIdeas" | "mealPlanner"
 
+	// ── List picker state ──────────────────────────────────────────────────────
+	const [showPicker,   setShowPicker]   = useState(false);
+	const [pickerLists,  setPickerLists]  = useState([]);
+	const [pickerLoading, setPickerLoading] = useState(false);
+	const [pendingAdd,   setPendingAdd]   = useState(null); // { recipeId, recipeTitle, ingredients, navigate }
+
 	// Tapping Meals nav tab while already on Meals → return to hub
 	useEffect(() => {
 		if (resetKey > 0) setView("hub");
@@ -430,27 +452,56 @@ export function MealsHubScreen({
 		if (jumpToRecipeId) setView("recipes");
 	}, [jumpToRecipeId]);
 
-	// ── Add recipe ingredients — navigates to shopping list so user sees result ─
-	const handleAddToShoppingList = async (
-		recipeId,
-		recipeTitle,
-		ingredients,
-	) => {
-		if (!user?.uid) throw new Error("Not signed in");
-		await appendToShoppingList(user.uid, activeChild?.id || null, recipeId, recipeTitle, ingredients);
-		setView("shopping");
+	// ── Shared add-to-list flow ────────────────────────────────────────────────
+	const triggerAdd = async (recipeId, recipeTitle, ingredients, navigate) => {
+		if (!user?.uid) return;
+		const addedByName = user.displayName || user.email?.split("@")[0] || "You";
+		if (!isPro) {
+			// Free users: always write to default personal list
+			const defaultList = { id: "shopping", name: "Shopping List", isShared: false, childId: null };
+			await appendToShoppingList(user.uid, defaultList, recipeId, recipeTitle, ingredients, addedByName);
+			if (navigate) setView("shopping");
+			return;
+		}
+		// Pro: load lists, show picker if multiple
+		setPickerLoading(true);
+		setPendingAdd({ recipeId, recipeTitle, ingredients, navigate, addedByName });
+		setShowPicker(true);
+		const childId = activeChild?.id || null;
+		const lists = await loadAllLists(user.uid, childId);
+		setPickerLists(lists);
+		setPickerLoading(false);
+
+		// If only one list skip the picker
+		if (lists.length === 1) {
+			setShowPicker(false);
+			setPendingAdd(null);
+			await appendToShoppingList(user.uid, lists[0], recipeId, recipeTitle, ingredients, addedByName);
+			if (navigate) setView("shopping");
+		}
 	};
 
-	// ── Add ingredients from Smart Meal Ideas — stays on the same screen ────────
-	const handleAddToShoppingListNoNav = async (
-		recipeId,
-		recipeTitle,
-		ingredients,
-	) => {
-		if (!user?.uid) throw new Error("Not signed in");
-		await appendToShoppingList(user.uid, activeChild?.id || null, recipeId, recipeTitle, ingredients);
-		// Intentionally no navigation — SmartMealIdeasScreen shows its own success state
+	const handlePickerSelect = async (list) => {
+		setShowPicker(false);
+		if (!pendingAdd || !user?.uid) return;
+		const { recipeId, recipeTitle, ingredients, navigate, addedByName } = pendingAdd;
+		setPendingAdd(null);
+		await appendToShoppingList(user.uid, list, recipeId, recipeTitle, ingredients, addedByName);
+		if (navigate) setView("shopping");
 	};
+
+	const handlePickerClose = () => {
+		setShowPicker(false);
+		setPendingAdd(null);
+	};
+
+	// ── Add recipe ingredients — navigates to shopping list so user sees result ─
+	const handleAddToShoppingList = (recipeId, recipeTitle, ingredients) =>
+		triggerAdd(recipeId, recipeTitle, ingredients, true);
+
+	// ── Add ingredients from Smart Meal Ideas / Meal Planner — no navigation ───
+	const handleAddToShoppingListNoNav = (recipeId, recipeTitle, ingredients) =>
+		triggerAdd(recipeId, recipeTitle, ingredients, false);
 
 	return (
 		<View style={{ flex: 1, backgroundColor: C.screen }}>
@@ -491,7 +542,7 @@ export function MealsHubScreen({
 					user={user}
 					jumpToRecipeId={jumpToRecipeId}
 					onJumpHandled={onJumpHandled}
-					onAddToShoppingList={isPro ? handleAddToShoppingList : null}
+					onAddToShoppingList={handleAddToShoppingList}
 					smartRecipes={smartRecipes}
 					onDeleteSmartRecipe={onDeleteSmartRecipe}
 					onRateSmartRecipe={onRateSmartRecipe}
@@ -511,8 +562,7 @@ export function MealsHubScreen({
 			</View>
 
 			{/* Smart Meal Ideas sub-page — always mounted so generated recipes survive navigation */}
-			<View
-				style={{ flex: 1, display: view === "mealIdeas" ? "flex" : "none" }}>
+			<View style={{ flex: 1, display: view === "mealIdeas" ? "flex" : "none" }}>
 				<SmartMealIdeasScreen
 					child={activeChild}
 					foodLog={childFoodLog}
@@ -525,8 +575,7 @@ export function MealsHubScreen({
 			</View>
 
 			{/* Meal Planner sub-page */}
-			<View
-				style={{ flex: 1, display: view === "mealPlanner" ? "flex" : "none" }}>
+			<View style={{ flex: 1, display: view === "mealPlanner" ? "flex" : "none" }}>
 				<MealPlannerScreen
 					user={user}
 					isPro={isPro}
@@ -539,6 +588,15 @@ export function MealsHubScreen({
 					childFoodLog={childFoodLog}
 				/>
 			</View>
+
+			{/* List picker — shown when Pro user adds from any recipe flow */}
+			<ListPickerModal
+				visible={showPicker}
+				lists={pickerLists}
+				loading={pickerLoading}
+				onSelect={handlePickerSelect}
+				onClose={handlePickerClose}
+			/>
 		</View>
 	);
 }

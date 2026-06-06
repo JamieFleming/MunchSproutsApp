@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
 	View, Text, TextInput, TouchableOpacity, Modal, Alert,
-	ScrollView, Platform, ActivityIndicator,
+	ScrollView, Platform, ActivityIndicator, KeyboardAvoidingView,
 	Keyboard, Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,52 +12,409 @@ import { parseIngredient } from "../helpers";
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const genId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+const DEFAULT_LIST_ID = "shopping";
 
-// ── Firestore helpers (dynamic imports to avoid bundle issues) ─────────────────
+// ── Firestore helpers ─────────────────────────────────────────────────────────
 
-async function loadItems(userId, childId) {
+function listDocSegments(userId, list) {
+	if (list.isShared && list.childId) {
+		return ["children", list.childId, "lists", list.id];
+	}
+	return ["users", userId, "lists", list.id];
+}
+
+export async function loadAllLists(userId, childId) {
 	try {
-		const { doc, getDoc, setDoc } = await import("firebase/firestore");
-		const { db }                  = await import("../../firebase");
+		const { collection, getDocs } = await import("firebase/firestore");
+		const { db } = await import("../../firebase");
 
+		const personalSnap = await getDocs(collection(db, "users", userId, "lists"));
+		const personal = personalSnap.docs.map((d) => ({
+			id: d.id,
+			name: d.data().name || "Shopping List",
+			isShared: false,
+			childId: null,
+		}));
+
+		let shared = [];
 		if (childId) {
-			// Child-based path — shared between all users with access to this child
-			const childSnap = await getDoc(doc(db, "children", childId, "lists", "shopping"));
-			const childItems = childSnap.exists() ? (childSnap.data().items || []) : [];
-			if (childItems.length > 0) return childItems;
-
-			// First load after migration: try old user path and copy over
-			const userSnap  = await getDoc(doc(db, "users", userId, "lists", "shopping"));
-			const userItems = userSnap.exists() ? (userSnap.data().items || []) : [];
-			if (userItems.length > 0) {
-				await setDoc(
-					doc(db, "children", childId, "lists", "shopping"),
-					{ items: userItems, updatedAt: new Date().toISOString() },
-					{ merge: true },
-				);
-			}
-			return userItems;
+			const sharedSnap = await getDocs(collection(db, "children", childId, "lists"));
+			shared = sharedSnap.docs.map((d) => ({
+				id: d.id,
+				name: d.data().name || "Shared List",
+				isShared: true,
+				childId,
+			}));
 		}
 
-		const snap = await getDoc(doc(db, "users", userId, "lists", "shopping"));
+		const all = [...personal, ...shared];
+		if (all.length === 0) {
+			return [{ id: DEFAULT_LIST_ID, name: "Shopping List", isShared: false, childId: null }];
+		}
+		return all;
+	} catch {
+		return [{ id: DEFAULT_LIST_ID, name: "Shopping List", isShared: false, childId: null }];
+	}
+}
+
+async function loadListItems(userId, list) {
+	try {
+		const { doc, getDoc } = await import("firebase/firestore");
+		const { db } = await import("../../firebase");
+		const snap = await getDoc(doc(db, ...listDocSegments(userId, list)));
 		return snap.exists() ? (snap.data().items || []) : [];
 	} catch { return []; }
 }
 
-async function persistItems(userId, childId, items) {
+async function persistListItems(userId, list, items) {
 	try {
 		const { doc, setDoc } = await import("firebase/firestore");
-		const { db }          = await import("../../firebase");
-		const ref = childId
-			? doc(db, "children", childId, "lists", "shopping")
-			: doc(db, "users", userId, "lists", "shopping");
-		await setDoc(ref, { items, updatedAt: new Date().toISOString() }, { merge: true });
+		const { db } = await import("../../firebase");
+		await setDoc(
+			doc(db, ...listDocSegments(userId, list)),
+			{ name: list.name, items, updatedAt: new Date().toISOString() },
+			{ merge: true },
+		);
 	} catch { /* silent */ }
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+async function createListDoc(userId, name) {
+	try {
+		const id = genId();
+		const { doc, setDoc } = await import("firebase/firestore");
+		const { db } = await import("../../firebase");
+		await setDoc(doc(db, "users", userId, "lists", id), {
+			name,
+			items: [],
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		});
+		return { id, name, isShared: false, childId: null };
+	} catch { return null; }
+}
 
-function EmptyState({ hasChecked }) {
+async function renameListDoc(userId, list, newName) {
+	try {
+		const { doc, setDoc } = await import("firebase/firestore");
+		const { db } = await import("../../firebase");
+		await setDoc(doc(db, ...listDocSegments(userId, list)), { name: newName }, { merge: true });
+	} catch { /* silent */ }
+}
+
+async function deleteListDoc(userId, list) {
+	try {
+		const { doc, deleteDoc } = await import("firebase/firestore");
+		const { db } = await import("../../firebase");
+		await deleteDoc(doc(db, ...listDocSegments(userId, list)));
+	} catch { /* silent */ }
+}
+
+async function moveListPath(userId, list, makeShared, childId, currentItems) {
+	try {
+		const { doc, setDoc, deleteDoc } = await import("firebase/firestore");
+		const { db } = await import("../../firebase");
+		if (makeShared) {
+			await setDoc(doc(db, "children", childId, "lists", list.id), {
+				name: list.name, items: currentItems, updatedAt: new Date().toISOString(),
+			});
+			await deleteDoc(doc(db, "users", userId, "lists", list.id));
+		} else {
+			await setDoc(doc(db, "users", userId, "lists", list.id), {
+				name: list.name, items: currentItems, updatedAt: new Date().toISOString(),
+			});
+			await deleteDoc(doc(db, "children", list.childId, "lists", list.id));
+		}
+	} catch { /* silent */ }
+}
+
+// ── ListTabBar ─────────────────────────────────────────────────────────────────
+
+function ListTabBar({ lists, activeId, onSelect, onAdd, onManage }) {
+	const { C } = useTheme();
+	return (
+		<ScrollView
+			horizontal
+			showsHorizontalScrollIndicator={false}
+			contentContainerStyle={{ gap: 8, paddingHorizontal: 14, paddingVertical: 10 }}>
+			{lists.map((list) => {
+				const active = list.id === activeId;
+				return (
+					<View key={list.id} style={{ flexDirection: "row", alignItems: "center" }}>
+						<TouchableOpacity
+							onPress={() => onSelect(list.id)}
+							onLongPress={() => onManage(list)}
+							activeOpacity={0.8}
+							style={{
+								flexDirection: "row", alignItems: "center", gap: 5,
+								backgroundColor: active ? C.primaryPurple : C.white,
+								borderRadius: 999,
+								paddingLeft: 12, paddingRight: 6, paddingVertical: 8,
+								borderWidth: 1.5,
+								borderColor: active ? C.primaryPurple : C.borderLight,
+							}}>
+							{list.isShared && (
+								<Icon name="users" size={11} color={active ? "#fff" : "#2a5f8f"} />
+							)}
+							<Text style={{ fontSize: 13, fontWeight: "700", color: active ? "#fff" : C.textCharcoal }}>
+								{list.name}
+							</Text>
+							<TouchableOpacity
+								onPress={() => onManage(list)}
+								hitSlop={{ top: 8, bottom: 8, left: 6, right: 8 }}
+								style={{ padding: 4 }}>
+								<Icon name="more" size={13} color={active ? "rgba(255,255,255,0.65)" : C.mutedText} />
+							</TouchableOpacity>
+						</TouchableOpacity>
+					</View>
+				);
+			})}
+			<TouchableOpacity
+				onPress={onAdd}
+				activeOpacity={0.8}
+				style={{
+					alignSelf: "center",
+					flexDirection: "row", alignItems: "center", gap: 5,
+					backgroundColor: C.bgPurple,
+					borderRadius: 999,
+					paddingHorizontal: 12, paddingVertical: 8,
+					borderWidth: 1.5, borderColor: C.primaryPurple + "40",
+				}}>
+				<Icon name="plus" size={13} color={C.primaryPurple} />
+				<Text style={{ fontSize: 13, fontWeight: "700", color: C.primaryPurple }}>New list</Text>
+			</TouchableOpacity>
+		</ScrollView>
+	);
+}
+
+// ── ListManageSheet ────────────────────────────────────────────────────────────
+
+function ListManageSheet({ visible, list, activeChild, canDelete, onRename, onToggleShare, onDelete, onClose }) {
+	const { C } = useTheme();
+	const [newName, setNewName] = useState("");
+	const [editing, setEditing] = useState(false);
+	const inputRef = useRef(null);
+
+	useEffect(() => {
+		if (visible) { setNewName(list?.name || ""); setEditing(false); }
+	}, [visible, list?.id]);
+
+	const handleSaveName = () => {
+		const trimmed = newName.trim();
+		if (trimmed && trimmed !== list?.name) onRename(list, trimmed);
+		setEditing(false);
+		onClose();
+	};
+
+	const hasChild = !!activeChild;
+
+	return (
+		<Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+			<TouchableOpacity
+				style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)" }}
+				activeOpacity={1}
+				onPress={onClose}
+			/>
+			<View style={{
+				backgroundColor: C.white,
+				borderTopLeftRadius: 24, borderTopRightRadius: 24,
+				paddingTop: 8, paddingBottom: 40, paddingHorizontal: 20,
+			}}>
+				<View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: C.borderLight, alignSelf: "center", marginBottom: 16 }} />
+				<Text style={{ fontSize: 16, fontWeight: "800", color: C.textCharcoal, marginBottom: 16 }}>
+					{list?.name}
+				</Text>
+
+				{/* Rename */}
+				{editing ? (
+					<View style={{ gap: 10, marginBottom: 8 }}>
+						<TextInput
+							ref={inputRef}
+							value={newName}
+							onChangeText={setNewName}
+							placeholder="List name"
+							autoFocus
+							returnKeyType="done"
+							onSubmitEditing={handleSaveName}
+							style={{ backgroundColor: C.bgPurple, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: C.textCharcoal }}
+						/>
+						<View style={{ flexDirection: "row", gap: 8 }}>
+							<TouchableOpacity onPress={() => setEditing(false)}
+								style={{ flex: 1, backgroundColor: C.bgPurple, borderRadius: 12, paddingVertical: 12, alignItems: "center" }}>
+								<Text style={{ fontWeight: "700", color: C.mutedText }}>Cancel</Text>
+							</TouchableOpacity>
+							<TouchableOpacity onPress={handleSaveName}
+								style={{ flex: 1, backgroundColor: C.primaryPurple, borderRadius: 12, paddingVertical: 12, alignItems: "center" }}>
+								<Text style={{ fontWeight: "700", color: "#fff" }}>Save</Text>
+							</TouchableOpacity>
+						</View>
+					</View>
+				) : (
+					<TouchableOpacity onPress={() => setEditing(true)} activeOpacity={0.8}
+						style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
+						<Icon name="edit" size={18} color={C.primaryPurple} />
+						<Text style={{ fontSize: 15, fontWeight: "600", color: C.textCharcoal }}>Rename list</Text>
+					</TouchableOpacity>
+				)}
+
+				{/* Share toggle */}
+				{hasChild && !editing && (
+					<TouchableOpacity
+						onPress={() => { onToggleShare(list); onClose(); }}
+						activeOpacity={0.8}
+						style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
+						<Icon name="users" size={18} color={list?.isShared ? "#2a5f8f" : C.mutedText} />
+						<View style={{ flex: 1 }}>
+							<Text style={{ fontSize: 15, fontWeight: "600", color: C.textCharcoal }}>
+								{list?.isShared ? "Stop sharing with family" : `Share with ${activeChild.name}'s family`}
+							</Text>
+							{!list?.isShared && (
+								<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 2 }}>
+									Family members can view and edit this list
+								</Text>
+							)}
+						</View>
+						<View style={{
+							width: 42, height: 24, borderRadius: 12,
+							backgroundColor: list?.isShared ? "#2a5f8f" : C.borderLight,
+							justifyContent: "center", paddingHorizontal: 2,
+						}}>
+							<View style={{
+								width: 20, height: 20, borderRadius: 10, backgroundColor: "#fff",
+								alignSelf: list?.isShared ? "flex-end" : "flex-start",
+							}} />
+						</View>
+					</TouchableOpacity>
+				)}
+
+				{/* Delete */}
+				{canDelete && !editing && (
+					<TouchableOpacity
+						onPress={() => { onDelete(list); onClose(); }}
+						activeOpacity={0.8}
+						style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14 }}>
+						<Icon name="trash" size={18} color="#c0392b" />
+						<Text style={{ fontSize: 15, fontWeight: "600", color: "#c0392b" }}>Delete list</Text>
+					</TouchableOpacity>
+				)}
+			</View>
+		</Modal>
+	);
+}
+
+// ── ListPickerSheet ───────────────────────────────────────────────────────────
+
+function ListPickerSheet({ visible, lists, onSelect, onClose }) {
+	const { C } = useTheme();
+	return (
+		<Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+			<TouchableOpacity
+				style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)" }}
+				activeOpacity={1}
+				onPress={onClose}
+			/>
+			<View style={{
+				backgroundColor: C.white,
+				borderTopLeftRadius: 24, borderTopRightRadius: 24,
+				paddingTop: 8, paddingBottom: 40,
+			}}>
+				<View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: C.borderLight, alignSelf: "center", marginBottom: 16 }} />
+				<Text style={{ fontSize: 17, fontWeight: "800", color: C.textCharcoal, paddingHorizontal: 20, marginBottom: 8 }}>
+					Add to which list?
+				</Text>
+				{lists.map((list) => (
+					<TouchableOpacity
+						key={list.id}
+						onPress={() => onSelect(list.id)}
+						activeOpacity={0.8}
+						style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
+						<View style={{
+							width: 38, height: 38, borderRadius: 11,
+							backgroundColor: list.isShared ? "#d4eef5" : C.bgPurple,
+							alignItems: "center", justifyContent: "center",
+						}}>
+							<Icon name={list.isShared ? "users" : "cart"} size={17} color={list.isShared ? "#2a5f8f" : C.primaryPurple} />
+						</View>
+						<View style={{ flex: 1 }}>
+							<Text style={{ fontSize: 15, fontWeight: "700", color: C.textCharcoal }}>{list.name}</Text>
+							{list.isShared && (
+								<Text style={{ fontSize: 11, color: "#2a5f8f", marginTop: 1 }}>Shared with family</Text>
+							)}
+						</View>
+						<Icon name="chevRight" size={15} color={C.mutedText} />
+					</TouchableOpacity>
+				))}
+			</View>
+		</Modal>
+	);
+}
+
+// ── CreateListModal ───────────────────────────────────────────────────────────
+
+function CreateListModal({ visible, onCreate, onClose }) {
+	const { C } = useTheme();
+	const [name, setName] = useState("");
+	const inputRef = useRef(null);
+
+	useEffect(() => {
+		if (visible) { setName(""); }
+	}, [visible]);
+
+	const handleCreate = () => {
+		const trimmed = name.trim();
+		if (!trimmed) return;
+		onCreate(trimmed);
+		onClose();
+	};
+
+	return (
+		<Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+			<KeyboardAvoidingView
+				style={{ flex: 1 }}
+				behavior={Platform.OS === "ios" ? "padding" : "height"}>
+				<TouchableOpacity
+					style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)" }}
+					activeOpacity={1}
+					onPress={onClose}
+				/>
+				<View style={{
+					backgroundColor: C.white,
+					borderTopLeftRadius: 24, borderTopRightRadius: 24,
+					paddingTop: 8, paddingBottom: 40, paddingHorizontal: 20,
+				}}>
+					<View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: C.borderLight, alignSelf: "center", marginBottom: 16 }} />
+					<Text style={{ fontSize: 17, fontWeight: "800", color: C.textCharcoal, marginBottom: 16 }}>New List</Text>
+					<TextInput
+						ref={inputRef}
+						value={name}
+						onChangeText={setName}
+						placeholder="e.g. Weekly Shop, Pantry…"
+						autoFocus
+						returnKeyType="done"
+						onSubmitEditing={handleCreate}
+						placeholderTextColor={C.mutedText}
+						style={{ backgroundColor: C.bgPurple, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, color: C.textCharcoal, marginBottom: 14 }}
+					/>
+					<View style={{ flexDirection: "row", gap: 10 }}>
+						<TouchableOpacity onPress={onClose}
+							style={{ flex: 1, backgroundColor: C.bgPurple, borderRadius: 14, paddingVertical: 14, alignItems: "center" }}>
+							<Text style={{ fontWeight: "700", color: C.mutedText }}>Cancel</Text>
+						</TouchableOpacity>
+						<TouchableOpacity
+							onPress={handleCreate}
+							disabled={!name.trim()}
+							style={{ flex: 1, backgroundColor: name.trim() ? C.primaryPurple : C.borderLight, borderRadius: 14, paddingVertical: 14, alignItems: "center" }}>
+							<Text style={{ fontWeight: "800", color: "#fff" }}>Create</Text>
+						</TouchableOpacity>
+					</View>
+				</View>
+			</KeyboardAvoidingView>
+		</Modal>
+	);
+}
+
+// ── EmptyState ────────────────────────────────────────────────────────────────
+
+function EmptyState() {
 	const { C } = useTheme();
 	return (
 		<View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32, paddingBottom: 80 }}>
@@ -65,18 +422,18 @@ function EmptyState({ hasChecked }) {
 				<Icon name="cart" size={36} color={C.primaryPurple} />
 			</View>
 			<Text style={{ fontSize: 20, fontWeight: "800", color: C.textCharcoal, textAlign: "center", marginBottom: 8 }}>
-				{hasChecked ? "All done!" : "Your list is empty"}
+				List is empty
 			</Text>
 			<Text style={{ fontSize: 14, color: C.mutedText, textAlign: "center", lineHeight: 20 }}>
-				{hasChecked
-					? "Everything's ticked off. Clear completed items or add more below."
-					: "Add items below or tap \"From Recipe\" to import ingredients straight from a recipe."}
+				Add items below or tap "From Recipe" to import ingredients straight from a recipe.
 			</Text>
 		</View>
 	);
 }
 
-function ItemRow({ item, onToggle, onRemove }) {
+// ── ItemRow ───────────────────────────────────────────────────────────────────
+
+function ItemRow({ item, onToggle, onRemove, currentUserId, isListShared }) {
 	const { C } = useTheme();
 	const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -84,20 +441,21 @@ function ItemRow({ item, onToggle, onRemove }) {
 		Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => onRemove(item.id));
 	};
 
+	const addedByLabel = isListShared && item.addedBy
+		? item.addedBy === currentUserId ? "You" : (item.addedByName || "Partner")
+		: null;
+
 	return (
 		<Animated.View style={{ opacity: fadeAnim, flexDirection: "row", alignItems: "center", backgroundColor: C.white, borderRadius: 14, marginBottom: 8, paddingHorizontal: 14, paddingVertical: 12, shadowColor: "#000", shadowOpacity: 0.03, shadowRadius: 4, elevation: 1 }}>
-			{/* Checkbox */}
 			<TouchableOpacity onPress={() => onToggle(item.id)} activeOpacity={0.7}
 				style={{ width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: item.checked ? C.primaryPurple : C.borderLight, backgroundColor: item.checked ? C.primaryPurple : "transparent", alignItems: "center", justifyContent: "center", marginRight: 12 }}>
 				{item.checked && <Icon name="check" size={13} color="#fff" />}
 			</TouchableOpacity>
-
-			{/* Name + badges */}
 			<View style={{ flex: 1, gap: 3 }}>
 				<Text style={{ fontSize: 15, fontWeight: "600", color: item.checked ? C.mutedText : C.textCharcoal, textDecorationLine: item.checked ? "line-through" : "none" }} numberOfLines={2}>
 					{item.name}
 				</Text>
-				<View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
+				<View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
 					{!!item.quantity && (
 						<View style={{ backgroundColor: "#f0f6fc", borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
 							<Text style={{ fontSize: 11, color: "#2a5f8f", fontWeight: "600" }}>{item.quantity}</Text>
@@ -108,10 +466,14 @@ function ItemRow({ item, onToggle, onRemove }) {
 							<Text style={{ fontSize: 11, color: C.primaryPurple, fontWeight: "600" }}>📖 {item.recipeTitle}</Text>
 						</View>
 					)}
+					{addedByLabel && (
+						<View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+							<Icon name="user" size={10} color={C.mutedText} />
+							<Text style={{ fontSize: 11, color: C.mutedText, fontStyle: "italic" }}>{addedByLabel}</Text>
+						</View>
+					)}
 				</View>
 			</View>
-
-			{/* Delete */}
 			<TouchableOpacity onPress={handleRemove} activeOpacity={0.7}
 				style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "#fde8e8", alignItems: "center", justifyContent: "center", marginLeft: 8 }}>
 				<Icon name="trash" size={14} color="#c0392b" />
@@ -120,27 +482,23 @@ function ItemRow({ item, onToggle, onRemove }) {
 	);
 }
 
-// ── Recipe Picker Modal ───────────────────────────────────────────────────────
+// ── RecipePickerModal ─────────────────────────────────────────────────────────
 
 function RecipePickerModal({ visible, recipes, onClose, onAddIngredients }) {
 	const { C } = useTheme();
-	const [step, setStep]                 = useState("recipes"); // "recipes" | "ingredients"
+	const [step, setStep]                     = useState("recipes");
 	const [selectedRecipe, setSelectedRecipe] = useState(null);
-	const [checked, setChecked]           = useState({});
-	const [search, setSearch]             = useState("");
+	const [checked, setChecked]               = useState({});
+	const [search, setSearch]                 = useState("");
 
-	// Reset when closed
 	useEffect(() => {
 		if (!visible) { setStep("recipes"); setSelectedRecipe(null); setChecked({}); setSearch(""); }
 	}, [visible]);
 
-	const filteredRecipes = recipes.filter((r) =>
-		r.title?.toLowerCase().includes(search.toLowerCase()),
-	);
+	const filteredRecipes = recipes.filter((r) => r.title?.toLowerCase().includes(search.toLowerCase()));
 
 	const handlePickRecipe = (recipe) => {
 		setSelectedRecipe(recipe);
-		// Pre-select all ingredients
 		const init = {};
 		(recipe.ingredients || []).forEach((ing, i) => { init[i] = true; });
 		setChecked(init);
@@ -161,8 +519,6 @@ function RecipePickerModal({ visible, recipes, onClose, onAddIngredients }) {
 		<Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
 			<View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" }}>
 				<View style={{ backgroundColor: C.screen, borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: "90%", paddingBottom: 34 }}>
-
-					{/* Handle + Header */}
 					<View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
 						<View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: C.borderLight, alignSelf: "center", marginBottom: 16 }} />
 						<View style={{ flexDirection: "row", alignItems: "center", marginBottom: 14 }}>
@@ -179,7 +535,7 @@ function RecipePickerModal({ visible, recipes, onClose, onAddIngredients }) {
 								</Text>
 								{step === "ingredients" && (
 									<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 1 }}>
-										Select ingredients to add to your list
+										Select ingredients to add to list
 									</Text>
 								)}
 							</View>
@@ -188,8 +544,6 @@ function RecipePickerModal({ visible, recipes, onClose, onAddIngredients }) {
 								<Icon name="close" size={15} color={C.mutedText} />
 							</TouchableOpacity>
 						</View>
-
-						{/* Search (recipe step only) */}
 						{step === "recipes" && (
 							<View style={{ flexDirection: "row", alignItems: "center", backgroundColor: C.bgPurple, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12, gap: 8 }}>
 								<Icon name="search" size={16} color={C.mutedText} />
@@ -204,7 +558,6 @@ function RecipePickerModal({ visible, recipes, onClose, onAddIngredients }) {
 						)}
 					</View>
 
-					{/* Recipe list */}
 					{step === "recipes" && (
 						<ScrollView style={{ paddingHorizontal: 20 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 							{filteredRecipes.length === 0 ? (
@@ -229,7 +582,6 @@ function RecipePickerModal({ visible, recipes, onClose, onAddIngredients }) {
 						</ScrollView>
 					)}
 
-					{/* Ingredient picker */}
 					{step === "ingredients" && (
 						<>
 							<ScrollView style={{ paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
@@ -244,8 +596,6 @@ function RecipePickerModal({ visible, recipes, onClose, onAddIngredients }) {
 								))}
 								<View style={{ height: 20 }} />
 							</ScrollView>
-
-							{/* Add button */}
 							<View style={{ paddingHorizontal: 20, paddingTop: 10 }}>
 								<TouchableOpacity onPress={handleAdd} disabled={selectedCount === 0} activeOpacity={0.85}
 									style={{ backgroundColor: selectedCount === 0 ? C.borderLight : C.primaryPurple, borderRadius: 16, paddingVertical: 15, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}>
@@ -263,64 +613,33 @@ function RecipePickerModal({ visible, recipes, onClose, onAddIngredients }) {
 	);
 }
 
-// ── Pro Upgrade Gate ──────────────────────────────────────────────────────────
-
-function ProGate({ onUpgradePro }) {
-	const { C } = useTheme();
-	return (
-		<View style={{ flex: 1, backgroundColor: C.screen, padding: 24, justifyContent: "center" }}>
-			<View style={{ backgroundColor: "#2d1f5e", borderRadius: 24, padding: 28, alignItems: "center", overflow: "hidden" }}>
-				<View style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: 60, backgroundColor: "rgba(155,127,232,0.2)" }} />
-				<View style={{ position: "absolute", bottom: -20, left: -20, width: 90, height: 90, borderRadius: 45, backgroundColor: "rgba(61,184,122,0.12)" }} />
-				<View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: "rgba(245,200,66,0.15)", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>
-					<Icon name="cart" size={34} color="#f5c842" />
-				</View>
-				<Text style={{ fontSize: 22, fontWeight: "900", color: "#fff", textAlign: "center", marginBottom: 8 }}>Shopping List</Text>
-				<Text style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", textAlign: "center", lineHeight: 20, marginBottom: 24 }}>
-					Build your shopping list and import ingredients directly from recipes. Upgrade to Pro to unlock this feature.
-				</Text>
-				{[
-					"Add & remove items with one tap",
-					"Import ingredients from any recipe",
-					"Tick items off as you shop",
-					"Synced across all your devices",
-				].map((f) => (
-					<View key={f} style={{ flexDirection: "row", alignItems: "center", gap: 10, alignSelf: "stretch", marginBottom: 10 }}>
-						<Icon name="check" size={13} color="#3db87a" />
-						<Text style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", fontWeight: "500" }}>{f}</Text>
-					</View>
-				))}
-				<TouchableOpacity onPress={onUpgradePro} activeOpacity={0.85}
-					style={{ backgroundColor: "#f5c842", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32, alignItems: "center", flexDirection: "row", gap: 8, marginTop: 10 }}>
-					<Icon name="crown" size={15} color="#2d1f5e" />
-					<Text style={{ color: "#2d1f5e", fontWeight: "800", fontSize: 15 }}>Upgrade to Pro</Text>
-				</TouchableOpacity>
-			</View>
-		</View>
-	);
-}
-
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
 export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], visible = true, activeChild = null }) {
 	const { C } = useTheme();
 	const insets = useSafeAreaInsets();
 
-	const [items,        setItems]        = useState([]);
-	const [loading,      setLoading]      = useState(true);
-	const [newName,      setNewName]      = useState("");
-	const [newQty,       setNewQty]       = useState("");
-	const [showRecipes,  setShowRecipes]  = useState(false);
-	const [kbPadding,    setKbPadding]    = useState(0);
+	// ── List state ─────────────────────────────────────────────────────────────
+	const [lists,           setLists]           = useState([]);
+	const [activeListId,    setActiveListId]    = useState(DEFAULT_LIST_ID);
+	const [manageList,      setManageList]      = useState(null);
+	const [showCreate,      setShowCreate]      = useState(false);
+	const [showListPicker,  setShowListPicker]  = useState(false);
+	const [pendingRecipe,   setPendingRecipe]   = useState(null);
+
+	// ── Item state ─────────────────────────────────────────────────────────────
+	const [items,      setItems]      = useState([]);
+	const [loading,    setLoading]    = useState(true);
+	const [newName,    setNewName]    = useState("");
+	const [newQty,     setNewQty]     = useState("");
+	const [showRecipes, setShowRecipes] = useState(false);
+	const [kbPadding,  setKbPadding]  = useState(0);
 	const nameRef = useRef(null);
 
-	// ── Keyboard avoidance (iOS) ────────────────────────────────────────────
-	// keyboardWillShow gives the exact keyboard height including the suggestion
-	// bar. We subtract the tab bar height so only the portion that overlaps the
-	// content area is compensated for.
+	// ── Keyboard avoidance (iOS) ───────────────────────────────────────────────
 	useEffect(() => {
 		if (Platform.OS !== "ios") return;
-		const TAB_BAR_HEIGHT = 49 + insets.bottom; // content + safe-area bottom
+		const TAB_BAR_HEIGHT = 49 + insets.bottom;
 		const show = Keyboard.addListener("keyboardWillShow", (e) => {
 			setKbPadding(Math.max(0, e.endCoordinates.height - TAB_BAR_HEIGHT));
 		});
@@ -328,86 +647,161 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 		return () => { show.remove(); hide.remove(); };
 	}, [insets.bottom]);
 
-	// ── Load from Firestore ─────────────────────────────────────────────────
-	const childId = activeChild?.id || null;
+	// ── Derived: active list descriptor ───────────────────────────────────────
+	const activeList = lists.find((l) => l.id === activeListId) || lists[0] || null;
+	const childId    = isPro ? (activeChild?.id || null) : null;
 
+	// ── Load all lists ─────────────────────────────────────────────────────────
 	useEffect(() => {
-		if (!user?.uid || !isPro) { setLoading(false); return; }
-		loadItems(user.uid, childId).then((saved) => { setItems(saved); setLoading(false); });
-	}, [user?.uid, isPro, childId]);
-
-	// Reload whenever the screen becomes visible (e.g. after adding items from RecipesScreen)
-	useEffect(() => {
-		if (!visible || !user?.uid || !isPro) return;
-		loadItems(user.uid, childId).then(setItems);
-	}, [visible]);
-
-	// ── Save helper (called after every mutation) ───────────────────────────
-	const save = useCallback((newItems) => {
-		if (user?.uid) persistItems(user.uid, childId, newItems);
+		if (!user?.uid) { setLoading(false); return; }
+		loadAllLists(user.uid, childId).then((loaded) => {
+			setLists(loaded);
+			setActiveListId(loaded[0]?.id || DEFAULT_LIST_ID);
+		});
 	}, [user?.uid, childId]);
 
-	// ── CRUD ────────────────────────────────────────────────────────────────
+	// ── Load items when active list changes ────────────────────────────────────
+	useEffect(() => {
+		if (!activeList || !user?.uid) { setLoading(false); return; }
+		setLoading(true);
+		loadListItems(user.uid, activeList).then((saved) => {
+			setItems(saved);
+			setLoading(false);
+		});
+	}, [activeList?.id, activeList?.isShared]);
+
+	// Reload when screen becomes visible
+	useEffect(() => {
+		if (!visible || !activeList || !user?.uid) return;
+		loadListItems(user.uid, activeList).then(setItems);
+	}, [visible]);
+
+	// ── Save ───────────────────────────────────────────────────────────────────
+	const save = useCallback((newItems) => {
+		if (activeList && user?.uid) persistListItems(user.uid, activeList, newItems);
+	}, [activeList, user?.uid]);
+
+	// ── Item CRUD ──────────────────────────────────────────────────────────────
 	const addItem = () => {
 		const name = newName.trim();
 		if (!name) { nameRef.current?.focus(); return; }
-		const next = [{ id: genId(), name, quantity: newQty.trim(), checked: false }, ...items];
-		setItems(next);
-		save(next);
-		setNewName("");
-		setNewQty("");
+		const addedByName = user?.displayName || user?.email?.split("@")[0] || "You";
+		const next = [{ id: genId(), name, quantity: newQty.trim(), checked: false, addedBy: user?.uid, addedByName }, ...items];
+		setItems(next); save(next);
+		setNewName(""); setNewQty("");
 		nameRef.current?.focus();
 	};
 
 	const toggleItem = (id) => {
 		const next = items.map((it) => it.id === id ? { ...it, checked: !it.checked } : it);
-		setItems(next);
-		save(next);
+		setItems(next); save(next);
 	};
 
 	const removeItem = (id) => {
 		const next = items.filter((it) => it.id !== id);
-		setItems(next);
-		save(next);
+		setItems(next); save(next);
 	};
 
 	const clearChecked = () => {
 		const next = items.filter((it) => !it.checked);
-		setItems(next);
-		save(next);
+		setItems(next); save(next);
 	};
 
 	const clearAll = () => {
-		Alert.alert(
-			"Clear entire list?",
-			"This will remove all items, including ones not yet ticked off.",
-			[
-				{ text: "Cancel", style: "cancel" },
-				{
-					text: "Clear all",
-					style: "destructive",
-					onPress: () => { setItems([]); save([]); },
-				},
-			],
-		);
+		Alert.alert("Clear entire list?", "This will remove all items, including ones not yet ticked off.", [
+			{ text: "Cancel", style: "cancel" },
+			{ text: "Clear all", style: "destructive", onPress: () => { setItems([]); save([]); } },
+		]);
 	};
 
-	const addFromRecipe = (recipeId, recipeTitle, ingredients) => {
+	// ── Recipe add flow ────────────────────────────────────────────────────────
+	const commitRecipeAdd = useCallback((recipeId, recipeTitle, ingredients, targetList) => {
+		const list = targetList || activeList;
+		if (!list || !user?.uid) return;
+		const addedByName = user?.displayName || user?.email?.split("@")[0] || "You";
 		const newItems = ingredients.map((ing) => {
 			const { name, quantity } = parseIngredient(ing);
-			return { id: genId(), name, quantity, checked: false, recipeId, recipeTitle };
+			return { id: genId(), name, quantity, checked: false, recipeId, recipeTitle, addedBy: user.uid, addedByName };
 		});
 		const next = [...newItems, ...items];
-		setItems(next);
-		save(next);
+		if (!targetList || targetList.id === activeList?.id) {
+			setItems(next);
+		}
+		persistListItems(user.uid, list, next);
+	}, [activeList, items, user?.uid]);
+
+	const handleRecipeAdd = (recipeId, recipeTitle, ingredients) => {
+		if (isPro && lists.length > 1) {
+			setPendingRecipe({ recipeId, recipeTitle, ingredients });
+			setShowListPicker(true);
+		} else {
+			commitRecipeAdd(recipeId, recipeTitle, ingredients);
+		}
 	};
 
-	// ── Derived lists ───────────────────────────────────────────────────────
+	const handleListPickerSelect = (listId) => {
+		setShowListPicker(false);
+		if (!pendingRecipe) return;
+		const target = lists.find((l) => l.id === listId);
+		if (target) {
+			commitRecipeAdd(pendingRecipe.recipeId, pendingRecipe.recipeTitle, pendingRecipe.ingredients, target);
+			setActiveListId(listId);
+		}
+		setPendingRecipe(null);
+	};
+
+	// ── List management ────────────────────────────────────────────────────────
+	const handleCreateList = async (name) => {
+		if (!user?.uid) return;
+		const newList = await createListDoc(user.uid, name);
+		if (newList) {
+			setLists((prev) => [...prev, newList]);
+			setActiveListId(newList.id);
+			setItems([]);
+		}
+	};
+
+	const handleRenameList = async (list, newName) => {
+		await renameListDoc(user.uid, list, newName);
+		setLists((prev) => prev.map((l) => l.id === list.id ? { ...l, name: newName } : l));
+	};
+
+	const handleToggleShare = async (list) => {
+		if (!activeChild?.id || !user?.uid) return;
+		const currentItems = list.id === activeList?.id ? items : await loadListItems(user.uid, list);
+		const makeShared = !list.isShared;
+		await moveListPath(user.uid, list, makeShared, activeChild.id, currentItems);
+		setLists((prev) => prev.map((l) => l.id === list.id
+			? { ...l, isShared: makeShared, childId: makeShared ? activeChild.id : null }
+			: l,
+		));
+	};
+
+	const handleDeleteList = (list) => {
+		Alert.alert(`Delete "${list.name}"?`, "All items in this list will be permanently removed.", [
+			{ text: "Cancel", style: "cancel" },
+			{
+				text: "Delete",
+				style: "destructive",
+				onPress: async () => {
+					await deleteListDoc(user.uid, list);
+					const remaining = lists.filter((l) => l.id !== list.id);
+					setLists(remaining);
+					if (list.id === activeListId) {
+						const next = remaining[0];
+						setActiveListId(next?.id || DEFAULT_LIST_ID);
+						if (next) loadListItems(user.uid, next).then(setItems);
+						else setItems([]);
+					}
+				},
+			},
+		]);
+	};
+
+	// ── Derived ────────────────────────────────────────────────────────────────
 	const unchecked = items.filter((it) => !it.checked);
 	const checked   = items.filter((it) => it.checked);
-
-	// ── Pro gate ────────────────────────────────────────────────────────────
-	if (!isPro) return <ProGate onUpgradePro={onUpgradePro} />;
+	const isShared  = activeList?.isShared && (activeChild?.sharedWith?.length > 0 || activeChild?.userId !== user?.uid);
 
 	if (loading) {
 		return (
@@ -417,37 +811,50 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 		);
 	}
 
-	// ── Render ──────────────────────────────────────────────────────────────
-	//
-	// We use keyboard listeners + paddingBottom instead of KeyboardAvoidingView.
-	// KAV's keyboardVerticalOffset must equal the exact pixel distance from the
-	// physical screen top to the KAV top, which varies by device and is hard to
-	// know statically. The listener approach reads the real keyboard height
-	// (incl. suggestion bar) and subtracts the tab bar height to get precisely
-	// how much of the content area is overlapped — no guesswork needed.
-	const isShared = childId && (activeChild?.sharedWith?.length > 0 || activeChild?.userId !== user?.uid);
-
 	return (
 		<View style={{ flex: 1, backgroundColor: C.screen, paddingBottom: kbPadding }}>
+
+			{/* List tab bar — always visible for Pro */}
+			{isPro && (
+				<ListTabBar
+					lists={lists}
+					activeId={activeList?.id}
+					onSelect={(id) => { if (id !== activeListId) setActiveListId(id); }}
+					onAdd={() => setShowCreate(true)}
+					onManage={setManageList}
+				/>
+			)}
+
 			{/* Shared indicator */}
 			{isShared && (
-				<View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#d4eef5", borderRadius: 10, marginHorizontal: 16, marginBottom: 4, paddingHorizontal: 12, paddingVertical: 7 }}>
+				<View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#d4eef5", borderRadius: 10, marginHorizontal: 14, marginBottom: 2, paddingHorizontal: 12, paddingVertical: 7 }}>
 					<Icon name="users" size={13} color="#2a5f8f" />
 					<Text style={{ fontSize: 12, fontWeight: "700", color: "#2a5f8f" }}>
 						Shared list — updates visible to all family members
 					</Text>
 				</View>
 			)}
+
+			{/* Pro upsell for free users with a child */}
+			{!isPro && activeChild && (
+				<TouchableOpacity onPress={onUpgradePro} activeOpacity={0.85}
+					style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#fef9c3", borderRadius: 10, marginHorizontal: 14, marginBottom: 4, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: "#f5c84240" }}>
+					<Icon name="crown" size={13} color="#c8920a" />
+					<Text style={{ fontSize: 12, fontWeight: "700", color: "#c8920a", flex: 1 }}>
+						Upgrade to Pro to share lists and create multiple lists
+					</Text>
+					<Icon name="chevRight" size={12} color="#c8920a" />
+				</TouchableOpacity>
+			)}
+
 			{/* Action bar */}
-			<View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10 }}>
+			<View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 10 }}>
 				<TouchableOpacity onPress={() => { Keyboard.dismiss(); setShowRecipes(true); }} activeOpacity={0.85}
 					style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9, borderWidth: 1.5, borderColor: C.primaryPurple + "30" }}>
 					<Icon name="chef" size={15} color={C.primaryPurple} />
 					<Text style={{ fontSize: 13, fontWeight: "700", color: C.primaryPurple }}>From Recipe</Text>
 				</TouchableOpacity>
-
 				<View style={{ flex: 1 }} />
-
 				{checked.length > 0 && (
 					<TouchableOpacity onPress={clearChecked} activeOpacity={0.8}
 						style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#fde8e8", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9 }}>
@@ -455,7 +862,7 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 						<Text style={{ fontSize: 13, fontWeight: "700", color: "#c0392b" }}>Clear done ({checked.length})</Text>
 					</TouchableOpacity>
 				)}
-				{items.length > 0 && (
+				{items.length > 0 && checked.length === 0 && (
 					<TouchableOpacity onPress={clearAll} activeOpacity={0.8}
 						style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#fde8e8", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9 }}>
 						<Icon name="trash" size={14} color="#c0392b" />
@@ -464,15 +871,14 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 				)}
 			</View>
 
-			{/* List — flex:1 so it compresses when keyboard appears */}
+			{/* Items */}
 			{items.length === 0 ? (
-				<EmptyState hasChecked={false} />
+				<EmptyState />
 			) : (
-				<ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+				<ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: 12 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 					{unchecked.map((item) => (
-						<ItemRow key={item.id} item={item} onToggle={toggleItem} onRemove={removeItem} />
+						<ItemRow key={item.id} item={item} onToggle={toggleItem} onRemove={removeItem} currentUserId={user?.uid} isListShared={activeList?.isShared} />
 					))}
-
 					{checked.length > 0 && (
 						<View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 10 }}>
 							<View style={{ flex: 1, height: 1, backgroundColor: C.borderLight }} />
@@ -483,14 +889,13 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 							<View style={{ flex: 1, height: 1, backgroundColor: C.borderLight }} />
 						</View>
 					)}
-
 					{checked.map((item) => (
-						<ItemRow key={item.id} item={item} onToggle={toggleItem} onRemove={removeItem} />
+						<ItemRow key={item.id} item={item} onToggle={toggleItem} onRemove={removeItem} currentUserId={user?.uid} isListShared={activeList?.isShared} />
 					))}
 				</ScrollView>
 			)}
 
-			{/* Sticky input bar — sits directly inside KAV, always above keyboard */}
+			{/* Sticky input */}
 			<View style={{ backgroundColor: C.white, borderTopWidth: 1, borderTopColor: C.borderLight, paddingHorizontal: 14, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 8 }}>
 				<TextInput
 					ref={nameRef}
@@ -517,12 +922,33 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 				</TouchableOpacity>
 			</View>
 
-			{/* Recipe picker modal */}
+			{/* Modals */}
 			<RecipePickerModal
 				visible={showRecipes}
 				recipes={recipes}
 				onClose={() => setShowRecipes(false)}
-				onAddIngredients={addFromRecipe}
+				onAddIngredients={handleRecipeAdd}
+			/>
+			<ListPickerSheet
+				visible={showListPicker}
+				lists={lists}
+				onSelect={handleListPickerSelect}
+				onClose={() => { setShowListPicker(false); setPendingRecipe(null); }}
+			/>
+			<ListManageSheet
+				visible={!!manageList}
+				list={manageList}
+				activeChild={isPro ? activeChild : null}
+				canDelete={lists.length > 1}
+				onRename={handleRenameList}
+				onToggleShare={handleToggleShare}
+				onDelete={handleDeleteList}
+				onClose={() => setManageList(null)}
+			/>
+			<CreateListModal
+				visible={showCreate}
+				onCreate={handleCreateList}
+				onClose={() => setShowCreate(false)}
 			/>
 		</View>
 	);
