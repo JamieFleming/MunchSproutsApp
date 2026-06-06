@@ -613,6 +613,7 @@ export function ChildDetailScreen({
 							child={child}
 							foodLog={foodLog}
 							weightLog={weightLog}
+							bottleLog={bottleLog}
 							user={user}
 						/>
 					</View>

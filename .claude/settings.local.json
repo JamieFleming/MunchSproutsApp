@@ -9,7 +9,23 @@
       "Bash(python3 -c \"from PIL import Image; print\\('ok'\\)\")",
       "Bash(npx expo *)",
       "Bash(npm install *)",
-      "Bash(eas update *)"
+      "Bash(eas update *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(firebase functions:log --only generateMealIdeas)",
+      "Bash(firebase deploy *)",
+      "Bash(find ~/Library/Developer/Xcode -name \"*.crash\" -newer /tmp -o -name \"*.ips\" -newer /tmp 2>/dev/null | head -10 *)",
+      "Bash(eas build *)",
+      "Bash(echo \"Build started in background — PID $!\")",
+      "Skill(schedule)",
+      "Skill(schedule:*)",
+      "Bash(at 9am)",
+      "Bash(atrm 1)",
+      "Bash(atrm 2)",
+      "Bash(atq)",
+      "Bash(atrm 3)",
+      "Bash(node scripts/sendPushNotification.js)"
     ]
   }
 }

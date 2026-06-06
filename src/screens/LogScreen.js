@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, memo, useCallback } from "react";
 import {
 	View, Text, TextInput, TouchableOpacity, ScrollView,
 	FlatList, Modal, Image, Alert, RefreshControl, Platform,
@@ -21,7 +21,7 @@ const SORT_OPTS = [
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function AttemptRow({ attempt: a, attemptNum, milestones, hasMultipleUsers, currentUserId, userMap, onToggleFavourite, onEdit, onDelete, setLightboxPhoto, isEven }) {
+const AttemptRow = memo(function AttemptRow({ attempt: a, attemptNum, milestones, hasMultipleUsers, currentUserId, userMap, onToggleFavourite, onEdit, onDelete, setLightboxPhoto, isEven }) {
 	const { C } = useTheme();
 	const s = useStyles();
 	return (
@@ -122,9 +122,9 @@ function AttemptRow({ attempt: a, attemptNum, milestones, hasMultipleUsers, curr
 			</View>
 		</View>
 	);
-}
+});
 
-function FoodCard({ foodKey: key, group: g, isOpen, toggle, milestones, hasMultipleUsers, currentUserId, userMap, onEdit, onDelete, onToggleFavourite, onAddAttempt, setLightboxPhoto }) {
+const FoodCard = memo(function FoodCard({ foodKey: key, group: g, isOpen, toggle, milestones, hasMultipleUsers, currentUserId, userMap, onEdit, onDelete, onToggleFavourite, onAddAttempt, setLightboxPhoto }) {
 	const { C } = useTheme();
 	const s = useStyles();
 
@@ -228,7 +228,7 @@ function FoodCard({ foodKey: key, group: g, isOpen, toggle, milestones, hasMulti
 			)}
 		</View>
 	);
-}
+});
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 

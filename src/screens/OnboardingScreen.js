@@ -18,7 +18,7 @@ import { updateProfile } from "firebase/auth";
 import { db, auth } from "../../firebase";
 import { useTheme } from "../ThemeContext";
 import { DateField } from "../components/DatePickerModal";
-import { pickImageAsBase64 } from "../helpers";
+import { pickImageAsBase64, uploadChildPhoto, isLocalUri } from "../helpers";
 import { updateUserProfile } from "../../firebaseHooks";
 
 // ── Step indicator ─────────────────────────────────────────────────────────────
@@ -167,8 +167,19 @@ function StepChild({ user, onFinish }) {
 				dob,
 			};
 			if (weanStart) childData.weaningStart = weanStart;
-			if (photo)     childData.photoUri     = photo;
-			await addDoc(collection(db, "children"), childData);
+			// Don't store local URI — upload to Storage first
+			const docRef = await addDoc(collection(db, "children"), childData);
+			if (photo && isLocalUri(photo)) {
+				try {
+					const url = await uploadChildPhoto(photo, user.uid, docRef.id);
+					await updateDoc(docRef, { photoUri: url });
+				} catch (uploadErr) {
+					console.warn("[onboarding] photo upload failed:", uploadErr.message);
+					// Photo is skipped — child is saved without it
+				}
+			} else if (photo) {
+				await updateDoc(docRef, { photoUri: photo });
+			}
 			await updateDoc(doc(db, "users", user.uid), { onboardingComplete: true });
 			onFinish();
 		} catch (e) {

@@ -306,7 +306,9 @@ function MealsHub({ onNavigate, isPro, onUpgradePro }) {
 				subtitle="BLW how-to guides, food preparation tips, and safe feeding advice."
 				fullWidth
 				onPress={() =>
-					WebBrowser.openBrowserAsync("https://munchsprouts.co.uk/getting-started")
+					WebBrowser.openBrowserAsync(
+						"https://munchsprouts.co.uk/getting-start-new",
+					)
 				}
 			/>
 
@@ -345,7 +347,11 @@ function MealsHub({ onNavigate, isPro, onUpgradePro }) {
 				iconColor={isPro ? "#9333ea" : "#c8920a"}
 				accentColor={isPro ? "#9333ea" : "#c8920a"}
 				title="Smart Meal Ideas"
-				subtitle={isPro ? "AI-powered ideas based on your child's food log." : "Upgrade to Pro to unlock."}
+				subtitle={
+					isPro
+						? "AI-powered ideas based on your child's food log."
+						: "Upgrade to Pro to unlock."
+				}
 				badge={isPro ? null : "Pro"}
 				onPress={isPro ? () => onNavigate("mealIdeas") : onUpgradePro}
 			/>
@@ -401,6 +407,10 @@ export function MealsHubScreen({
 	onRestorePurchases,
 	jumpToRecipeId,
 	onJumpHandled,
+	// Smart Recipes (AI-generated, saved to Firestore)
+	smartRecipes,
+	onDeleteSmartRecipe,
+	onRateSmartRecipe,
 	// Incremented by App.js when the Meals nav tab is tapped while already on Meals
 	resetKey,
 }) {
@@ -417,7 +427,7 @@ export function MealsHubScreen({
 		if (jumpToRecipeId) setView("recipes");
 	}, [jumpToRecipeId]);
 
-	// ── Add recipe ingredients straight to the shopping list ─────────────────
+	// ── Add recipe ingredients — navigates to shopping list so user sees result ─
 	const handleAddToShoppingList = async (
 		recipeId,
 		recipeTitle,
@@ -425,8 +435,18 @@ export function MealsHubScreen({
 	) => {
 		if (!user?.uid) throw new Error("Not signed in");
 		await appendToShoppingList(user.uid, recipeId, recipeTitle, ingredients);
-		// Switch to shopping so the list reloads and the user can see the added items
 		setView("shopping");
+	};
+
+	// ── Add ingredients from Smart Meal Ideas — stays on the same screen ────────
+	const handleAddToShoppingListNoNav = async (
+		recipeId,
+		recipeTitle,
+		ingredients,
+	) => {
+		if (!user?.uid) throw new Error("Not signed in");
+		await appendToShoppingList(user.uid, recipeId, recipeTitle, ingredients);
+		// Intentionally no navigation — SmartMealIdeasScreen shows its own success state
 	};
 
 	return (
@@ -444,7 +464,11 @@ export function MealsHubScreen({
 
 			{/* Hub */}
 			<View style={{ flex: 1, display: view === "hub" ? "flex" : "none" }}>
-				<MealsHub onNavigate={setView} isPro={isPro} onUpgradePro={onUpgradePro} />
+				<MealsHub
+					onNavigate={setView}
+					isPro={isPro}
+					onUpgradePro={onUpgradePro}
+				/>
 			</View>
 
 			{/* Recipes sub-page */}
@@ -461,6 +485,9 @@ export function MealsHubScreen({
 					jumpToRecipeId={jumpToRecipeId}
 					onJumpHandled={onJumpHandled}
 					onAddToShoppingList={isPro ? handleAddToShoppingList : null}
+					smartRecipes={smartRecipes}
+					onDeleteSmartRecipe={onDeleteSmartRecipe}
+					onRateSmartRecipe={onRateSmartRecipe}
 				/>
 			</View>
 
@@ -475,18 +502,19 @@ export function MealsHubScreen({
 				/>
 			</View>
 
-			{/* Smart Meal Ideas sub-page */}
-			{view === "mealIdeas" && (
-				<View style={{ flex: 1 }}>
-					<SmartMealIdeasScreen
-						child={activeChild}
-						foodLog={childFoodLog}
-						user={user}
-						isPro={isPro}
-						onUpgradePro={onUpgradePro}
-					/>
-				</View>
-			)}
+			{/* Smart Meal Ideas sub-page — always mounted so generated recipes survive navigation */}
+			<View
+				style={{ flex: 1, display: view === "mealIdeas" ? "flex" : "none" }}>
+				<SmartMealIdeasScreen
+					child={activeChild}
+					foodLog={childFoodLog}
+					user={user}
+					isPro={isPro}
+					onUpgradePro={onUpgradePro}
+					onAddToShoppingList={handleAddToShoppingListNoNav}
+					onLogRecipe={onLogRecipe}
+				/>
+			</View>
 		</View>
 	);
 }

@@ -1,6 +1,8 @@
 import { Alert, Platform } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import { storage } from "../firebase";
 import { REACTIONS, MONTHS } from "./constants";
 
 /**
@@ -323,6 +325,31 @@ export function buildHours() {
 
 export function buildMinutes() {
 	return ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
+}
+
+/**
+ * Returns true if a URI is a local device path (file:// or content://)
+ * that cannot be read by other devices or after a reinstall.
+ */
+export function isLocalUri(uri) {
+	return typeof uri === "string" && (uri.startsWith("file://") || uri.startsWith("content://"));
+}
+
+/**
+ * Uploads a local image URI to Firebase Storage and returns the public download URL.
+ *
+ * @param {string} localUri  - file:// or content:// URI from the image picker
+ * @param {string} userId    - the owning user's UID (used for the storage path)
+ * @param {string} filename  - filename within childPhotos/{userId}/ (no extension needed)
+ * @returns {Promise<string>} Firebase Storage download URL
+ */
+export async function uploadChildPhoto(localUri, userId, filename) {
+	const base64 = await FileSystem.readAsStringAsync(localUri, {
+		encoding: FileSystem.EncodingType.Base64,
+	});
+	const storageRef = ref(storage, `childPhotos/${userId}/${filename}.jpg`);
+	await uploadString(storageRef, base64, "base64", { contentType: "image/jpeg" });
+	return await getDownloadURL(storageRef);
 }
 
 export async function pickImageAsBase64(aspect = [4, 3]) {

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useMemo, memo } from "react";
 import {
 	View, Text, TextInput, TouchableOpacity, ScrollView,
 	Modal, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Image, Linking,
@@ -45,7 +45,8 @@ function NutritionBar({ nutrition }) {
 	);
 }
 
-function FeaturedCard({ recipe, isPro, onPress }) {
+const FeaturedCard = memo(function FeaturedCard({ recipe, isPro, onPress }) {
+
 	const { C } = useTheme();
 	const effectiveLocked = recipe.locked && !isPro;
 	return (
@@ -77,170 +78,535 @@ function FeaturedCard({ recipe, isPro, onPress }) {
 			</View>
 		</TouchableOpacity>
 	);
-}
+});
 
 // ── Recipe card (collapsed + expanded) ───────────────────────────────────────
 
-function RecipeCard({ r, isOpen, isSaved, isPro, onToggle, onToggleFav, onLogRecipe, onAddToList }) {
+// ── Recipe Detail Modal ───────────────────────────────────────────────────────
+
+const RecipeDetailModal = memo(function RecipeDetailModal({ recipe: r, visible, isSaved, isPro, onClose, onToggleFav, onLogRecipe, onAddToList }) {
+	const { C } = useTheme();
+	const s = useStyles();
+	if (!r) return null;
+	const effectiveLocked = r.locked && !isPro;
+
+	return (
+		<Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+			<View style={{ flex: 1, backgroundColor: C.screen }}>
+				{/* Header bar */}
+				<View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
+					<TouchableOpacity onPress={onClose} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center", marginRight: 12 }}>
+						<Icon name="chevDown" size={16} color={C.mutedText} />
+					</TouchableOpacity>
+					<Text style={{ flex: 1, fontSize: 16, fontWeight: "800", color: C.textCharcoal }} numberOfLines={1}>{r.title}</Text>
+					{!effectiveLocked && (
+						<TouchableOpacity onPress={onToggleFav} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: isSaved ? "#fef6d4" : C.bgPurple, alignItems: "center", justifyContent: "center" }}>
+							<Icon name={isSaved ? "starFill" : "star"} size={16} color={isSaved ? "#c49a10" : C.mutedText} />
+						</TouchableOpacity>
+					)}
+				</View>
+
+				<ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+					{/* Hero image or category icon */}
+					{r.imageUrl ? (
+						<Image source={{ uri: r.imageUrl }} style={{ width: "100%", height: 220 }} resizeMode="cover" />
+					) : (
+						<View style={{ height: 140, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center" }}>
+							<CategoryIcon category={r.category} size={72} />
+						</View>
+					)}
+
+					<View style={{ padding: 20, gap: 18 }}>
+						{/* Title + badges */}
+						<View style={{ gap: 10 }}>
+							<Text style={{ fontSize: 22, fontWeight: "900", color: C.primaryPinkDark, lineHeight: 28 }}>{r.title}</Text>
+							<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+								{r.featured  && <View style={{ backgroundColor: "#fef6d4", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ fontSize: 11, fontWeight: "700", color: "#c49a10" }}>★ Featured</Text></View>}
+								{r.category  && <View style={s.tagPurple}><Text style={s.tagPurpleText}>{r.category}</Text></View>}
+								{r.ageGroup  && <View style={s.tagGreen}><Text style={s.tagGreenText}>{r.ageGroup}</Text></View>}
+								{r.time      && <View style={s.tagPurple}><Text style={s.tagPurpleText}>⏱ {r.time}</Text></View>}
+								{r.servings  && <View style={s.tagPurple}><Text style={s.tagPurpleText}>🍽 {r.servings} servings</Text></View>}
+								{(r.tags || []).map((t) => <View key={t} style={s.tagWarning}><Text style={s.tagWarningText}>{t}</Text></View>)}
+								{r.freezable && <FreezableBadge />}
+							</View>
+						</View>
+
+						{/* Locked state */}
+						{effectiveLocked ? (
+							<View style={{ backgroundColor: C.bgPurple, borderRadius: 16, padding: 20, alignItems: "center", gap: 12 }}>
+								<Icon name="lock" size={32} color={C.mutedText} />
+								<Text style={{ fontSize: 16, fontWeight: "800", color: C.textCharcoal }}>Pro Recipe</Text>
+								<Text style={{ fontSize: 13, color: C.mutedText, textAlign: "center", lineHeight: 20 }}>Upgrade to Pro to unlock this recipe and hundreds more.</Text>
+							</View>
+						) : (
+							<>
+								{r.description && (
+									<Text style={{ fontSize: 14, color: C.mutedText, lineHeight: 22, fontStyle: "italic" }}>{r.description}</Text>
+								)}
+
+								{r.nutrition && <NutritionBar nutrition={r.nutrition} />}
+
+								{r.allergens?.length > 0 && (
+									<View style={{ backgroundColor: "#fde8e8", borderRadius: 14, padding: 14, flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+										<Icon name="alert" size={18} color="#c0392b" />
+										<View style={{ flex: 1 }}>
+											<Text style={{ fontWeight: "800", fontSize: 13, color: "#c0392b", marginBottom: 4 }}>Contains allergens</Text>
+											<Text style={{ fontSize: 13, color: "#c0392b", lineHeight: 20 }}>{r.allergens.join(", ")}</Text>
+										</View>
+									</View>
+								)}
+
+								{/* Ingredients */}
+								<View style={{ gap: 10 }}>
+									<Text style={s.sectionTitle}>Ingredients</Text>
+									{(r.ingredients || []).map((ing, i) => (
+										<View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: C.bgPurple, borderRadius: 12, padding: 13 }}>
+											<View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.primaryPurple, marginTop: 5, flexShrink: 0 }} />
+											<Text style={{ fontSize: 14, color: C.textCharcoal, fontWeight: "600", flex: 1 }}>{ing}</Text>
+										</View>
+									))}
+								</View>
+
+								{/* Method */}
+								<View style={{ gap: 10 }}>
+									<Text style={s.sectionTitle}>Method</Text>
+									{(r.steps || []).map((step, i) => (
+										<View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: i % 2 === 0 ? C.white : C.bgPurple, borderRadius: 12, padding: 13, borderWidth: i % 2 === 0 ? 1 : 0, borderColor: C.borderLight }}>
+											<View style={{ backgroundColor: C.primaryPurple, borderRadius: 10, width: 26, height: 26, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+												<Text style={{ fontSize: 12, fontWeight: "700", color: C.white }}>{i + 1}</Text>
+											</View>
+											<Text style={{ fontSize: 14, color: C.textCharcoal, lineHeight: 21, flex: 1, paddingTop: 2 }}>{step}</Text>
+										</View>
+									))}
+								</View>
+
+								{r.notes && (
+									<View style={{ backgroundColor: "#fff8e1", borderRadius: 14, padding: 16, flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
+										<Text style={{ fontSize: 18 }}>💡</Text>
+										<View style={{ flex: 1 }}>
+											<Text style={{ fontWeight: "800", fontSize: 13, color: "#a85a1a", marginBottom: 4 }}>Tip</Text>
+											<Text style={{ fontSize: 13, color: "#7a4a10", lineHeight: 20 }}>{r.notes}</Text>
+										</View>
+									</View>
+								)}
+
+								{r.freezable && (
+									<View style={{ backgroundColor: "#d4eef5", borderRadius: 14, padding: 14, flexDirection: "row", alignItems: "center", gap: 10 }}>
+										<Text style={{ fontSize: 18 }}>❄️</Text>
+										<Text style={{ fontSize: 13, fontWeight: "700", color: "#2a5f8f" }}>This recipe can be frozen for later use</Text>
+									</View>
+								)}
+
+								{/* Actions */}
+								<View style={{ gap: 10, marginTop: 4 }}>
+									<View style={{ flexDirection: "row", gap: 10 }}>
+										<TouchableOpacity onPress={onToggleFav} activeOpacity={0.8}
+											style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: isSaved ? "#fef6d4" : C.bgPurple, borderRadius: 14, paddingVertical: 14 }}>
+											<Icon name={isSaved ? "starFill" : "star"} size={17} color={isSaved ? "#c49a10" : C.mutedText} />
+											<Text style={{ fontWeight: "700", fontSize: 14, color: isSaved ? "#c49a10" : C.mutedText }}>{isSaved ? "Saved" : "Save"}</Text>
+										</TouchableOpacity>
+										<TouchableOpacity onPress={onLogRecipe} activeOpacity={0.8}
+											style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: C.primaryPurple, borderRadius: 14, paddingVertical: 14, elevation: 3 }}>
+											<Icon name="plus" size={17} color={C.white} />
+											<Text style={{ fontWeight: "700", fontSize: 14, color: C.white }}>Log This</Text>
+										</TouchableOpacity>
+									</View>
+									{!!onAddToList && (
+										<TouchableOpacity onPress={onAddToList} activeOpacity={0.8}
+											style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#dbeafe", borderRadius: 14, paddingVertical: 14 }}>
+											<Icon name="cart" size={17} color="#1d4ed8" />
+											<Text style={{ fontWeight: "700", fontSize: 14, color: "#1d4ed8" }}>Add to Shopping List</Text>
+										</TouchableOpacity>
+									)}
+								</View>
+							</>
+						)}
+					</View>
+				</ScrollView>
+			</View>
+		</Modal>
+	);
+});
+
+// ── Recipe list card (summary only — detail opens in RecipeDetailModal) ───────
+
+const RecipeCard = memo(function RecipeCard({ r, isSaved, isPro, onPress }) {
 	const { C } = useTheme();
 	const s = useStyles();
 	const effectiveLocked = r.locked && !isPro;
 
 	return (
-		<View style={[s.card, { padding: 0, overflow: "hidden", borderWidth: isOpen ? 2 : 0, borderColor: C.primaryPurple, opacity: effectiveLocked ? 0.8 : 1, backgroundColor: C.white }]}>
-			{/* Image / no-image header */}
-			<TouchableOpacity onPress={onToggle} activeOpacity={effectiveLocked ? 1 : 0.85}>
-				{r.imageUrl ? (
-					<View style={{ position: "relative" }}>
-						<Image source={{ uri: r.imageUrl }} style={{ width: "100%", height: 170 }} resizeMode="cover" />
-						{/* Top-left badges */}
-						<View style={{ position: "absolute", top: 10, left: 10, flexDirection: "row", gap: 6 }}>
-							{r.featured && (
-								<View style={{ backgroundColor: "rgba(196,154,16,0.92)", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
-									<Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>★ Featured</Text>
-								</View>
-							)}
-							{r.freezable && (
-								<View style={{ backgroundColor: "rgba(42,95,143,0.92)", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, flexDirection: "row", alignItems: "center", gap: 3 }}>
-									<Text style={{ fontSize: 11 }}>❄️</Text>
-									<Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>Freezable</Text>
-								</View>
-							)}
-						</View>
-						{/* Top-right badges */}
-						<View style={{ position: "absolute", top: 10, right: 10, flexDirection: "row", gap: 6 }}>
-							{effectiveLocked && <View style={{ backgroundColor: C.warningStroke, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>PRO</Text></View>}
-							{isSaved && <View style={{ backgroundColor: "rgba(196,154,16,0.92)", borderRadius: 999, paddingHorizontal: 7, paddingVertical: 3 }}><Text style={{ fontSize: 11, color: "#fff" }}>★</Text></View>}
-						</View>
+		<TouchableOpacity
+			onPress={onPress}
+			activeOpacity={0.85}
+			style={[s.card, { padding: 0, overflow: "hidden", opacity: effectiveLocked ? 0.82 : 1, backgroundColor: C.white }]}>
+			{/* Image or icon strip */}
+			{r.imageUrl ? (
+				<View style={{ position: "relative" }}>
+					<Image source={{ uri: r.imageUrl }} style={{ width: "100%", height: 140 }} resizeMode="cover" />
+					<View style={{ position: "absolute", top: 8, left: 8, flexDirection: "row", gap: 5 }}>
+						{r.featured  && <View style={{ backgroundColor: "rgba(196,154,16,0.92)", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>★ Featured</Text></View>}
+						{r.freezable && <View style={{ backgroundColor: "rgba(42,95,143,0.92)", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, flexDirection: "row", alignItems: "center", gap: 3 }}><Text style={{ fontSize: 10 }}>❄️</Text><Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>Freezable</Text></View>}
 					</View>
-				) : (
-					<View style={{ padding: 18, paddingBottom: 0, flexDirection: "row", alignItems: "center", gap: 14 }}>
-						<CategoryIcon category={r.category} size={52} />
-						<View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-							{r.featured    && <View style={{ backgroundColor: "#fef6d4", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ fontSize: 10, fontWeight: "700", color: "#c49a10" }}>★ Featured</Text></View>}
-							{r.freezable   && <FreezableBadge />}
-							{effectiveLocked && <View style={{ backgroundColor: C.warningStroke, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>PRO</Text></View>}
-						</View>
+					<View style={{ position: "absolute", top: 8, right: 8, flexDirection: "row", gap: 5 }}>
+						{effectiveLocked && <View style={{ backgroundColor: C.warningStroke, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>PRO</Text></View>}
+						{isSaved && <View style={{ backgroundColor: "rgba(196,154,16,0.92)", borderRadius: 999, paddingHorizontal: 7, paddingVertical: 3 }}><Text style={{ fontSize: 11, color: "#fff" }}>★</Text></View>}
 					</View>
-				)}
+				</View>
+			) : null}
 
-				{/* Card body */}
-				<View style={{ padding: 16 }}>
-					<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-						<Text style={{ fontWeight: "700", fontSize: 15, color: C.primaryPinkDark, flex: 1, marginRight: 8 }}>{r.title}</Text>
-						{effectiveLocked ? <Icon name="lock" size={16} color={C.mutedText} /> : <Icon name={isOpen ? "chevUp" : "chevDown"} size={16} color={C.mutedText} />}
+			<View style={{ padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
+				{!r.imageUrl && <CategoryIcon category={r.category} size={44} />}
+				<View style={{ flex: 1 }}>
+					<View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+						<Text style={{ fontWeight: "700", fontSize: 15, color: C.primaryPinkDark, flex: 1 }}>{r.title}</Text>
+						{effectiveLocked
+							? <Icon name="lock" size={15} color={C.mutedText} />
+							: <Icon name="chevRight" size={15} color={C.mutedText} />}
 					</View>
-					<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+					<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 5 }}>
+						{!r.imageUrl && r.featured  && <View style={{ backgroundColor: "#fef6d4", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}><Text style={{ fontSize: 10, fontWeight: "700", color: "#c49a10" }}>★ Featured</Text></View>}
 						{r.category  && <View style={s.tagPurple}><Text style={s.tagPurpleText}>{r.category}</Text></View>}
 						{r.ageGroup  && <View style={s.tagGreen}><Text style={s.tagGreenText}>{r.ageGroup}</Text></View>}
 						{r.time      && <View style={s.tagPurple}><Text style={s.tagPurpleText}>⏱ {r.time}</Text></View>}
-						{r.servings  && <View style={s.tagPurple}><Text style={s.tagPurpleText}>🍽 {r.servings} servings</Text></View>}
-						{(r.tags || []).map((t) => <View key={t} style={s.tagWarning}><Text style={s.tagWarningText}>{t}</Text></View>)}
+						{!r.imageUrl && r.freezable && <FreezableBadge />}
+						{!r.imageUrl && effectiveLocked && <View style={{ backgroundColor: C.warningStroke, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}><Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>PRO</Text></View>}
+						{!r.imageUrl && isSaved     && <View style={{ backgroundColor: "#fef6d4", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}><Text style={{ fontSize: 10, fontWeight: "700", color: "#c49a10" }}>★ Saved</Text></View>}
 						{r.allergens?.length > 0 && (
-							<View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#fde8e8", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
-								<Icon name="alert" size={10} color="#c0392b" />
+							<View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#fde8e8", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
+								<Icon name="alert" size={9} color="#c0392b" />
 								<Text style={{ fontSize: 10, fontWeight: "700", color: "#c0392b" }}>{r.allergens.join(", ")}</Text>
 							</View>
 						)}
 					</View>
 				</View>
-			</TouchableOpacity>
+			</View>
 
-			{/* Expanded detail */}
-			{isOpen && (
-				<View style={{ borderTopWidth: 1, borderTopColor: C.borderLight, padding: 18 }}>
-					{r.description && <Text style={{ fontSize: 13, color: C.textCharcoal, marginBottom: 18, lineHeight: 21, fontStyle: "italic" }}>{r.description}</Text>}
-
-					{r.nutrition && <NutritionBar nutrition={r.nutrition} />}
-
-					{r.allergens?.length > 0 && (
-						<View style={{ backgroundColor: "#fde8e8", borderRadius: 12, padding: 12, marginBottom: 18, flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
-							<Icon name="alert" size={16} color="#c0392b" />
-							<View style={{ flex: 1 }}>
-								<Text style={{ fontWeight: "700", fontSize: 12, color: "#c0392b", marginBottom: 4 }}>Allergens</Text>
-								<Text style={{ fontSize: 12, color: "#c0392b", lineHeight: 18 }}>{r.allergens.join(", ")}</Text>
-							</View>
-						</View>
-					)}
-
-					<Text style={[s.sectionTitle, { marginBottom: 12 }]}>Ingredients</Text>
-					{r.ingredients.map((ing, i) => (
-						<View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: C.bgPurple, borderRadius: 12, padding: 12, marginBottom: 8 }}>
-							<View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.primaryPurple, marginTop: 5, flexShrink: 0 }} />
-							<Text style={{ fontSize: 14, color: C.textCharcoal, fontWeight: "600", flex: 1 }}>{ing}</Text>
-						</View>
-					))}
-
-					<Text style={[s.sectionTitle, { marginTop: 18, marginBottom: 12 }]}>Method</Text>
-					{r.steps.map((step, i) => (
-						<View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 14, backgroundColor: i % 2 === 0 ? C.white : C.bgPurple, borderRadius: 12, padding: 12, marginBottom: 8 }}>
-							<View style={{ backgroundColor: C.primaryPurple, borderRadius: 12, width: 26, height: 26, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-								<Text style={{ fontSize: 12, fontWeight: "700", color: C.white }}>{i + 1}</Text>
-							</View>
-							<Text style={{ fontSize: 13, color: C.textCharcoal, lineHeight: 20, flex: 1, paddingTop: 3 }}>{step}</Text>
-						</View>
-					))}
-
-					{r.notes && (
-						<View style={{ backgroundColor: "#fff8e1", borderRadius: 12, padding: 14, marginTop: 14, flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
-							<Text style={{ fontSize: 16 }}>💡</Text>
-							<View style={{ flex: 1 }}>
-								<Text style={{ fontWeight: "700", fontSize: 12, color: "#a85a1a", marginBottom: 4 }}>Tip</Text>
-								<Text style={{ fontSize: 12, color: "#7a4a10", lineHeight: 18 }}>{r.notes}</Text>
-							</View>
-						</View>
-					)}
-
-					{r.freezable && (
-						<View style={{ backgroundColor: "#d4eef5", borderRadius: 12, padding: 12, marginTop: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
-							<Text style={{ fontSize: 16 }}>❄️</Text>
-							<Text style={{ fontSize: 12, fontWeight: "700", color: "#2a5f8f" }}>This recipe can be frozen for later use</Text>
-						</View>
-					)}
-
-					{/* Action buttons */}
-					<View style={{ flexDirection: "row", gap: 10, marginTop: 20 }}>
-						<TouchableOpacity onPress={onToggleFav} activeOpacity={0.8}
-							style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: isSaved ? "#fef6d4" : C.bgPurple, borderRadius: 12, paddingVertical: 12 }}>
-							<Icon name={isSaved ? "starFill" : "star"} size={16} color={isSaved ? "#c49a10" : C.mutedText} />
-							<Text style={{ fontWeight: "700", fontSize: 13, color: isSaved ? "#c49a10" : C.mutedText }}>{isSaved ? "Saved" : "Save"}</Text>
-						</TouchableOpacity>
-						<TouchableOpacity onPress={onLogRecipe} activeOpacity={0.8}
-							style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: C.primaryPurple, borderRadius: 12, paddingVertical: 12, shadowColor: C.primaryPurple, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3 }}>
-							<Icon name="plus" size={16} color={C.white} />
-							<Text style={{ fontWeight: "700", fontSize: 13, color: C.white }}>Log This</Text>
-						</TouchableOpacity>
-					</View>
-					{!!onAddToList && (
-						<TouchableOpacity onPress={onAddToList} activeOpacity={0.8}
-							style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#dbeafe", borderRadius: 12, paddingVertical: 12, marginTop: 10 }}>
-							<Icon name="cart" size={16} color="#1d4ed8" />
-							<Text style={{ fontWeight: "700", fontSize: 13, color: "#1d4ed8" }}>Add to Shopping List</Text>
-						</TouchableOpacity>
-					)}
-				</View>
-			)}
-
-			{/* Locked footer */}
 			{effectiveLocked && (
-				<View style={{ borderTopWidth: 1, borderTopColor: C.borderLight, padding: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
-					<Icon name="lock" size={13} color={C.mutedText} />
+				<View style={{ borderTopWidth: 1, borderTopColor: C.borderLight, paddingHorizontal: 14, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 7 }}>
+					<Icon name="lock" size={12} color={C.mutedText} />
 					<Text style={{ fontSize: 11, fontWeight: "700", color: C.mutedText, textTransform: "uppercase" }}>Upgrade to Pro to view this recipe</Text>
 				</View>
 			)}
+		</TouchableOpacity>
+	);
+});
+
+// ── Smart Recipe Card ─────────────────────────────────────────────────────────
+
+const SMART_COLORS = [
+	{ color: "#7c3aed", bg: "#ede8f7" },
+	{ color: "#16a34a", bg: "#f0fdf4" },
+	{ color: "#c2410c", bg: "#fff7ed" },
+	{ color: "#2a5f8f", bg: "#dbeafe" },
+];
+
+const RATING_LABELS = ["", "Not for us", "It was ok", "Pretty good", "Really liked it", "Absolutely loved it!"];
+
+function SmartStarRating({ rating, onRate, size = 22 }) {
+	const { C } = useTheme();
+	return (
+		<View style={{ flexDirection: "row", gap: 6 }}>
+			{[1, 2, 3, 4, 5].map((star) => (
+				<TouchableOpacity key={star} onPress={() => onRate(star)} hitSlop={6} activeOpacity={0.7}>
+					<Icon
+						name={star <= (rating || 0) ? "starFill" : "star"}
+						size={size}
+						color={star <= (rating || 0) ? "#c49a10" : (C.borderLight || "#d1d5db")}
+					/>
+				</TouchableOpacity>
+			))}
 		</View>
 	);
 }
+
+// ── Smart Recipe Detail Modal ─────────────────────────────────────────────────
+
+const SmartRecipeDetailModal = memo(function SmartRecipeDetailModal({ recipe: r, visible, onClose, onRate, onDelete, onAddToList, onLogRecipe }) {
+	const { C } = useTheme();
+	if (!r) return null;
+
+	const index = 0; // colour is fixed per recipe via recipe.colorIndex passed in
+	const { color, bg } = SMART_COLORS[(r.colorIndex ?? 0) % SMART_COLORS.length];
+
+	const savedAt = r.savedAt?.toDate?.() || (r.savedAt ? new Date(r.savedAt) : null);
+	const dateStr = savedAt
+		? savedAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+		: "";
+
+	return (
+		<Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+			<View style={{ flex: 1, backgroundColor: C.screen }}>
+				{/* Colour strip */}
+				<View style={{ height: 4, backgroundColor: color }} />
+
+				{/* Header bar */}
+				<View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 14, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
+					<TouchableOpacity onPress={onClose} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center", marginRight: 12 }}>
+						<Icon name="chevDown" size={16} color={C.mutedText} />
+					</TouchableOpacity>
+					<Text style={{ flex: 1, fontSize: 16, fontWeight: "800", color: C.textCharcoal }} numberOfLines={1}>{r.title}</Text>
+					{r.rating ? (
+						<View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+							<Icon name="starFill" size={14} color="#c49a10" />
+							<Text style={{ fontSize: 13, fontWeight: "700", color: "#c49a10" }}>{r.rating}</Text>
+						</View>
+					) : null}
+				</View>
+
+				<ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
+					{/* Hero block */}
+					<View style={{ backgroundColor: bg, padding: 20, gap: 12 }}>
+						<View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+							<View style={{ width: 56, height: 56, borderRadius: 18, backgroundColor: color + "22", alignItems: "center", justifyContent: "center" }}>
+								<Icon name="sparkle" size={28} color={color} />
+							</View>
+							<View style={{ flex: 1, gap: 6 }}>
+								<Text style={{ fontSize: 20, fontWeight: "900", color: C.textCharcoal, lineHeight: 26 }}>{r.title}</Text>
+								<View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+									<View style={{ backgroundColor: "#7c3aed", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
+										<Text style={{ fontSize: 9, fontWeight: "800", color: "#fff", textTransform: "uppercase", letterSpacing: 0.5 }}>AI Generated</Text>
+									</View>
+									{r.mealType && (
+										<View style={{ backgroundColor: color + "22", borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 }}>
+											<Text style={{ fontSize: 11, fontWeight: "700", color }}>{r.mealType}</Text>
+										</View>
+									)}
+									{r.ageGroup && (
+										<View style={{ backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 }}>
+											<Text style={{ fontSize: 11, fontWeight: "700", color: C.primaryPurple }}>{r.ageGroup}</Text>
+										</View>
+									)}
+								</View>
+							</View>
+						</View>
+						<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+							{r.childName ? <Text style={{ fontSize: 12, color: C.mutedText }}>For {r.childName}</Text> : <View />}
+							{dateStr ? <Text style={{ fontSize: 11, color: C.mutedText }}>{dateStr}</Text> : null}
+						</View>
+					</View>
+
+					<View style={{ padding: 20, gap: 18 }}>
+						{/* Description */}
+						{r.description ? (
+							<Text style={{ fontSize: 14, color: C.mutedText, lineHeight: 22, fontStyle: "italic" }}>{r.description}</Text>
+						) : null}
+
+						{/* Why suggested */}
+						{r.whySuggested ? (
+							<View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: C.bgPurple, borderRadius: 14, padding: 14 }}>
+								<Icon name="sparkle" size={15} color={C.primaryPurple} />
+								<View style={{ flex: 1 }}>
+									<Text style={{ fontSize: 12, fontWeight: "800", color: C.primaryPurple, marginBottom: 4 }}>Why we suggested this</Text>
+									<Text style={{ fontSize: 13, color: C.primaryPurpleDark, lineHeight: 19 }}>{r.whySuggested}</Text>
+								</View>
+							</View>
+						) : null}
+
+						{/* Nutrition */}
+						{r.nutrition && (
+							<View style={{ gap: 8 }}>
+								<Text style={{ fontSize: 11, fontWeight: "800", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5 }}>Approx. nutrition per serving</Text>
+								<NutritionBar nutrition={r.nutrition} />
+								<Text style={{ fontSize: 10, color: C.mutedText, fontStyle: "italic", marginTop: -12 }}>Values are estimates only — not medical or dietetic advice</Text>
+							</View>
+						)}
+
+						{/* New food highlight */}
+						{r.newFood ? (
+							<View style={{ backgroundColor: "#fef9c3", borderRadius: 14, padding: 14, flexDirection: "row", alignItems: "center", gap: 10 }}>
+								<Icon name="sparkle" size={16} color="#ca8a04" />
+								<Text style={{ fontSize: 13, fontWeight: "700", color: "#92400e" }}>New food: {r.newFood}</Text>
+							</View>
+						) : null}
+
+						{/* Allergens */}
+						{r.allergens?.length > 0 && (
+							<View style={{ backgroundColor: "#fde8e8", borderRadius: 14, padding: 14, flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+								<Icon name="alert" size={18} color="#c0392b" />
+								<View style={{ flex: 1 }}>
+									<Text style={{ fontWeight: "800", fontSize: 13, color: "#c0392b", marginBottom: 4 }}>Contains allergens</Text>
+									<Text style={{ fontSize: 13, color: "#c0392b", lineHeight: 20 }}>{r.allergens.join(", ")}</Text>
+								</View>
+							</View>
+						)}
+
+						{/* Ingredients */}
+						{r.ingredients?.length > 0 && (
+							<View style={{ gap: 10 }}>
+								<Text style={{ fontSize: 13, fontWeight: "800", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.5 }}>Ingredients</Text>
+								{r.ingredients.map((ing, i) => (
+									<View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: C.bgPurple, borderRadius: 12, padding: 13 }}>
+										<View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color, marginTop: 5, flexShrink: 0 }} />
+										<Text style={{ fontSize: 14, color: C.textCharcoal, fontWeight: "600", flex: 1 }}>{ing}</Text>
+									</View>
+								))}
+							</View>
+						)}
+
+						{/* Steps */}
+						{r.steps?.length > 0 && (
+							<View style={{ gap: 10 }}>
+								<Text style={{ fontSize: 13, fontWeight: "800", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.5 }}>Method</Text>
+								{r.steps.map((step, i) => (
+									<View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: i % 2 === 0 ? C.white : C.bgPurple, borderRadius: 12, padding: 13, borderWidth: i % 2 === 0 ? 1 : 0, borderColor: C.borderLight }}>
+										<View style={{ backgroundColor: color, borderRadius: 10, width: 26, height: 26, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+											<Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>{i + 1}</Text>
+										</View>
+										<Text style={{ fontSize: 14, color: C.textCharcoal, lineHeight: 21, flex: 1, paddingTop: 2 }}>{step}</Text>
+									</View>
+								))}
+							</View>
+						)}
+
+						{/* Serving suggestions */}
+						{r.servingSuggestions?.length > 0 && (
+							<View style={{ gap: 10 }}>
+								<Text style={{ fontSize: 13, fontWeight: "800", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.5 }}>Serve with</Text>
+								{r.servingSuggestions.map((suggestion, i) => (
+									<View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: C.bgPurple, borderRadius: 12, padding: 13 }}>
+										<View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color, marginTop: 6, flexShrink: 0 }} />
+										<Text style={{ fontSize: 14, color: C.textCharcoal, fontWeight: "500", flex: 1, lineHeight: 21 }}>{suggestion}</Text>
+									</View>
+								))}
+							</View>
+						)}
+
+						{/* Star rating */}
+						<View style={{ backgroundColor: C.bgPurple, borderRadius: 16, padding: 16, gap: 10 }}>
+							<Text style={{ fontSize: 13, fontWeight: "800", color: C.textCharcoal }}>
+								{r.rating ? "Your rating" : "Rate this recipe"}
+							</Text>
+							<SmartStarRating rating={r.rating} onRate={onRate} size={26} />
+							{r.rating ? (
+								<Text style={{ fontSize: 13, color: "#c49a10", fontWeight: "600" }}>{RATING_LABELS[r.rating]}</Text>
+							) : (
+								<Text style={{ fontSize: 12, color: C.mutedText }}>Tap a star to rate</Text>
+							)}
+						</View>
+
+						{/* Actions */}
+						<View style={{ gap: 10 }}>
+							{onLogRecipe && (
+								<TouchableOpacity onPress={onLogRecipe} activeOpacity={0.8}
+									style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: C.primaryPurple, borderRadius: 14, paddingVertical: 14, elevation: 3 }}>
+									<Icon name="plus" size={17} color={C.white} />
+									<Text style={{ fontWeight: "700", fontSize: 14, color: C.white }}>Log This</Text>
+								</TouchableOpacity>
+							)}
+							<View style={{ flexDirection: "row", gap: 10 }}>
+								{onAddToList && (
+									<TouchableOpacity onPress={onAddToList} activeOpacity={0.8}
+										style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#dbeafe", borderRadius: 14, paddingVertical: 14 }}>
+										<Icon name="cart" size={17} color="#1d4ed8" />
+										<Text style={{ fontWeight: "700", fontSize: 14, color: "#1d4ed8" }}>Shopping List</Text>
+									</TouchableOpacity>
+								)}
+								<TouchableOpacity onPress={onDelete} activeOpacity={0.8}
+									style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#fef2f2", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 20 }}>
+									<Icon name="trash" size={17} color="#c0392b" />
+									<Text style={{ fontWeight: "700", fontSize: 14, color: "#c0392b" }}>Delete</Text>
+								</TouchableOpacity>
+							</View>
+						</View>
+					</View>
+				</ScrollView>
+			</View>
+		</Modal>
+	);
+});
+
+// ── Smart Recipe list card (summary only) ─────────────────────────────────────
+
+const SmartRecipeCard = memo(function SmartRecipeCard({ recipe, colorIndex, onPress }) {
+	const { C } = useTheme();
+	const { color, bg } = SMART_COLORS[colorIndex % SMART_COLORS.length];
+
+	const savedAt = recipe.savedAt?.toDate?.() || (recipe.savedAt ? new Date(recipe.savedAt) : null);
+	const dateStr = savedAt
+		? savedAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+		: "";
+
+	return (
+		<TouchableOpacity onPress={onPress} activeOpacity={0.85} style={{
+			backgroundColor: C.white, borderRadius: 18, overflow: "hidden",
+			shadowColor: color, shadowOpacity: 0.1, shadowRadius: 12,
+			shadowOffset: { width: 0, height: 4 }, elevation: 3,
+		}}>
+			{/* Colour strip */}
+			<View style={{ height: 4, backgroundColor: color }} />
+
+			<View style={{ padding: 16, gap: 10 }}>
+				{/* Header */}
+				<View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+					<View style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: bg, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+						<Icon name="sparkle" size={22} color={color} />
+					</View>
+					<View style={{ flex: 1 }}>
+						<Text style={{ fontSize: 15, fontWeight: "800", color: C.textCharcoal, marginBottom: 4 }}>{recipe.title}</Text>
+						<View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+							<View style={{ backgroundColor: "#7c3aed", borderRadius: 999, paddingHorizontal: 7, paddingVertical: 2 }}>
+								<Text style={{ fontSize: 9, fontWeight: "800", color: "#fff", textTransform: "uppercase", letterSpacing: 0.4 }}>AI</Text>
+							</View>
+							{recipe.mealType && (
+								<View style={{ backgroundColor: bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
+									<Text style={{ fontSize: 10, fontWeight: "700", color }}>{recipe.mealType}</Text>
+								</View>
+							)}
+							{recipe.ageGroup && (
+								<View style={{ backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
+									<Text style={{ fontSize: 10, fontWeight: "700", color: C.primaryPurple }}>{recipe.ageGroup}</Text>
+								</View>
+							)}
+							{recipe.childName && (
+								<Text style={{ fontSize: 10, color: C.mutedText }}>for {recipe.childName}</Text>
+							)}
+						</View>
+					</View>
+					{/* Rating + chevron */}
+					<View style={{ alignItems: "flex-end", gap: 4 }}>
+						{recipe.rating ? (
+							<View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+								<Icon name="starFill" size={12} color="#c49a10" />
+								<Text style={{ fontSize: 11, fontWeight: "700", color: "#c49a10" }}>{recipe.rating}</Text>
+							</View>
+						) : null}
+						<Icon name="chevRight" size={15} color={C.mutedText} />
+					</View>
+				</View>
+
+				{/* Description preview */}
+				{recipe.description ? (
+					<Text style={{ fontSize: 13, color: C.mutedText, lineHeight: 19 }} numberOfLines={2}>
+						{recipe.description}
+					</Text>
+				) : null}
+
+				{/* New food + date */}
+				<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+					{recipe.newFood ? (
+						<View style={{ backgroundColor: "#fef9c3", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexDirection: "row", alignItems: "center", gap: 5 }}>
+							<Icon name="sparkle" size={10} color="#ca8a04" />
+							<Text style={{ fontSize: 11, fontWeight: "700", color: "#ca8a04" }}>New food: {recipe.newFood}</Text>
+						</View>
+					) : <View />}
+					{dateStr ? <Text style={{ fontSize: 10, color: C.mutedText }}>{dateStr}</Text> : null}
+				</View>
+			</View>
+		</TouchableOpacity>
+	);
+});
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 const EMPTY_SUGGEST = { title: "", category: "", ageGroup: "", time: "", description: "", ingredients: "", steps: "" };
 
-export function RecipesScreen({ isPro, recipes, favouriteRecipeIds, onUpgradePro, onToggleFav, onLogRecipe, onRestorePurchases, user, jumpToRecipeId = null, onJumpHandled, onAddToShoppingList }) {
+export function RecipesScreen({ isPro, recipes, favouriteRecipeIds, onUpgradePro, onToggleFav, onLogRecipe, onRestorePurchases, user, jumpToRecipeId = null, onJumpHandled, onAddToShoppingList, smartRecipes = [], onDeleteSmartRecipe, onRateSmartRecipe }) {
 	const { C } = useTheme();
 	const s = useStyles();
 
-	const [expandedId,         setExpandedId]         = useState(null);
+	const [selectedRecipe,      setSelectedRecipe]     = useState(null);  // regular recipe open in detail modal
+	const [selectedSmartRecipe, setSelectedSmartRecipe] = useState(null); // smart recipe open in detail modal
 	const [filterAge,          setFilterAge]          = useState("all");
 	const [searchQuery,        setSearchQuery]        = useState("");
 	const [upgradeLoading,     setUpgradeLoading]     = useState(false);
@@ -254,9 +620,9 @@ export function RecipesScreen({ isPro, recipes, favouriteRecipeIds, onUpgradePro
 	const [shopPickerChecked,  setShopPickerChecked]  = useState({});
 	const [shopPickerLoading,  setShopPickerLoading]  = useState(false);
 
-	const scrollViewRef  = useRef(null);
-	const cardPositions  = useRef({});
 	const setSF = (k, v) => setSuggestForm((p) => ({ ...p, [k]: v }));
+
+	const openRecipe = (recipe) => { if (recipe.locked && !isPro) return; setSelectedRecipe(recipe); };
 
 	// Shopping list picker helpers
 	const openShopPicker = (recipe) => {
@@ -303,33 +669,35 @@ export function RecipesScreen({ isPro, recipes, favouriteRecipeIds, onUpgradePro
 	};
 
 	const ageGroups = ["all", "4-6m+", "6m+", "7-9m+", "10m+"];
-	const q = searchQuery.trim().toLowerCase();
 
-	let filtered = filterAge === "all" ? recipes : filterAge === "saved" ? recipes.filter((r) => favouriteRecipeIds.includes(r.id)) : recipes.filter((r) => r.ageGroup === filterAge);
-	if (q) filtered = filtered.filter((r) => r.title?.toLowerCase().includes(q) || r.description?.toLowerCase().includes(q) || (r.ingredients || []).some((ing) => ing.toLowerCase().includes(q)));
-	if (!isPro) filtered = [...filtered.filter((r) => !r.locked), ...filtered.filter((r) => r.locked)];
-
-	const featuredRecipes = recipes.filter((r) => r.featured);
-
-	const toggle = (id, locked) => { if (locked && !isPro) return; setExpandedId((prev) => prev === id ? null : id); };
-
-	const jumpToRecipe = (id, locked) => {
-		if (locked && !isPro) return;
-		setExpandedId(id);
-		setTimeout(() => { const y = cardPositions.current[id]; if (y != null) scrollViewRef.current?.scrollTo({ y: y - 16, animated: true }); }, 80);
-	};
+	const { filtered, featuredRecipes } = useMemo(() => {
+		const q = searchQuery.trim().toLowerCase();
+		let base = filterAge === "all" ? recipes
+			: filterAge === "saved" ? recipes.filter((r) => favouriteRecipeIds.includes(r.id))
+			: recipes.filter((r) => r.ageGroup === filterAge);
+		if (q) base = base.filter((r) =>
+			r.title?.toLowerCase().includes(q) ||
+			r.description?.toLowerCase().includes(q) ||
+			(r.ingredients || []).some((ing) => ing.toLowerCase().includes(q))
+		);
+		if (!isPro) base = [...base.filter((r) => !r.locked), ...base.filter((r) => r.locked)];
+		return {
+			filtered: base,
+			featuredRecipes: recipes.filter((r) => r.featured),
+		};
+	}, [recipes, favouriteRecipeIds, filterAge, searchQuery, isPro]);
 
 	React.useEffect(() => {
 		if (!jumpToRecipeId) return;
 		const recipe = recipes.find((r) => r.id === jumpToRecipeId);
 		if (!recipe) return;
-		const timer = setTimeout(() => { jumpToRecipe(jumpToRecipeId, recipe.locked); onJumpHandled?.(); }, 450);
+		const timer = setTimeout(() => { openRecipe(recipe); onJumpHandled?.(); }, 450);
 		return () => clearTimeout(timer);
 	}, [jumpToRecipeId]);
 
 	return (
 		<>
-		<ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingBottom: 24 }}>
+		<ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingBottom: 24 }}>
 
 			{/* Pro upgrade banner */}
 			{!isPro && (
@@ -454,7 +822,7 @@ export function RecipesScreen({ isPro, recipes, favouriteRecipeIds, onUpgradePro
 					</View>
 					<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 2, paddingBottom: 4 }}>
 						{featuredRecipes.map((r) => (
-							<FeaturedCard key={r.id} recipe={r} isPro={isPro} onPress={() => jumpToRecipe(r.id, r.locked)} />
+							<FeaturedCard key={r.id} recipe={r} isPro={isPro} onPress={() => openRecipe(r)} />
 						))}
 					</ScrollView>
 				</View>
@@ -477,6 +845,16 @@ export function RecipesScreen({ isPro, recipes, favouriteRecipeIds, onUpgradePro
 				<TouchableOpacity onPress={() => setFilterAge("saved")} style={{ backgroundColor: filterAge === "saved" ? "#c49a10" : C.white, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8, flexDirection: "row", alignItems: "center", gap: 6, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 }}>
 					<Icon name="starFill" size={12} color={filterAge === "saved" ? C.white : "#c49a10"} />
 					<Text style={{ fontSize: 13, fontWeight: "700", color: filterAge === "saved" ? C.white : "#c49a10" }}>Saved</Text>
+				</TouchableOpacity>
+				{/* Smart Recipes tab */}
+				<TouchableOpacity onPress={() => setFilterAge("smart")} style={{ backgroundColor: filterAge === "smart" ? "#7c3aed" : C.white, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8, flexDirection: "row", alignItems: "center", gap: 6, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 }}>
+					<Icon name="sparkle" size={12} color={filterAge === "smart" ? C.white : "#7c3aed"} />
+					<Text style={{ fontSize: 13, fontWeight: "700", color: filterAge === "smart" ? C.white : "#7c3aed" }}>Smart Recipes</Text>
+					{smartRecipes.length > 0 && (
+						<View style={{ backgroundColor: filterAge === "smart" ? "rgba(255,255,255,0.3)" : "#ede8f7", borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1, minWidth: 18, alignItems: "center" }}>
+							<Text style={{ fontSize: 10, fontWeight: "800", color: filterAge === "smart" ? "#fff" : "#7c3aed" }}>{smartRecipes.length}</Text>
+						</View>
+					)}
 				</TouchableOpacity>
 			</ScrollView>
 
@@ -555,22 +933,77 @@ export function RecipesScreen({ isPro, recipes, favouriteRecipeIds, onUpgradePro
 				</KeyboardAvoidingView>
 			</Modal>
 
-			{/* Recipe list */}
-			{filtered.map((r) => (
-				<View
+			{/* Smart Recipes list */}
+			{filterAge === "smart" && (
+				/* ── Pro gate ── */
+				!isPro ? (
+					<View style={{ backgroundColor: "#2d1f5e", borderRadius: 20, padding: 24, alignItems: "center", gap: 16, overflow: "hidden" }}>
+						{/* Decorative circles */}
+						<View style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: 60, backgroundColor: "rgba(155,127,232,0.15)" }} />
+						<View style={{ position: "absolute", bottom: -20, left: -20, width: 90, height: 90, borderRadius: 45, backgroundColor: "rgba(61,184,122,0.1)" }} />
+						<View style={{ width: 64, height: 64, borderRadius: 22, backgroundColor: "#f5c84222", alignItems: "center", justifyContent: "center" }}>
+							<Icon name="sparkle" size={30} color="#f5c842" />
+						</View>
+						<View style={{ alignItems: "center", gap: 8 }}>
+							<Text style={{ fontSize: 20, fontWeight: "900", color: "#fff", textAlign: "center" }}>Smart Recipes</Text>
+							<Text style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", textAlign: "center", lineHeight: 20, paddingHorizontal: 8 }}>
+								AI-generated meal ideas personalised to your child are saved here automatically.{"\n"}Upgrade to Pro to unlock Smart Meal Ideas and Smart Recipes.
+							</Text>
+						</View>
+						<TouchableOpacity
+							onPress={onUpgradePro}
+							activeOpacity={0.85}
+							style={{ backgroundColor: "#f5c842", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32, flexDirection: "row", alignItems: "center", gap: 8 }}>
+							<Icon name="crown" size={16} color="#2d1f5e" />
+							<Text style={{ color: "#2d1f5e", fontWeight: "800", fontSize: 15 }}>Upgrade to Pro</Text>
+						</TouchableOpacity>
+					</View>
+				) : smartRecipes.length === 0 ? (
+					/* ── Empty state (Pro, no recipes yet) ── */
+					<View style={{ alignItems: "center", paddingVertical: 48, gap: 14 }}>
+						<View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: "#ede8f7", alignItems: "center", justifyContent: "center" }}>
+							<Icon name="sparkle" size={32} color="#7c3aed" />
+						</View>
+						<Text style={{ fontSize: 17, fontWeight: "800", color: C.textCharcoal }}>No Smart Recipes yet</Text>
+						<Text style={{ fontSize: 13, color: C.mutedText, textAlign: "center", lineHeight: 20, paddingHorizontal: 20 }}>
+							Go to Smart Meal Ideas and generate some ideas — they'll be automatically saved here.
+						</Text>
+					</View>
+				) : (
+					/* ── Recipe list ── */
+					<View style={{ gap: 14 }}>
+						{/* Disclaimer */}
+						<View style={{ backgroundColor: "#fff8e1", borderRadius: 14, padding: 14, gap: 8, borderWidth: 1, borderColor: "#fde68a" }}>
+							<View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+								<Icon name="alert" size={14} color="#a85a1a" />
+								<Text style={{ fontSize: 12, fontWeight: "800", color: "#a85a1a" }}>AI-generated suggestions only</Text>
+							</View>
+							<Text style={{ fontSize: 11, color: "#7a4a10", lineHeight: 17 }}>
+								These recipes are generated by AI for inspiration and are not medical or nutritional advice. Nutritional values are estimates. Always consult your health visitor, GP, or dietitian regarding allergies or feeding concerns.
+							</Text>
+						</View>
+						<Text style={{ fontSize: 13, color: C.mutedText }}>{smartRecipes.length} AI-generated recipe{smartRecipes.length !== 1 ? "s" : ""} saved</Text>
+						{smartRecipes.map((r, i) => (
+							<SmartRecipeCard
+								key={r.id}
+								recipe={r}
+								colorIndex={i}
+								onPress={() => setSelectedSmartRecipe({ ...r, colorIndex: i })}
+							/>
+						))}
+					</View>
+				)
+			)}
+
+			{/* Regular recipe list */}
+			{filterAge !== "smart" && filtered.map((r) => (
+				<RecipeCard
 					key={r.id}
-					onLayout={(e) => { cardPositions.current[r.id] = e.nativeEvent.layout.y; }}>
-					<RecipeCard
-						r={r}
-						isOpen={expandedId === r.id && !(r.locked && !isPro)}
-						isSaved={favouriteRecipeIds.includes(r.id)}
-						isPro={isPro}
-						onToggle={() => toggle(r.id, r.locked)}
-						onToggleFav={() => onToggleFav(r.id)}
-						onLogRecipe={() => onLogRecipe(r)}
-						onAddToList={onAddToShoppingList && !(r.locked && !isPro) ? () => openShopPicker(r) : null}
-					/>
-				</View>
+					r={r}
+					isSaved={favouriteRecipeIds.includes(r.id)}
+					isPro={isPro}
+					onPress={() => openRecipe(r)}
+				/>
 			))}
 		</ScrollView>
 
@@ -658,6 +1091,50 @@ export function RecipesScreen({ isPro, recipes, favouriteRecipeIds, onUpgradePro
 				</View>
 			</View>
 		</Modal>
+
+		{/* ── Regular recipe detail modal ── */}
+		<RecipeDetailModal
+			recipe={selectedRecipe}
+			visible={!!selectedRecipe}
+			isSaved={selectedRecipe ? favouriteRecipeIds.includes(selectedRecipe.id) : false}
+			isPro={isPro}
+			onClose={() => setSelectedRecipe(null)}
+			onToggleFav={() => selectedRecipe && onToggleFav(selectedRecipe.id)}
+			onLogRecipe={() => { if (selectedRecipe) { onLogRecipe(selectedRecipe); setSelectedRecipe(null); } }}
+			onAddToList={onAddToShoppingList && selectedRecipe && !(selectedRecipe.locked && !isPro)
+				? () => { openShopPicker(selectedRecipe); setSelectedRecipe(null); }
+				: null}
+		/>
+
+		{/* ── Smart recipe detail modal ── */}
+		<SmartRecipeDetailModal
+			recipe={selectedSmartRecipe}
+			visible={!!selectedSmartRecipe}
+			onClose={() => setSelectedSmartRecipe(null)}
+			onRate={(rating) => {
+				if (selectedSmartRecipe) {
+					onRateSmartRecipe?.(selectedSmartRecipe.id, rating);
+					setSelectedSmartRecipe((prev) => prev ? { ...prev, rating } : null);
+				}
+			}}
+			onDelete={() => {
+				if (!selectedSmartRecipe) return;
+				Alert.alert(
+					"Delete recipe?",
+					`Remove "${selectedSmartRecipe.title}" from your Smart Recipes?`,
+					[
+						{ text: "Cancel", style: "cancel" },
+						{ text: "Delete", style: "destructive", onPress: () => { onDeleteSmartRecipe?.(selectedSmartRecipe.id); setSelectedSmartRecipe(null); } },
+					],
+				);
+			}}
+			onAddToList={onAddToShoppingList && selectedSmartRecipe
+				? () => { openShopPicker(selectedSmartRecipe); setSelectedSmartRecipe(null); }
+				: null}
+			onLogRecipe={onLogRecipe && selectedSmartRecipe
+				? () => { onLogRecipe(selectedSmartRecipe); setSelectedSmartRecipe(null); }
+				: null}
+		/>
 		</>
 	);
 }

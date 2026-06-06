@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Image, RefreshControl } from "react-native";
+import React, { useMemo, memo, useState, useEffect } from "react";
+import { View, Text, TouchableOpacity, ScrollView, Image, RefreshControl, Linking } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon, CategoryIcon, ReactionFace, AllergenIcon } from "../components/Icon";
@@ -16,7 +16,7 @@ const MILK_LABELS = { formula: "Formula", breast: "Breast Milk", specialised: "S
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function MilkGraph({ entries }) {
+const MilkGraph = memo(function MilkGraph({ entries }) {
 	const { C } = useTheme();
 	if (entries.length === 0) return null;
 	const BAR_H = 64;
@@ -36,9 +36,9 @@ function MilkGraph({ entries }) {
 			})}
 		</View>
 	);
-}
+});
 
-function CheckInReminderCard({ allergenStatus, onNavigate }) {
+const CheckInReminderCard = memo(function CheckInReminderCard({ allergenStatus, onNavigate }) {
 	const { C } = useTheme();
 	const s = useStyles();
 	const checkIns = allergenStatus.filter((a) => a.needsCheckIn);
@@ -68,14 +68,17 @@ function CheckInReminderCard({ allergenStatus, onNavigate }) {
 			</View>
 		</TouchableOpacity>
 	);
-}
+});
 
-function FavouritesSection({ foodLog, onNavigateFiltered }) {
+const FavouritesSection = memo(function FavouritesSection({ foodLog, onNavigateFiltered }) {
 	const { C } = useTheme();
 	const s = useStyles();
-	const favItems = Object.values(groupByFood(foodLog))
-		.filter((g) => g.attempts.some((a) => a.favourite))
-		.sort((a, b) => a.name.localeCompare(b.name));
+	const favItems = useMemo(() =>
+		Object.values(groupByFood(foodLog))
+			.filter((g) => g.attempts.some((a) => a.favourite))
+			.sort((a, b) => a.name.localeCompare(b.name)),
+		[foodLog]
+	);
 	if (favItems.length === 0) return null;
 	return (
 		<View style={s.card}>
@@ -105,9 +108,81 @@ function FavouritesSection({ foodLog, onNavigateFiltered }) {
 			</View>
 		</View>
 	);
-}
+});
 
 // ── Screen ────────────────────────────────────────────────────────────────────
+
+const PROMO_EXPIRY = new Date("2026-06-13T23:59:59");
+const PROMO_URL    = "https://apps.apple.com/redeem?ctx=offercodes&id=6763142582&code=MUNCHSPROUTS50";
+
+function PromoCountdownBanner() {
+	const [timeLeft, setTimeLeft] = useState(null);
+
+	useEffect(() => {
+		const calc = () => {
+			const diff = PROMO_EXPIRY - Date.now();
+			if (diff <= 0) { setTimeLeft(null); return; }
+			const d = Math.floor(diff / 86400000);
+			const h = Math.floor((diff % 86400000) / 3600000);
+			const m = Math.floor((diff % 3600000) / 60000);
+			setTimeLeft({ d, h, m });
+		};
+		calc();
+		const id = setInterval(calc, 60000);
+		return () => clearInterval(id);
+	}, []);
+
+	if (!timeLeft) return null;
+
+	return (
+		<TouchableOpacity
+			onPress={() => Linking.openURL(PROMO_URL).catch(() => {})}
+			activeOpacity={0.88}
+			style={{ borderRadius: 20, overflow: "hidden", backgroundColor: "#fff0f6", borderWidth: 1.5, borderColor: "#f9a8d4" }}>
+
+			{/* Decorative blobs */}
+			<View style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: 60, backgroundColor: "#fce7f3" }} />
+			<View style={{ position: "absolute", bottom: -24, left: -24, width: 90, height: 90, borderRadius: 45, backgroundColor: "#ede9fe" }} />
+
+			<View style={{ padding: 16, gap: 12 }}>
+				{/* Badge + headline */}
+				<View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+					<View style={{ backgroundColor: "#ec4899", borderRadius: 12, paddingHorizontal: 10, paddingVertical: 5, flexShrink: 0 }}>
+						<Text style={{ fontSize: 11, fontWeight: "900", color: "#fff", letterSpacing: 0.5 }}>🎉 LIMITED OFFER</Text>
+					</View>
+					<Text style={{ flex: 1, fontSize: 13, fontWeight: "800", color: "#9d174d" }}>Ends Friday 13th June!</Text>
+					<Icon name="chevRight" size={14} color="#ec4899" />
+				</View>
+
+				{/* Main message */}
+				<View style={{ gap: 2 }}>
+					<Text style={{ fontSize: 20, fontWeight: "900", color: "#831843", lineHeight: 26 }}>50% Off Pro — Lifetime Access</Text>
+					<Text style={{ fontSize: 13, color: "#be185d", lineHeight: 19 }}>All recipes, AI meal ideas, smart insights & more — yours forever for just <Text style={{ fontWeight: "800" }}>£19.99</Text> 🌟</Text>
+				</View>
+
+				{/* Countdown tiles */}
+				<View style={{ flexDirection: "row", gap: 8 }}>
+					{[
+						{ val: timeLeft.d, label: "days" },
+						{ val: timeLeft.h, label: "hrs"  },
+						{ val: timeLeft.m, label: "mins" },
+					].map(({ val, label }) => (
+						<View key={label} style={{ flex: 1, backgroundColor: "#fce7f3", borderRadius: 12, paddingVertical: 10, alignItems: "center", borderWidth: 1, borderColor: "#fbcfe8" }}>
+							<Text style={{ fontSize: 24, fontWeight: "900", color: "#db2777", lineHeight: 28 }}>{String(val).padStart(2, "0")}</Text>
+							<Text style={{ fontSize: 10, fontWeight: "700", color: "#be185d", textTransform: "uppercase", letterSpacing: 0.5, marginTop: 1 }}>{label}</Text>
+						</View>
+					))}
+				</View>
+
+				{/* CTA button */}
+				<View style={{ backgroundColor: "#ec4899", borderRadius: 12, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}>
+					<Icon name="crown" size={15} color="#fff" />
+					<Text style={{ fontSize: 14, fontWeight: "900", color: "#fff", letterSpacing: 0.3 }}>Claim 50% Off — Use Code MUNCHSPROUTS50</Text>
+				</View>
+			</View>
+		</TouchableOpacity>
+	);
+}
 
 export function DashboardScreen({
 	child, foodLog, bottleLog = [], weightLog = [], weightPreference = "lbs",
@@ -165,6 +240,9 @@ export function DashboardScreen({
 			contentContainerStyle={{ gap: 18, paddingBottom: 24 }}
 			showsVerticalScrollIndicator={false}
 			refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primaryPurple} colors={[C.primaryPurple]} progressBackgroundColor={C.white} />}>
+
+			{/* ── Promo banner ── */}
+			{!isPro && <PromoCountdownBanner />}
 
 			{/* ── Child hero ── */}
 			{child ? (

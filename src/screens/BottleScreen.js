@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, memo, useCallback } from "react";
 import {
-	View, Text, TextInput, TouchableOpacity, ScrollView,
+	View, Text, TextInput, TouchableOpacity, ScrollView, FlatList,
 	Modal, KeyboardAvoidingView, Platform, Alert,
 } from "react-native";
 import { useTheme, useStyles } from "../ThemeContext";
@@ -86,7 +86,7 @@ const EMPTY_FORM = {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function SymptomRow({ sym, selected, onPress, isFirst }) {
+const SymptomRow = memo(function SymptomRow({ sym, selected, onPress, isFirst }) {
 	const { C } = useTheme();
 	return (
 		<TouchableOpacity
@@ -102,9 +102,9 @@ function SymptomRow({ sym, selected, onPress, isFirst }) {
 			</View>
 		</TouchableOpacity>
 	);
-}
+});
 
-function BreastSideBtn({ side, selected, onPress }) {
+const BreastSideBtn = memo(function BreastSideBtn({ side, selected, onPress }) {
 	const { C } = useTheme();
 	const isExpressed = side.id === "expressed";
 	return (
@@ -122,9 +122,9 @@ function BreastSideBtn({ side, selected, onPress }) {
 			<Text style={{ fontSize: 12, fontWeight: "700", color: selected ? "#7a2d6a" : C.mutedText, textAlign: "center" }}>{side.label}</Text>
 		</TouchableOpacity>
 	);
-}
+});
 
-function BottleEntryRow({ entry: e, today, onEdit, onDelete }) {
+const BottleEntryRow = memo(function BottleEntryRow({ entry: e, today, onEdit, onDelete }) {
 	const { C } = useTheme();
 	const t = typeStyle(e.type);
 	return (
@@ -196,7 +196,7 @@ function BottleEntryRow({ entry: e, today, onEdit, onDelete }) {
 			</View>
 		</View>
 	);
-}
+});
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -293,59 +293,65 @@ export function BottleScreen({ bottleLog, childName, onAdd, onEdit, onDelete, qu
 				</TouchableOpacity>
 			</View>
 
-			<ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingBottom: 24 }}>
-				{/* Today's summary */}
-				<View style={{ backgroundColor: C.statBlueBg, borderRadius: 20, padding: 18, flexDirection: "row", alignItems: "center", gap: 16 }}>
-					<View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: "#2a5f8f22", alignItems: "center", justifyContent: "center" }}>
-						<Icon name="bottle" size={28} color="#2a5f8f" />
-					</View>
-					<View style={{ flex: 1 }}>
-						<Text style={{ fontSize: 12, fontWeight: "700", color: "#2a5f8f", textTransform: "uppercase", letterSpacing: 0.5 }}>Today{childName ? ` · ${childName}` : ""}</Text>
-						<Text style={{ fontSize: 26, fontWeight: "800", color: "#2a5f8f", marginTop: 2 }}>{todayTotalMl} ml</Text>
-						<Text style={{ fontSize: 12, color: "#2a5f8f99", marginTop: 2 }}>
-							{todayEntries.length === 0 ? "No feeds logged yet" : `${todayEntries.length} feed${todayEntries.length !== 1 ? "s" : ""} today`}
-						</Text>
-					</View>
-					{todayEntries.length > 0 && (
-						<View style={{ alignItems: "flex-end" }}>
-							{MILK_TYPES.map((t) => {
-								const cnt = todayEntries.filter((e) => e.type === t.id).length;
-								if (cnt === 0) return null;
-								return (
-									<View key={t.id} style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 4 }}>
-										<View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: t.color }} />
-										<Text style={{ fontSize: 11, color: "#2a5f8f", fontWeight: "600" }}>{cnt}× {t.label}</Text>
-									</View>
-								);
-							})}
+			<FlatList
+				showsVerticalScrollIndicator={false}
+				contentContainerStyle={{ gap: 14, paddingBottom: 24 }}
+				data={grouped}
+				keyExtractor={([date]) => date}
+				ListHeaderComponent={
+					<>
+						{/* Today's summary */}
+						<View style={{ backgroundColor: C.statBlueBg, borderRadius: 20, padding: 18, flexDirection: "row", alignItems: "center", gap: 16 }}>
+							<View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: "#2a5f8f22", alignItems: "center", justifyContent: "center" }}>
+								<Icon name="bottle" size={28} color="#2a5f8f" />
+							</View>
+							<View style={{ flex: 1 }}>
+								<Text style={{ fontSize: 12, fontWeight: "700", color: "#2a5f8f", textTransform: "uppercase", letterSpacing: 0.5 }}>Today{childName ? ` · ${childName}` : ""}</Text>
+								<Text style={{ fontSize: 26, fontWeight: "800", color: "#2a5f8f", marginTop: 2 }}>{todayTotalMl} ml</Text>
+								<Text style={{ fontSize: 12, color: "#2a5f8f99", marginTop: 2 }}>
+									{todayEntries.length === 0 ? "No feeds logged yet" : `${todayEntries.length} feed${todayEntries.length !== 1 ? "s" : ""} today`}
+								</Text>
+							</View>
+							{todayEntries.length > 0 && (
+								<View style={{ alignItems: "flex-end" }}>
+									{MILK_TYPES.map((t) => {
+										const cnt = todayEntries.filter((e) => e.type === t.id).length;
+										if (cnt === 0) return null;
+										return (
+											<View key={t.id} style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 4 }}>
+												<View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: t.color }} />
+												<Text style={{ fontSize: 11, color: "#2a5f8f", fontWeight: "600" }}>{cnt}× {t.label}</Text>
+											</View>
+										);
+									})}
+								</View>
+							)}
 						</View>
-					)}
-				</View>
 
-				{/* Type legend */}
-				<View style={{ flexDirection: "row", gap: 8 }}>
-					{MILK_TYPES.map((t) => (
-						<View key={t.id} style={{ flex: 1, backgroundColor: t.bg, borderRadius: 12, padding: 10, alignItems: "center" }}>
-							<View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: t.color, marginBottom: 4 }} />
-							<Text style={{ fontSize: 10, fontWeight: "700", color: t.color, textAlign: "center" }}>{t.label}</Text>
+						{/* Type legend */}
+						<View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
+							{MILK_TYPES.map((t) => (
+								<View key={t.id} style={{ flex: 1, backgroundColor: t.bg, borderRadius: 12, padding: 10, alignItems: "center" }}>
+									<View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: t.color, marginBottom: 4 }} />
+									<Text style={{ fontSize: 10, fontWeight: "700", color: t.color, textAlign: "center" }}>{t.label}</Text>
+								</View>
+							))}
 						</View>
-					))}
-				</View>
 
-				{/* Empty state */}
-				{bottleLog.length === 0 && (
-					<View style={[s.card, { alignItems: "center", paddingVertical: 40 }]}>
-						<Icon name="bottle" size={48} color={C.secondaryPurple} />
-						<Text style={{ color: C.mutedText, fontWeight: "600", fontSize: 15, marginTop: 14, marginBottom: 12 }}>No bottles logged yet</Text>
-						<TouchableOpacity onPress={openAdd} style={[s.btnPrimary, { paddingHorizontal: 28, width: "auto" }]}>
-							<Text style={s.btnPrimaryText}>Log First Bottle</Text>
-						</TouchableOpacity>
-					</View>
-				)}
-
-				{/* History grouped by date */}
-				{grouped.map(([date, entries]) => (
-					<View key={date} style={s.card}>
+						{/* Empty state */}
+						{bottleLog.length === 0 && (
+							<View style={[s.card, { alignItems: "center", paddingVertical: 40 }]}>
+								<Icon name="bottle" size={48} color={C.secondaryPurple} />
+								<Text style={{ color: C.mutedText, fontWeight: "600", fontSize: 15, marginTop: 14, marginBottom: 12 }}>No bottles logged yet</Text>
+								<TouchableOpacity onPress={openAdd} style={[s.btnPrimary, { paddingHorizontal: 28, width: "auto" }]}>
+									<Text style={s.btnPrimaryText}>Log First Bottle</Text>
+								</TouchableOpacity>
+							</View>
+						)}
+					</>
+				}
+				renderItem={({ item: [date, entries] }) => (
+					<View style={s.card}>
 						<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
 							<Text style={s.sectionTitle}>{date === today ? "Today" : formatDate(date)}</Text>
 							<Text style={{ fontSize: 13, color: C.primaryPurple, fontWeight: "700" }}>
@@ -358,8 +364,8 @@ export function BottleScreen({ bottleLog, childName, onAdd, onEdit, onDelete, qu
 							</View>
 						))}
 					</View>
-				))}
-			</ScrollView>
+				)}
+			/>
 
 			{/* ── Add/Edit Modal ── */}
 			<Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>

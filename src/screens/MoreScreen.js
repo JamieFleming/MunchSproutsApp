@@ -525,7 +525,7 @@ export function MoreScreen({
 	bottleRemindersEnabled = false, bottleReminderTimes = [],
 	onToggleBottleReminders, onAddBottleReminderTime, onRemoveBottleReminderTime,
 	onLogout, onDeleteAccount, onUpgradePro, onRestorePurchases,
-	onManageSharing, foodLog = [], bottleLog = [], weightLog = [], childName,
+	onManageSharing, onGenerateCode, onJoinViaCode, foodLog = [], bottleLog = [], weightLog = [], childName,
 }) {
 	const { C, theme, setTheme } = useTheme();
 	const s = useStyles();
@@ -1389,7 +1389,7 @@ export function MoreScreen({
 				icon={isPro ? "users" : "lock"}
 				iconBg={isPro ? C.statBlueBg : C.bgPurple}
 				label="Share with Family"
-				sublabel={isPro ? "Invite a partner or caregiver by email" : "Pro feature — upgrade to unlock"}
+				sublabel={isPro ? "Invite by email or share an invite code" : "Pro feature — upgrade to unlock"}
 				color={isPro ? undefined : C.mutedText}
 				onPress={isPro ? () => setShowSharing(true) : onUpgradePro}
 				right={isPro ? undefined : (
@@ -1402,6 +1402,8 @@ export function MoreScreen({
 				visible={showSharing} onClose={() => setShowSharing(false)}
 				user={user} ownedChildren={ownedChildren} defaultChildId={defaultChildId}
 				onManageSharing={onManageSharing}
+				onGenerateCode={onGenerateCode}
+				onJoinViaCode={onJoinViaCode}
 			/>
 
 			{/* Support */}

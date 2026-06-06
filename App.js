@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { collection, onSnapshot, doc, deleteDoc, updateDoc } from "firebase/firestore";
+import { db as firestoreDb } from "./firebase";
 import {
 	View,
 	Text,
@@ -10,7 +12,10 @@ import {
 	Platform,
 	KeyboardAvoidingView,
 	Image,
+	Linking,
+	AppState,
 } from "react-native";
+import * as Updates from "expo-updates";
 import {
 	SafeAreaView,
 	useSafeAreaInsets,
@@ -52,6 +57,8 @@ import {
 	groupByFood,
 	applyWeeklyFeaturedRotation,
 	computeMilestones,
+	uploadChildPhoto,
+	isLocalUri,
 } from "./src/helpers";
 
 import { LoadingScreen } from "./src/screens/LoadingScreen";
@@ -592,6 +599,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 	const [bottleRemindersEnabled, setBottleRemindersEnabled] = useState(false);
 	const [bottleReminderTimes, setBottleReminderTimes] = useState([]);
 	const [showWeightModal, setShowWeightModal] = useState(false);
+	const [smartRecipes, setSmartRecipes] = useState([]);
 
 	const STORAGE_KEY = `defaultChildId_${user?.uid}`;
 	const saveDefaultChild = (id) =>
@@ -619,11 +627,14 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 		// Clear badge whenever the app is opened
 		clearBadge().catch(() => {});
 
-		// Handle notification tap — extend this to navigate when needed
+		// Handle notification tap
 		const unsub = onNotificationTapped((response) => {
 			const data = response?.notification?.request?.content?.data ?? {};
+			// Open a URL if one is included in the notification data (e.g. App Store offer code redemption link)
+			if (data.url) {
+				Linking.openURL(data.url).catch(() => {});
+			}
 			// e.g. if (data.screen) setPage(data.screen);
-			// Ready to wire up navigation here without a new native build
 		});
 
 		return unsub;
@@ -667,6 +678,43 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 			alive = false;
 		};
 	}, [user]);
+
+	// ── Smart Recipes listener ────────────────────────────────────────────────
+	// No orderBy — sorts client-side to avoid needing a Firestore composite index.
+	useEffect(() => {
+		if (!user?.uid) return;
+		const unsub = onSnapshot(
+			collection(firestoreDb, "users", user.uid, "smartRecipes"),
+			(snap) => {
+				const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+				// Sort newest-first client-side
+				docs.sort((a, b) => {
+					const aMs = a.savedAt?.toMillis?.() ?? 0;
+					const bMs = b.savedAt?.toMillis?.() ?? 0;
+					return bMs - aMs;
+				});
+				setSmartRecipes(docs);
+			},
+			(err) => console.warn("[smartRecipes] listener error:", err.message),
+		);
+		return () => unsub();
+	}, [user?.uid]);
+
+	const handleDeleteSmartRecipe = async (id) => {
+		try {
+			await deleteDoc(doc(firestoreDb, "users", user.uid, "smartRecipes", id));
+		} catch (e) {
+			console.warn("[smartRecipes] delete error:", e.message);
+		}
+	};
+
+	const handleRateSmartRecipe = async (id, rating) => {
+		try {
+			await updateDoc(doc(firestoreDb, "users", user.uid, "smartRecipes", id), { rating });
+		} catch (e) {
+			console.warn("[smartRecipes] rate error:", e.message);
+		}
+	};
 
 	// Reset log filters whenever the user navigates away from the log screen
 	useEffect(() => {
@@ -945,6 +993,18 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 	const addChild = async (child) => {
 		try {
 			const { initialWeight, initialWeightOz, initialWeightUnit, ...childData } = child;
+
+			// Upload photo to Firebase Storage before saving to Firestore
+			if (childData.photoUri && isLocalUri(childData.photoUri)) {
+				try {
+					const tempName = `${user.uid}_${Date.now()}`;
+					childData.photoUri = await uploadChildPhoto(childData.photoUri, user.uid, tempName);
+				} catch (uploadErr) {
+					console.warn("[addChild] photo upload failed:", uploadErr.message);
+					childData.photoUri = ""; // never store a local URI in Firestore
+				}
+			}
+
 			const newId = await fbAddChild(user.uid, childData);
 			const newChild = { id: newId, ...childData };
 			setChildren((p) => [...p, newChild]);
@@ -976,8 +1036,22 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 
 	const editChild = async (updated) => {
 		try {
-			await fbUpdateChild(updated.id, updated);
-			setChildren((p) => p.map((c) => (c.id === updated.id ? updated : c)));
+			let toSave = { ...updated };
+
+			// Upload photo to Firebase Storage before saving to Firestore
+			if (toSave.photoUri && isLocalUri(toSave.photoUri)) {
+				try {
+					toSave.photoUri = await uploadChildPhoto(toSave.photoUri, user.uid, toSave.id);
+				} catch (uploadErr) {
+					console.warn("[editChild] photo upload failed:", uploadErr.message);
+					// Fall back to the existing saved URL (don't store local URI)
+					const existing = children.find((c) => c.id === toSave.id);
+					toSave.photoUri = isLocalUri(existing?.photoUri) ? "" : (existing?.photoUri || "");
+				}
+			}
+
+			await fbUpdateChild(toSave.id, toSave);
+			setChildren((p) => p.map((c) => (c.id === toSave.id ? toSave : c)));
 			toast("Updated");
 		} catch {
 			Alert.alert("Error", "Could not update child.");
@@ -1309,6 +1383,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 		childId,
 		onSuccess,
 		isRemove = false,
+		role = "caregiver",
 	) => {
 		if (!childId) {
 			Alert.alert("No child selected", "Please select a child to share.");
@@ -1320,6 +1395,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 				updateDoc,
 				arrayUnion,
 				arrayRemove,
+				deleteField,
 				collection,
 				query,
 				where,
@@ -1328,31 +1404,29 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 			const { db: firedb } = await import("./firebase");
 
 			if (isRemove) {
-				await updateDoc(doc(firedb, "children", childId), {
-					sharedWith: arrayRemove(emailOrUid),
-				});
-				const child = children.find((c) => c.id === childId);
+				const child    = children.find((c) => c.id === childId);
 				const uidIndex = (child?.sharedWith || []).indexOf(emailOrUid);
-				const matchEmail =
-					uidIndex !== -1 ? (child?.sharedWithEmails || [])[uidIndex] : null;
-				if (matchEmail)
-					await updateDoc(doc(firedb, "children", childId), {
-						sharedWithEmails: arrayRemove(matchEmail),
-					});
+				const matchEmail = uidIndex !== -1 ? (child?.sharedWithEmails || [])[uidIndex] : null;
+				const update = {
+					sharedWith: arrayRemove(emailOrUid),
+					[`sharedWithRoles.${emailOrUid}`]: deleteField(),
+				};
+				if (matchEmail) update.sharedWithEmails = arrayRemove(matchEmail);
+				await updateDoc(doc(firedb, "children", childId), update);
 				setChildren((p) =>
-					p.map((c) =>
-						c.id !== childId
-							? c
-							: {
-									...c,
-									sharedWith: (c.sharedWith || []).filter(
-										(u) => u !== emailOrUid,
-									),
-									sharedWithEmails: matchEmail
-										? (c.sharedWithEmails || []).filter((e) => e !== matchEmail)
-										: c.sharedWithEmails || [],
-								},
-					),
+					p.map((c) => {
+						if (c.id !== childId) return c;
+						const newRoles = { ...(c.sharedWithRoles || {}) };
+						delete newRoles[emailOrUid];
+						return {
+							...c,
+							sharedWith: (c.sharedWith || []).filter((u) => u !== emailOrUid),
+							sharedWithEmails: matchEmail
+								? (c.sharedWithEmails || []).filter((e) => e !== matchEmail)
+								: c.sharedWithEmails || [],
+							sharedWithRoles: newRoles,
+						};
+					}),
 				);
 				Alert.alert("Removed", "Access has been removed.");
 				return;
@@ -1386,8 +1460,9 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 			}
 			const theirEmail = emailOrUid.toLowerCase().trim();
 			await updateDoc(doc(firedb, "children", childId), {
-				sharedWith: arrayUnion(theirUid),
+				sharedWith:       arrayUnion(theirUid),
 				sharedWithEmails: arrayUnion(theirEmail),
+				[`sharedWithRoles.${theirUid}`]: role,
 			});
 			setChildren((p) =>
 				p.map((c) =>
@@ -1395,14 +1470,16 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						? c
 						: {
 								...c,
-								sharedWith: [...(c.sharedWith || []), theirUid],
+								sharedWith:       [...(c.sharedWith || []), theirUid],
 								sharedWithEmails: [...(c.sharedWithEmails || []), theirEmail],
+								sharedWithRoles:  { ...(c.sharedWithRoles || {}), [theirUid]: role },
 							},
 				),
 			);
+			const roleLabel = role === "parent" ? "Parent" : "Caregiver";
 			Alert.alert(
 				"Shared! ✓",
-				`${emailOrUid} now has access to ${child?.name || "your child"}. They will see the data next time they open the app.`,
+				`${emailOrUid} has been added as a ${roleLabel} for ${child?.name || "your child"}. They will see the data next time they open the app.`,
 			);
 			onSuccess?.();
 		} catch (e) {
@@ -1412,6 +1489,22 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 				e.message || "Could not update sharing. Please try again.",
 			);
 		}
+	};
+
+	const handleGenerateInviteCode = async (childId, role = "caregiver") => {
+		const { httpsCallable } = await import("firebase/functions");
+		const { functions: fns } = await import("./firebase");
+		const fn     = httpsCallable(fns, "generateInviteCode");
+		const result = await fn({ childId, role });
+		return result.data.code;
+	};
+
+	const handleJoinViaCode = async (code) => {
+		const { httpsCallable } = await import("firebase/functions");
+		const { functions: fns } = await import("./firebase");
+		const fn     = httpsCallable(fns, "joinViaInviteCode");
+		const result = await fn({ code });
+		return result.data; // { childName }
 	};
 
 	if (!dataLoaded) return <LoadingScreen />;
@@ -1596,6 +1689,9 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						jumpToRecipeId={jumpToRecipeId}
 						onJumpHandled={() => setJumpToRecipeId(null)}
 						resetKey={mealsResetKey}
+						smartRecipes={smartRecipes}
+						onDeleteSmartRecipe={handleDeleteSmartRecipe}
+						onRateSmartRecipe={handleRateSmartRecipe}
 					/>
 				</View>
 				<View style={{ flex: 1, display: page === "bottle" ? "flex" : "none" }}>
@@ -1842,6 +1938,8 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						onUpgradePro={handleUpgradePro}
 						onRestorePurchases={handleRestorePurchases}
 						onManageSharing={handleManageSharing}
+						onGenerateCode={handleGenerateInviteCode}
+						onJoinViaCode={handleJoinViaCode}
 						foodLog={childLog}
 						bottleLog={childBottleLog}
 						weightLog={childWeightLog}
@@ -1947,6 +2045,33 @@ export default function App() {
 		return () => {
 			alive = false;
 		};
+	}, []);
+
+	// ── OTA update check ─────────────────────────────────────────────────────────
+	useEffect(() => {
+		if (__DEV__) return; // expo-updates doesn't run in development
+
+		const checkForUpdate = async () => {
+			try {
+				const update = await Updates.checkForUpdateAsync();
+				if (update.isAvailable) {
+					await Updates.fetchUpdateAsync();
+					await Updates.reloadAsync();
+				}
+			} catch {
+				// Non-fatal — network unavailable or already on latest
+			}
+		};
+
+		// Check immediately on launch
+		checkForUpdate();
+
+		// Re-check every time the app comes back to the foreground
+		const sub = AppState.addEventListener("change", (state) => {
+			if (state === "active") checkForUpdate();
+		});
+
+		return () => sub.remove();
 	}, []);
 
 	const setTheme = (t) => {

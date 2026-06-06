@@ -275,11 +275,107 @@ export function computeGrowthSnapshot(weightLog) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 5. Bundle everything into the payload sent to the Cloud Function.
+// 5. Milk intake insight
+// ─────────────────────────────────────────────────────────────────────────────
+
+function toMl(amount, unit) {
+  if (amount == null) return 0;
+  return unit === "oz" ? Math.round(amount * 29.5735) : amount;
+}
+
+function getNhsMilkTarget(ageMonths) {
+  if (ageMonths < 1)  return { minMl: 450, maxMl: 600,  minFeeds: 6, maxFeeds: 10, note: "very frequent feeding on demand" };
+  if (ageMonths < 3)  return { minMl: 600, maxMl: 900,  minFeeds: 6, maxFeeds: 8,  note: "around 150–200ml per formula feed, 6–8 feeds/day" };
+  if (ageMonths < 6)  return { minMl: 600, maxMl: 1000, minFeeds: 5, maxFeeds: 7,  note: "around 180–240ml per formula feed, 5–7 feeds/day" };
+  if (ageMonths < 9)  return { minMl: 500, maxMl: 600,  minFeeds: 3, maxFeeds: 5,  note: "NHS recommends at least 500–600ml/day formula alongside solids" };
+  if (ageMonths < 12) return { minMl: 400, maxMl: 500,  minFeeds: 3, maxFeeds: 4,  note: "400–500ml formula as solid meals increase" };
+  return                     { minMl: 300, maxMl: 400,  minFeeds: 0, maxFeeds: 0,  note: "300–400ml whole cows milk from 12 months, formula no longer needed" };
+}
+
+export function computeMilkInsight(bottleLog = [], ageMonths = 6) {
+  if (!bottleLog || bottleLog.length === 0) {
+    return { hasData: false };
+  }
+
+  const today   = new Date();
+  const cut7    = new Date(today); cut7.setDate(today.getDate() - 7);
+  const cut14   = new Date(today); cut14.setDate(today.getDate() - 14);
+
+  const todayStr = dateStr(today);
+  const cut7Str  = dateStr(cut7);
+  const cut14Str = dateStr(cut14);
+
+  const week1 = bottleLog.filter((e) => e.date >= cut7Str && e.date <= todayStr);
+  const week2 = bottleLog.filter((e) => e.date >= cut14Str && e.date < cut7Str);
+
+  if (week1.length === 0) return { hasData: false };
+
+  const hasFormula = week1.some((e) => e.type === "formula" || e.type === "specialised");
+  const hasBreast  = week1.some((e) => e.type === "breast");
+  const milkType   = hasFormula && hasBreast ? "mixed" : hasFormula ? "formula" : "breast";
+
+  const daysLogged1 = Math.max(1, new Set(week1.map((e) => e.date)).size);
+  const daysLogged2 = Math.max(1, new Set(week2.map((e) => e.date)).size);
+
+  // Formula/expressed ml totals
+  const formulaEntries1 = week1.filter((e) => e.type === "formula" || e.type === "specialised" || (e.type === "breast" && e.breastSide === "expressed"));
+  const formulaEntries2 = week2.filter((e) => e.type === "formula" || e.type === "specialised" || (e.type === "breast" && e.breastSide === "expressed"));
+  const totalMl1 = formulaEntries1.reduce((s, e) => s + toMl(e.amount, e.unit), 0);
+  const totalMl2 = formulaEntries2.reduce((s, e) => s + toMl(e.amount, e.unit), 0);
+  const avgDailyMlThis = totalMl1 > 0 ? Math.round(totalMl1 / daysLogged1) : 0;
+  const avgDailyMlLast = week2.length > 0 && totalMl2 > 0 ? Math.round(totalMl2 / daysLogged2) : null;
+
+  // Direct breast feeds
+  const directBreast1 = week1.filter((e) => e.type === "breast" && e.breastSide && e.breastSide !== "expressed");
+  const directBreast2 = week2.filter((e) => e.type === "breast" && e.breastSide && e.breastSide !== "expressed");
+  const avgDailyFeeds = Math.round((week1.length / daysLogged1) * 10) / 10;
+  const avgDailyFeedsLast = week2.length > 0 ? Math.round((week2.length / daysLogged2) * 10) / 10 : null;
+
+  // Trend
+  let trend = "stable";
+  if (avgDailyMlThis > 0 && avgDailyMlLast != null) {
+    if (avgDailyMlThis > avgDailyMlLast * 1.15) trend = "up";
+    else if (avgDailyMlThis < avgDailyMlLast * 0.85) trend = "down";
+  } else if (avgDailyFeedsLast != null) {
+    if (avgDailyFeeds > avgDailyFeedsLast * 1.15) trend = "up";
+    else if (avgDailyFeeds < avgDailyFeedsLast * 0.85) trend = "down";
+  }
+
+  const target = getNhsMilkTarget(ageMonths);
+
+  // Status vs NHS target (formula/expressed only)
+  let status = "unknown";
+  if (avgDailyMlThis > 0) {
+    if      (avgDailyMlThis < target.minMl * 0.8) status = "low";
+    else if (avgDailyMlThis > target.maxMl * 1.2) status = "high";
+    else                                            status = "ok";
+  } else if (milkType === "breast") {
+    status = "breast_unmeasured";
+  }
+
+  return {
+    hasData:       true,
+    milkType,
+    hasFormula,
+    hasBreast,
+    avgDailyMlThis,
+    avgDailyMlLast,
+    avgDailyFeeds,
+    avgDailyFeedsLast,
+    trend,
+    status,
+    nhsTarget:     target,
+    daysLogged:    daysLogged1,
+    totalFeeds:    week1.length,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. Bundle everything into the payload sent to the Cloud Function.
 //    Keeps the AI prompt small by only sending computed summaries.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function buildInsightPayload(child, foodLog, weightLog) {
+export function buildInsightPayload(child, foodLog, weightLog, bottleLog = []) {
 	const nutrition = computeNutritionScore(foodLog);
 	const trends    = computeTrends(foodLog);
 	const { milestones, nextMilestone, allergenProgress } = computeMilestones(foodLog, child);
@@ -290,6 +386,15 @@ export function buildInsightPayload(child, foodLog, weightLog) {
 	const months = dob
 		? Math.floor((Date.now() - dob.getTime()) / (1000 * 60 * 60 * 24 * 30.44))
 		: null;
+
+	const milk = computeMilkInsight(bottleLog, months ?? 6);
+
+	// NHS expected weight gain for age
+	const nhsWeightGain =
+		months < 3  ? { minGPerDay: 20, maxGPerDay: 35 } :
+		months < 6  ? { minGPerDay: 14, maxGPerDay: 21 } :
+		months < 12 ? { minGPerDay: 8,  maxGPerDay: 14 } :
+		              { minGPerDay: 3,  maxGPerDay: 8  };
 
 	return {
 		childName:    child?.name || "Baby",
@@ -322,6 +427,29 @@ export function buildInsightPayload(child, foodLog, weightLog) {
 		growth: {
 			trend:      growth.trend,
 			entryCount: growth.entryCount,
+		},
+		milk: milk.hasData ? {
+			type:            milk.milkType,
+			avgDailyMlThis:  milk.avgDailyMlThis,
+			avgDailyMlLast:  milk.avgDailyMlLast,
+			avgDailyFeeds:   milk.avgDailyFeeds,
+			trend:           milk.trend,
+			status:          milk.status,
+			nhsTargetMin:    milk.nhsTarget.minMl,
+			nhsTargetMax:    milk.nhsTarget.maxMl,
+			nhsTargetNote:   milk.nhsTarget.note,
+			daysLogged:      milk.daysLogged,
+		} : { type: "none", note: "No milk feeds logged in the last 7 days" },
+		weightDetail: {
+			trend:           growth.trend,
+			latestKg:        growth.latestKg,
+			gPerDay:         growth.gPerDay ?? null,
+			nhsMinGPerDay:   nhsWeightGain.minGPerDay,
+			nhsMaxGPerDay:   nhsWeightGain.maxGPerDay,
+			entryCount:      growth.entryCount,
+			withinRange:     growth.gPerDay != null
+				? (growth.gPerDay >= nhsWeightGain.minGPerDay && growth.gPerDay <= nhsWeightGain.maxGPerDay)
+				: null,
 		},
 	};
 }
