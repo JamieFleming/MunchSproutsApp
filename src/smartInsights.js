@@ -6,6 +6,8 @@
  * which lives in the generateInsights Cloud Function.
  */
 
+import { toMl } from "./helpers";
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -277,11 +279,6 @@ export function computeGrowthSnapshot(weightLog) {
 // ─────────────────────────────────────────────────────────────────────────────
 // 5. Milk intake insight
 // ─────────────────────────────────────────────────────────────────────────────
-
-function toMl(amount, unit) {
-  if (amount == null) return 0;
-  return unit === "oz" ? Math.round(amount * 29.5735) : amount;
-}
 
 function getNhsMilkTarget(ageMonths) {
   if (ageMonths < 1)  return { minMl: 450, maxMl: 600,  minFeeds: 6, maxFeeds: 10, note: "very frequent feeding on demand" };

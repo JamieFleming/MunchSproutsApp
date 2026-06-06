@@ -193,7 +193,7 @@ function ListTabBar({ lists, activeKey, onSelect, onAdd, onManage }) {
 							<TouchableOpacity
 								onPress={() => onManage(list)}
 								hitSlop={{ top: 8, bottom: 8, left: 6, right: 8 }}
-								style={{ padding: 4 }}>
+								style={{ padding: 0 }}>
 								<Icon name="more" size={13} color={active ? "rgba(255,255,255,0.65)" : C.mutedText} />
 							</TouchableOpacity>
 						)}

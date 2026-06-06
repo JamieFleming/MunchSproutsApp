@@ -1,4 +1,5 @@
 import * as Notifications from "expo-notifications";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
 export const DEFAULT_NOTIFICATION_PREFS = {
@@ -9,7 +10,8 @@ export const DEFAULT_NOTIFICATION_PREFS = {
 	sound: "default",
 };
 
-// Notification messages — rotated so they don't feel stale
+const MEAL_IDS_KEY = "munchsprouts_mealReminderIds";
+
 const MESSAGES = [
 	{ title: "Time to log! 🥦", body: "Don't forget to record your little one's meal" },
 	{ title: "Meal time check-in 🍓", body: "Tap to log what your baby tried today" },
@@ -18,32 +20,16 @@ const MESSAGES = [
 	{ title: "Weaning reminder 🌽", body: "Add today's foods to your log" },
 ];
 
-// Returns true if the given hour falls within quiet hours (inclusive of start, exclusive of end)
 function isInQuietHours(hour, quietStart, quietEnd) {
 	const startH = parseInt(quietStart.split(":")[0], 10);
 	const endH = parseInt(quietEnd.split(":")[0], 10);
-
 	if (startH >= endH) {
-		// Overnight window e.g. 22:00 → 07:00
 		return hour >= startH || hour < endH;
-	} else {
-		// Same-day window e.g. 10:00 → 14:00
-		return hour >= startH && hour < endH;
 	}
+	return hour >= startH && hour < endH;
 }
 
-// Set global notification handler — call once on app start
-export function initNotificationHandler() {
-	Notifications.setNotificationHandler({
-		handleNotification: async () => ({
-			shouldShowAlert: true,
-			shouldPlaySound: true,
-			shouldSetBadge: false,
-		}),
-	});
-}
-
-// Request permission — returns true if granted
+// Request permission and ensure the Android reminders channel exists
 export async function requestNotificationPermission() {
 	if (Platform.OS === "android") {
 		await Notifications.setNotificationChannelAsync("reminders", {
@@ -60,9 +46,27 @@ export async function requestNotificationPermission() {
 	return status === "granted";
 }
 
-// Cancel all pending reminder notifications and reschedule based on prefs
+// Cancel only meal reminder notifications (not bottle reminders)
+export async function cancelAllReminders() {
+	try {
+		const raw = await AsyncStorage.getItem(MEAL_IDS_KEY);
+		if (raw) {
+			const ids = JSON.parse(raw);
+			await Promise.all(
+				ids.map((id) =>
+					Notifications.cancelScheduledNotificationAsync(id).catch(() => {}),
+				),
+			);
+		}
+	} catch { /* silent */ }
+	try {
+		await AsyncStorage.removeItem(MEAL_IDS_KEY);
+	} catch { /* silent */ }
+}
+
+// Cancel existing meal reminders and reschedule based on prefs
 export async function scheduleReminders(prefs) {
-	await Notifications.cancelAllScheduledNotificationsAsync();
+	await cancelAllReminders();
 
 	if (!prefs?.enabled) return;
 
@@ -71,47 +75,39 @@ export async function scheduleReminders(prefs) {
 	const quietEnd = prefs.quietEnd || "07:00";
 	const useSound = prefs.sound !== "silent";
 
-	// Override the handler sound based on pref
-	Notifications.setNotificationHandler({
-		handleNotification: async () => ({
-			shouldShowAlert: true,
-			shouldPlaySound: useSound,
-			shouldSetBadge: false,
-		}),
-	});
-
-	// Build list of hours in a 24-hour day at the given interval
 	const candidateHours = [];
 	for (let h = 0; h < 24; h += intervalHours) {
 		candidateHours.push(h);
 	}
 
-	// Filter out quiet hours
 	const validHours = candidateHours.filter(
 		(h) => !isInQuietHours(h, quietStart, quietEnd),
 	);
 
-	// Schedule one daily notification per valid hour
+	const ids = [];
 	for (let i = 0; i < validHours.length; i++) {
 		const hour = validHours[i];
 		const msg = MESSAGES[i % MESSAGES.length];
 
-		await Notifications.scheduleNotificationAsync({
-			content: {
-				title: msg.title,
-				body: msg.body,
-				sound: useSound ? "default" : null,
-			},
-			trigger: {
-				type: "daily",
-				hour,
-				minute: 0,
-				repeats: true,
-			},
-		});
+		try {
+			const id = await Notifications.scheduleNotificationAsync({
+				content: {
+					title: msg.title,
+					body: msg.body,
+					sound: useSound ? "default" : null,
+					...(Platform.OS === "android" && { channelId: "reminders" }),
+				},
+				trigger: {
+					type: Notifications.SchedulableTriggerInputTypes.DAILY,
+					hour,
+					minute: 0,
+				},
+			});
+			ids.push(id);
+		} catch { /* silent */ }
 	}
-}
 
-export async function cancelAllReminders() {
-	await Notifications.cancelAllScheduledNotificationsAsync();
+	try {
+		await AsyncStorage.setItem(MEAL_IDS_KEY, JSON.stringify(ids));
+	} catch { /* silent */ }
 }
