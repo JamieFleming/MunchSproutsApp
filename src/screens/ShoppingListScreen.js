@@ -13,6 +13,8 @@ import { parseIngredient } from "../helpers";
 
 const genId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 const DEFAULT_LIST_ID = "shopping";
+// Composite key so personal "shopping" and shared "shopping" never collide in the tab bar
+const tabKey = (l) => (l?.isShared ? "s:" : "p:") + (l?.id || "");
 
 // ── Firestore helpers ─────────────────────────────────────────────────────────
 
@@ -25,35 +27,60 @@ function listDocSegments(userId, list) {
 
 export async function loadAllLists(userId, childId) {
 	try {
-		const { collection, getDocs } = await import("firebase/firestore");
+		const { collection, getDocs, doc, getDoc } = await import("firebase/firestore");
 		const { db } = await import("../../firebase");
 
+		// Always include the default family shared list when a child is active.
+		// It lives at children/{childId}/lists/shopping and is always present.
+		let familyList = null;
+		if (childId) {
+			const snap = await getDoc(doc(db, "children", childId, "lists", DEFAULT_LIST_ID));
+			familyList = {
+				id: DEFAULT_LIST_ID,
+				name: snap.exists() ? (snap.data().name || "Family List") : "Family List",
+				isShared: true,
+				childId,
+				isDefault: true,
+			};
+		}
+
+		// Personal lists
 		const personalSnap = await getDocs(collection(db, "users", userId, "lists"));
 		const personal = personalSnap.docs.map((d) => ({
 			id: d.id,
 			name: d.data().name || "Shopping List",
 			isShared: false,
 			childId: null,
+			isDefault: false,
 		}));
 
-		let shared = [];
+		// Additional shared lists the user promoted (exclude the default "shopping" one)
+		let additionalShared = [];
 		if (childId) {
 			const sharedSnap = await getDocs(collection(db, "children", childId, "lists"));
-			shared = sharedSnap.docs.map((d) => ({
-				id: d.id,
-				name: d.data().name || "Shared List",
-				isShared: true,
-				childId,
-			}));
+			additionalShared = sharedSnap.docs
+				.filter((d) => d.id !== DEFAULT_LIST_ID)
+				.map((d) => ({
+					id: d.id,
+					name: d.data().name || "Shared List",
+					isShared: true,
+					childId,
+					isDefault: false,
+				}));
 		}
 
-		const all = [...personal, ...shared];
+		const all = [
+			...(familyList ? [familyList] : []),
+			...additionalShared,
+			...personal,
+		];
+
 		if (all.length === 0) {
-			return [{ id: DEFAULT_LIST_ID, name: "Shopping List", isShared: false, childId: null }];
+			return [{ id: DEFAULT_LIST_ID, name: "Shopping List", isShared: false, childId: null, isDefault: false }];
 		}
 		return all;
 	} catch {
-		return [{ id: DEFAULT_LIST_ID, name: "Shopping List", isShared: false, childId: null }];
+		return [{ id: DEFAULT_LIST_ID, name: "Shopping List", isShared: false, childId: null, isDefault: false }];
 	}
 }
 
@@ -89,7 +116,7 @@ async function createListDoc(userId, name) {
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString(),
 		});
-		return { id, name, isShared: false, childId: null };
+		return { id, name, isShared: false, childId: null, isDefault: false };
 	} catch { return null; }
 }
 
@@ -127,55 +154,58 @@ async function moveListPath(userId, list, makeShared, childId, currentItems) {
 	} catch { /* silent */ }
 }
 
+// Shared lists = blue, personal lists = purple
+const SHARED_COLORS = { active: "#1d4ed8", inactiveBg: "#dbeafe", inactiveBorder: "#93c5fd", inactiveText: "#1d4ed8" };
+
 // ── ListTabBar ─────────────────────────────────────────────────────────────────
 
-function ListTabBar({ lists, activeId, onSelect, onAdd, onManage }) {
+function ListTabBar({ lists, activeKey, onSelect, onAdd, onManage }) {
 	const { C } = useTheme();
 	return (
 		<ScrollView
 			horizontal
 			showsHorizontalScrollIndicator={false}
-			contentContainerStyle={{ gap: 8, paddingHorizontal: 14, paddingVertical: 10 }}>
+			style={{ flexGrow: 0, flexShrink: 0 }}
+			contentContainerStyle={{ gap: 8, paddingHorizontal: 14, paddingVertical: 10, alignItems: "center" }}>
 			{lists.map((list) => {
-				const active = list.id === activeId;
+				const key       = tabKey(list);
+				const active    = key === activeKey;
+				const sh        = list.isShared;
+				const canManage = !list.isDefault;
+				const bg     = active ? (sh ? SHARED_COLORS.active : C.primaryPurple) : (sh ? SHARED_COLORS.inactiveBg : C.white);
+				const border = active ? (sh ? SHARED_COLORS.active : C.primaryPurple) : (sh ? SHARED_COLORS.inactiveBorder : C.borderLight);
+				const textCol= active ? "#fff" : (sh ? SHARED_COLORS.inactiveText : C.textCharcoal);
 				return (
-					<View key={list.id} style={{ flexDirection: "row", alignItems: "center" }}>
-						<TouchableOpacity
-							onPress={() => onSelect(list.id)}
-							onLongPress={() => onManage(list)}
-							activeOpacity={0.8}
-							style={{
-								flexDirection: "row", alignItems: "center", gap: 5,
-								backgroundColor: active ? C.primaryPurple : C.white,
-								borderRadius: 999,
-								paddingLeft: 12, paddingRight: 6, paddingVertical: 8,
-								borderWidth: 1.5,
-								borderColor: active ? C.primaryPurple : C.borderLight,
-							}}>
-							{list.isShared && (
-								<Icon name="users" size={11} color={active ? "#fff" : "#2a5f8f"} />
-							)}
-							<Text style={{ fontSize: 13, fontWeight: "700", color: active ? "#fff" : C.textCharcoal }}>
-								{list.name}
-							</Text>
+					<TouchableOpacity
+						key={key}
+						onPress={() => onSelect(key)}
+						onLongPress={() => canManage && onManage(list)}
+						activeOpacity={0.8}
+						style={{
+							flexDirection: "row", alignItems: "center", gap: 5,
+							backgroundColor: bg, borderRadius: 999,
+							paddingLeft: 12, paddingRight: canManage ? 6 : 12, paddingVertical: 8,
+							borderWidth: 1.5, borderColor: border,
+						}}>
+						{sh && <Icon name="users" size={11} color={active ? "#fff" : SHARED_COLORS.active} />}
+						<Text style={{ fontSize: 13, fontWeight: "700", color: textCol }}>{list.name}</Text>
+						{canManage && (
 							<TouchableOpacity
 								onPress={() => onManage(list)}
 								hitSlop={{ top: 8, bottom: 8, left: 6, right: 8 }}
 								style={{ padding: 4 }}>
 								<Icon name="more" size={13} color={active ? "rgba(255,255,255,0.65)" : C.mutedText} />
 							</TouchableOpacity>
-						</TouchableOpacity>
-					</View>
+						)}
+					</TouchableOpacity>
 				);
 			})}
 			<TouchableOpacity
 				onPress={onAdd}
 				activeOpacity={0.8}
 				style={{
-					alignSelf: "center",
 					flexDirection: "row", alignItems: "center", gap: 5,
-					backgroundColor: C.bgPurple,
-					borderRadius: 999,
+					backgroundColor: C.bgPurple, borderRadius: 999,
 					paddingHorizontal: 12, paddingVertical: 8,
 					borderWidth: 1.5, borderColor: C.primaryPurple + "40",
 				}}>
@@ -205,7 +235,8 @@ function ListManageSheet({ visible, list, activeChild, canDelete, onRename, onTo
 		onClose();
 	};
 
-	const hasChild = !!activeChild;
+	const hasChild  = !!activeChild;
+	const isDefault = list?.isDefault;
 
 	return (
 		<Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -256,8 +287,8 @@ function ListManageSheet({ visible, list, activeChild, canDelete, onRename, onTo
 					</TouchableOpacity>
 				)}
 
-				{/* Share toggle */}
-				{hasChild && !editing && (
+				{/* Share toggle — not available for the default family list */}
+				{hasChild && !editing && !isDefault && (
 					<TouchableOpacity
 						onPress={() => { onToggleShare(list); onClose(); }}
 						activeOpacity={0.8}
@@ -286,8 +317,8 @@ function ListManageSheet({ visible, list, activeChild, canDelete, onRename, onTo
 					</TouchableOpacity>
 				)}
 
-				{/* Delete */}
-				{canDelete && !editing && (
+				{/* Delete — not available for the default family list */}
+				{canDelete && !editing && !isDefault && (
 					<TouchableOpacity
 						onPress={() => { onDelete(list); onClose(); }}
 						activeOpacity={0.8}
@@ -323,21 +354,21 @@ function ListPickerSheet({ visible, lists, onSelect, onClose }) {
 				</Text>
 				{lists.map((list) => (
 					<TouchableOpacity
-						key={list.id}
-						onPress={() => onSelect(list.id)}
+						key={tabKey(list)}
+						onPress={() => onSelect(tabKey(list))}
 						activeOpacity={0.8}
 						style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
 						<View style={{
 							width: 38, height: 38, borderRadius: 11,
-							backgroundColor: list.isShared ? "#d4eef5" : C.bgPurple,
+							backgroundColor: list.isShared ? SHARED_COLORS.inactiveBg : C.bgPurple,
 							alignItems: "center", justifyContent: "center",
 						}}>
-							<Icon name={list.isShared ? "users" : "cart"} size={17} color={list.isShared ? "#2a5f8f" : C.primaryPurple} />
+							<Icon name={list.isShared ? "users" : "cart"} size={17} color={list.isShared ? SHARED_COLORS.active : C.primaryPurple} />
 						</View>
 						<View style={{ flex: 1 }}>
 							<Text style={{ fontSize: 15, fontWeight: "700", color: C.textCharcoal }}>{list.name}</Text>
 							{list.isShared && (
-								<Text style={{ fontSize: 11, color: "#2a5f8f", marginTop: 1 }}>Shared with family</Text>
+								<Text style={{ fontSize: 11, color: SHARED_COLORS.active, marginTop: 1 }}>Shared with family</Text>
 							)}
 						</View>
 						<Icon name="chevRight" size={15} color={C.mutedText} />
@@ -621,7 +652,7 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 
 	// ── List state ─────────────────────────────────────────────────────────────
 	const [lists,           setLists]           = useState([]);
-	const [activeListId,    setActiveListId]    = useState(DEFAULT_LIST_ID);
+	const [activeTabKey,    setActiveTabKey]    = useState(null);
 	const [manageList,      setManageList]      = useState(null);
 	const [showCreate,      setShowCreate]      = useState(false);
 	const [showListPicker,  setShowListPicker]  = useState(false);
@@ -648,7 +679,7 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 	}, [insets.bottom]);
 
 	// ── Derived: active list descriptor ───────────────────────────────────────
-	const activeList = lists.find((l) => l.id === activeListId) || lists[0] || null;
+	const activeList = lists.find((l) => tabKey(l) === activeTabKey) || lists[0] || null;
 	const childId    = isPro ? (activeChild?.id || null) : null;
 
 	// ── Load all lists ─────────────────────────────────────────────────────────
@@ -656,7 +687,7 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 		if (!user?.uid) { setLoading(false); return; }
 		loadAllLists(user.uid, childId).then((loaded) => {
 			setLists(loaded);
-			setActiveListId(loaded[0]?.id || DEFAULT_LIST_ID);
+			setActiveTabKey(loaded[0] ? tabKey(loaded[0]) : null);
 		});
 	}, [user?.uid, childId]);
 
@@ -739,13 +770,13 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 		}
 	};
 
-	const handleListPickerSelect = (listId) => {
+	const handleListPickerSelect = (key) => {
 		setShowListPicker(false);
 		if (!pendingRecipe) return;
-		const target = lists.find((l) => l.id === listId);
+		const target = lists.find((l) => tabKey(l) === key);
 		if (target) {
 			commitRecipeAdd(pendingRecipe.recipeId, pendingRecipe.recipeTitle, pendingRecipe.ingredients, target);
-			setActiveListId(listId);
+			setActiveTabKey(key);
 		}
 		setPendingRecipe(null);
 	};
@@ -756,28 +787,29 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 		const newList = await createListDoc(user.uid, name);
 		if (newList) {
 			setLists((prev) => [...prev, newList]);
-			setActiveListId(newList.id);
+			setActiveTabKey(tabKey(newList));
 			setItems([]);
 		}
 	};
 
 	const handleRenameList = async (list, newName) => {
 		await renameListDoc(user.uid, list, newName);
-		setLists((prev) => prev.map((l) => l.id === list.id ? { ...l, name: newName } : l));
+		setLists((prev) => prev.map((l) => tabKey(l) === tabKey(list) ? { ...l, name: newName } : l));
 	};
 
 	const handleToggleShare = async (list) => {
-		if (!activeChild?.id || !user?.uid) return;
-		const currentItems = list.id === activeList?.id ? items : await loadListItems(user.uid, list);
+		if (list.isDefault || !activeChild?.id || !user?.uid) return;
+		const currentItems = tabKey(list) === tabKey(activeList) ? items : await loadListItems(user.uid, list);
 		const makeShared = !list.isShared;
 		await moveListPath(user.uid, list, makeShared, activeChild.id, currentItems);
-		setLists((prev) => prev.map((l) => l.id === list.id
+		setLists((prev) => prev.map((l) => tabKey(l) === tabKey(list)
 			? { ...l, isShared: makeShared, childId: makeShared ? activeChild.id : null }
 			: l,
 		));
 	};
 
 	const handleDeleteList = (list) => {
+		if (list.isDefault) return;
 		Alert.alert(`Delete "${list.name}"?`, "All items in this list will be permanently removed.", [
 			{ text: "Cancel", style: "cancel" },
 			{
@@ -785,11 +817,11 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 				style: "destructive",
 				onPress: async () => {
 					await deleteListDoc(user.uid, list);
-					const remaining = lists.filter((l) => l.id !== list.id);
+					const remaining = lists.filter((l) => tabKey(l) !== tabKey(list));
 					setLists(remaining);
-					if (list.id === activeListId) {
+					if (tabKey(list) === activeTabKey) {
 						const next = remaining[0];
-						setActiveListId(next?.id || DEFAULT_LIST_ID);
+						setActiveTabKey(next ? tabKey(next) : null);
 						if (next) loadListItems(user.uid, next).then(setItems);
 						else setItems([]);
 					}
@@ -818,8 +850,8 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 			{isPro && (
 				<ListTabBar
 					lists={lists}
-					activeId={activeList?.id}
-					onSelect={(id) => { if (id !== activeListId) setActiveListId(id); }}
+					activeKey={activeTabKey}
+					onSelect={(key) => { if (key !== activeTabKey) setActiveTabKey(key); }}
 					onAdd={() => setShowCreate(true)}
 					onManage={setManageList}
 				/>
