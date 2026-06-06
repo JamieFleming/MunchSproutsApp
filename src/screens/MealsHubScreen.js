@@ -15,13 +15,16 @@ const genId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
 async function appendToShoppingList(
 	userId,
+	childId,
 	recipeId,
 	recipeTitle,
 	ingredients,
 ) {
 	const { doc, getDoc, setDoc } = await import("firebase/firestore");
 	const { db } = await import("../../firebase");
-	const ref = doc(db, "users", userId, "lists", "shopping");
+	const ref = childId
+		? doc(db, "children", childId, "lists", "shopping")
+		: doc(db, "users", userId, "lists", "shopping");
 	const snap = await getDoc(ref);
 	const existing = snap.exists() ? snap.data().items || [] : [];
 	const newItems = ingredients.map((ing) => {
@@ -434,7 +437,7 @@ export function MealsHubScreen({
 		ingredients,
 	) => {
 		if (!user?.uid) throw new Error("Not signed in");
-		await appendToShoppingList(user.uid, recipeId, recipeTitle, ingredients);
+		await appendToShoppingList(user.uid, activeChild?.id || null, recipeId, recipeTitle, ingredients);
 		setView("shopping");
 	};
 
@@ -445,7 +448,7 @@ export function MealsHubScreen({
 		ingredients,
 	) => {
 		if (!user?.uid) throw new Error("Not signed in");
-		await appendToShoppingList(user.uid, recipeId, recipeTitle, ingredients);
+		await appendToShoppingList(user.uid, activeChild?.id || null, recipeId, recipeTitle, ingredients);
 		// Intentionally no navigation — SmartMealIdeasScreen shows its own success state
 	};
 
@@ -503,6 +506,7 @@ export function MealsHubScreen({
 					onUpgradePro={onUpgradePro}
 					recipes={recipes}
 					visible={view === "shopping"}
+					activeChild={activeChild}
 				/>
 			</View>
 

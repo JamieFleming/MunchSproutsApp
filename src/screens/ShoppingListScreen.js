@@ -15,24 +15,43 @@ const genId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
 // ── Firestore helpers (dynamic imports to avoid bundle issues) ─────────────────
 
-async function loadItems(userId) {
+async function loadItems(userId, childId) {
 	try {
-		const { doc, getDoc }   = await import("firebase/firestore");
-		const { db }            = await import("../../firebase");
+		const { doc, getDoc, setDoc } = await import("firebase/firestore");
+		const { db }                  = await import("../../firebase");
+
+		if (childId) {
+			// Child-based path — shared between all users with access to this child
+			const childSnap = await getDoc(doc(db, "children", childId, "lists", "shopping"));
+			const childItems = childSnap.exists() ? (childSnap.data().items || []) : [];
+			if (childItems.length > 0) return childItems;
+
+			// First load after migration: try old user path and copy over
+			const userSnap  = await getDoc(doc(db, "users", userId, "lists", "shopping"));
+			const userItems = userSnap.exists() ? (userSnap.data().items || []) : [];
+			if (userItems.length > 0) {
+				await setDoc(
+					doc(db, "children", childId, "lists", "shopping"),
+					{ items: userItems, updatedAt: new Date().toISOString() },
+					{ merge: true },
+				);
+			}
+			return userItems;
+		}
+
 		const snap = await getDoc(doc(db, "users", userId, "lists", "shopping"));
 		return snap.exists() ? (snap.data().items || []) : [];
 	} catch { return []; }
 }
 
-async function persistItems(userId, items) {
+async function persistItems(userId, childId, items) {
 	try {
-		const { doc, setDoc }   = await import("firebase/firestore");
-		const { db }            = await import("../../firebase");
-		await setDoc(
-			doc(db, "users", userId, "lists", "shopping"),
-			{ items, updatedAt: new Date().toISOString() },
-			{ merge: true },
-		);
+		const { doc, setDoc } = await import("firebase/firestore");
+		const { db }          = await import("../../firebase");
+		const ref = childId
+			? doc(db, "children", childId, "lists", "shopping")
+			: doc(db, "users", userId, "lists", "shopping");
+		await setDoc(ref, { items, updatedAt: new Date().toISOString() }, { merge: true });
 	} catch { /* silent */ }
 }
 
@@ -283,7 +302,7 @@ function ProGate({ onUpgradePro }) {
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
-export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], visible = true }) {
+export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], visible = true, activeChild = null }) {
 	const { C } = useTheme();
 	const insets = useSafeAreaInsets();
 
@@ -310,21 +329,23 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 	}, [insets.bottom]);
 
 	// ── Load from Firestore ─────────────────────────────────────────────────
+	const childId = activeChild?.id || null;
+
 	useEffect(() => {
 		if (!user?.uid || !isPro) { setLoading(false); return; }
-		loadItems(user.uid).then((saved) => { setItems(saved); setLoading(false); });
-	}, [user?.uid, isPro]);
+		loadItems(user.uid, childId).then((saved) => { setItems(saved); setLoading(false); });
+	}, [user?.uid, isPro, childId]);
 
 	// Reload whenever the screen becomes visible (e.g. after adding items from RecipesScreen)
 	useEffect(() => {
 		if (!visible || !user?.uid || !isPro) return;
-		loadItems(user.uid).then(setItems);
+		loadItems(user.uid, childId).then(setItems);
 	}, [visible]);
 
 	// ── Save helper (called after every mutation) ───────────────────────────
 	const save = useCallback((newItems) => {
-		if (user?.uid) persistItems(user.uid, newItems);
-	}, [user?.uid]);
+		if (user?.uid) persistItems(user.uid, childId, newItems);
+	}, [user?.uid, childId]);
 
 	// ── CRUD ────────────────────────────────────────────────────────────────
 	const addItem = () => {
@@ -404,8 +425,19 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 	// know statically. The listener approach reads the real keyboard height
 	// (incl. suggestion bar) and subtracts the tab bar height to get precisely
 	// how much of the content area is overlapped — no guesswork needed.
+	const isShared = childId && (activeChild?.sharedWith?.length > 0 || activeChild?.userId !== user?.uid);
+
 	return (
 		<View style={{ flex: 1, backgroundColor: C.screen, paddingBottom: kbPadding }}>
+			{/* Shared indicator */}
+			{isShared && (
+				<View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#d4eef5", borderRadius: 10, marginHorizontal: 16, marginBottom: 4, paddingHorizontal: 12, paddingVertical: 7 }}>
+					<Icon name="users" size={13} color="#2a5f8f" />
+					<Text style={{ fontSize: 12, fontWeight: "700", color: "#2a5f8f" }}>
+						Shared list — updates visible to all family members
+					</Text>
+				</View>
+			)}
 			{/* Action bar */}
 			<View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10 }}>
 				<TouchableOpacity onPress={() => { Keyboard.dismiss(); setShowRecipes(true); }} activeOpacity={0.85}
