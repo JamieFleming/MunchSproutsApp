@@ -22,7 +22,7 @@
 			}
 		},
 		"android": {
-			"googleServicesFile": "$GOOGLE_SERVICES_JSON",
+			"googleServicesFile": "./google-services.json",
 			"adaptiveIcon": {
 				"foregroundImage": "./assets/logo.png",
 				"backgroundColor": "#ffffff"
