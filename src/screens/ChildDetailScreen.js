@@ -3,7 +3,7 @@ import {
 	View, Text, TouchableOpacity, ScrollView, Modal, TextInput,
 	Image, Platform, Dimensions, Alert, KeyboardAvoidingView,
 } from "react-native";
-import Svg, { Polyline, Circle, Line, Text as SvgText, Path } from "react-native-svg";
+import Svg, { Polyline, Circle, Text as SvgText, Path } from "react-native-svg";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon } from "../components/Icon";
 import { ZoomableImage } from "../components/ZoomableImage";
@@ -63,10 +63,9 @@ function LineGraph({ data, color = "#7c3aed", unitLabel = "", emptyText = "Log a
 
 			{/* Grid lines */}
 			{tickVals.map((v, i) => (
-				<Line
+				<Path
 					key={i}
-					x1={PAD_L} y1={toY(v)}
-					x2={GRAPH_W} y2={toY(v)}
+					d={`M${PAD_L} ${toY(v)} H${GRAPH_W}`}
 					stroke="#e5e7eb" strokeWidth="1"
 				/>
 			))}
@@ -126,7 +125,7 @@ function ProLock({ title, onUpgradePro, children }) {
 				<View style={{ backgroundColor: "#f5c842", borderRadius: 14, width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
 					<Icon name="crown" size={22} color="#2d1f5e" />
 				</View>
-				<Text style={{ fontWeight: "800", fontSize: 15, color: "#2d1f5e" }}>{title}</Text>
+				<Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 15, color: "#2d1f5e" }}>{title}</Text>
 				<Text style={{ fontSize: 12, color: "#5a4a8f", textAlign: "center", paddingHorizontal: 20 }}>
 					Upgrade to Pro to unlock this feature
 				</Text>
@@ -134,7 +133,7 @@ function ProLock({ title, onUpgradePro, children }) {
 					onPress={onUpgradePro}
 					activeOpacity={0.85}
 					style={{ backgroundColor: "#2d1f5e", borderRadius: 12, paddingHorizontal: 24, paddingVertical: 11, marginTop: 4 }}>
-					<Text style={{ color: "#f5c842", fontWeight: "800", fontSize: 13 }}>Unlock with Pro</Text>
+					<Text style={{ color: "#f5c842", fontFamily: "NunitoSans_800ExtraBold", fontSize: 13 }}>Unlock with Pro</Text>
 				</TouchableOpacity>
 			</View>
 		</View>
@@ -208,7 +207,7 @@ function MilestoneCircle({ size = 60, emoji, icon, iconColor, label, achieved, p
 				)}
 			</View>
 			<Text style={{
-				fontSize: 10, fontWeight: "700",
+				fontSize: 10, fontFamily: "NunitoSans_700Bold",
 				color: achieved ? color : GREY,
 				textAlign: "center", marginTop: 5,
 				maxWidth: size + 16,
@@ -258,20 +257,22 @@ function MilestonesSection({ foodLog }) {
 
 	return (
 		<View style={s.card}>
-			<View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
-				<Text style={{ fontSize: 20 }}>🏆</Text>
-				<Text style={s.sectionTitle}>Milestones</Text>
+			<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+				<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+					<Icon name="star" size={18} color="#c49a10" />
+					<Text style={s.sectionTitle}>Milestones</Text>
+				</View>
 			</View>
 			<Text style={{ fontSize: 12, color: C.mutedText, marginBottom: 20 }}>
 				{totalUnique === 0
 					? "Start logging foods to earn milestones!"
 					: nextTotalMilestone
 						? `${totalUnique} unique food${totalUnique !== 1 ? "s" : ""} tried · ${nextTotalMilestone.count - totalUnique} until next milestone`
-						: `${totalUnique} unique foods tried · All food milestones unlocked! 🎉`}
+						: `${totalUnique} unique foods tried · All food milestones unlocked!`}
 			</Text>
 
 			{/* Food Explorer */}
-			<Text style={{ fontSize: 11, fontWeight: "800", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 12 }}>
+			<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 12 }}>
 				Food Explorer
 			</Text>
 			<View style={{ flexDirection: "row", justifyContent: "space-around", marginBottom: 24 }}>
@@ -291,7 +292,7 @@ function MilestonesSection({ foodLog }) {
 			</View>
 
 			{/* Allergen Introductions */}
-			<Text style={{ fontSize: 11, fontWeight: "800", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 12 }}>
+			<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 12 }}>
 				Allergen Introductions
 			</Text>
 			<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 24, justifyContent: "space-around" }}>
@@ -310,7 +311,7 @@ function MilestonesSection({ foodLog }) {
 			</View>
 
 			{/* Category Champions */}
-			<Text style={{ fontSize: 11, fontWeight: "800", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 12 }}>
+			<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 12 }}>
 				Category Champions
 			</Text>
 			<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "space-around" }}>
@@ -358,11 +359,11 @@ function EditChildModal({ visible, child, onSave, onClose }) {
 				{/* Header */}
 				<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
 					<TouchableOpacity onPress={onClose}>
-						<Text style={{ fontSize: 16, color: C.mutedText, fontWeight: "600" }}>Cancel</Text>
+						<Text style={{ fontSize: 16, color: C.mutedText, fontFamily: "NunitoSans_600SemiBold" }}>Cancel</Text>
 					</TouchableOpacity>
-					<Text style={{ fontSize: 17, fontWeight: "800", color: C.primaryPinkDark }}>Edit Child</Text>
+					<Text style={{ fontSize: 17, fontFamily: "PlusJakartaSans_700Bold", color: C.primaryPinkDark }}>Edit Child</Text>
 					<TouchableOpacity onPress={handleSave}>
-						<Text style={{ fontSize: 16, color: C.primaryPurple, fontWeight: "700" }}>Save</Text>
+						<Text style={{ fontSize: 16, color: C.primaryPurple, fontFamily: "NunitoSans_700Bold" }}>Save</Text>
 					</TouchableOpacity>
 				</View>
 
@@ -418,7 +419,7 @@ function EditChildModal({ visible, child, onSave, onClose }) {
 					{form.weaningStart ? (
 						<TouchableOpacity onPress={() => set("weaningStart", "")}
 							style={{ alignSelf: "flex-start" }}>
-							<Text style={{ fontSize: 12, color: "#c0392b", fontWeight: "600" }}>Clear weaning date</Text>
+							<Text style={{ fontSize: 12, color: "#c0392b", fontFamily: "NunitoSans_600SemiBold" }}>Clear weaning date</Text>
 						</TouchableOpacity>
 					) : null}
 
@@ -526,7 +527,7 @@ function EditWeightModal({ visible, entry, weightPreference, onSave, onDelete, o
 											key={u}
 											onPress={() => set("unit", u)}
 											style={{ flex: 1, paddingVertical: 10, alignItems: "center", backgroundColor: fields.unit === u ? C.primaryPurple : "transparent" }}>
-											<Text style={{ fontWeight: "700", fontSize: 13, color: fields.unit === u ? C.white : C.mutedText }}>{u}</Text>
+											<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 13, color: fields.unit === u ? C.white : C.mutedText }}>{u}</Text>
 										</TouchableOpacity>
 									))}
 								</View>
@@ -582,7 +583,7 @@ function EditWeightModal({ visible, entry, weightPreference, onSave, onDelete, o
 							<TouchableOpacity
 								onPress={handleDelete}
 								style={{ alignItems: "center", paddingVertical: 12 }}>
-								<Text style={{ fontSize: 14, fontWeight: "700", color: "#c0392b" }}>Delete Entry</Text>
+								<Text style={{ fontSize: 14, fontFamily: "NunitoSans_700Bold", color: "#c0392b" }}>Delete Entry</Text>
 							</TouchableOpacity>
 						</View>
 					</ScrollView>
@@ -676,7 +677,7 @@ export function ChildDetailScreen({
 					onPress={() => setShowEdit(true)}
 					style={{ backgroundColor: C.bgPurple, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, flexDirection: "row", alignItems: "center", gap: 6 }}>
 					<Icon name="edit" size={14} color={C.primaryPurple} />
-					<Text style={{ fontSize: 13, fontWeight: "700", color: C.primaryPurple }}>Edit</Text>
+					<Text style={{ fontSize: 13, fontFamily: "NunitoSans_700Bold", color: C.primaryPurple }}>Edit</Text>
 				</TouchableOpacity>
 			</View>
 
@@ -696,22 +697,22 @@ export function ChildDetailScreen({
 						</View>
 					)}
 					<View style={{ flex: 1, gap: 5 }}>
-						<Text style={{ fontWeight: "800", fontSize: 20, color: C.primaryPinkDark }}>{child.name}</Text>
+						<Text style={{ fontFamily: "PlusJakartaSans_700Bold", fontSize: 20, color: C.primaryPinkDark }}>{child.name}</Text>
 						<Text style={{ fontSize: 12, color: C.mutedText }}>Born {formatDate(child.dob)}</Text>
 						<View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
 							{weeks !== null && (
 								<>
 									<View style={{ backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
-										<Text style={{ fontSize: 11, fontWeight: "700", color: C.primaryPurple }}>{weeks}w</Text>
+										<Text style={{ fontSize: 11, fontFamily: "NunitoSans_700Bold", color: C.primaryPurple }}>{weeks}w</Text>
 									</View>
 									<View style={{ backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
-										<Text style={{ fontSize: 11, fontWeight: "700", color: C.primaryPurple }}>{months}mo</Text>
+										<Text style={{ fontSize: 11, fontFamily: "NunitoSans_700Bold", color: C.primaryPurple }}>{months}mo</Text>
 									</View>
 								</>
 							)}
 							{latestWeight && (
 								<View style={{ backgroundColor: "#e6f7ef", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
-									<Text style={{ fontSize: 11, fontWeight: "700", color: "#2d7a55" }}>
+									<Text style={{ fontSize: 11, fontFamily: "NunitoSans_700Bold", color: "#2d7a55" }}>
 										{formatWeight(latestWeight.value_kg, weightPreference)}
 									</Text>
 								</View>
@@ -725,20 +726,20 @@ export function ChildDetailScreen({
 
 				{/* ── Weight graph ── */}
 				<View style={s.card}>
-					<View style={{ marginBottom: 16 }}>
+					<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
 						<Text style={s.sectionTitle}>Weight Over Time</Text>
-						{latestWeight ? (
-							<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 3 }}>
-								Latest: <Text style={{ fontWeight: "700", color: C.primaryPurple }}>
-									{formatWeight(latestWeight.value_kg, weightPreference)}
-								</Text> · {formatDate(latestWeight.date)}
-							</Text>
-						) : (
-							<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 3 }}>
-								No weight entries yet — use the + button to log one
-							</Text>
-						)}
 					</View>
+					{latestWeight ? (
+						<Text style={{ fontSize: 12, color: C.mutedText, marginBottom: 14 }}>
+							Latest: <Text style={{ fontFamily: "NunitoSans_700Bold", color: C.primaryPurple }}>
+								{formatWeight(latestWeight.value_kg, weightPreference)}
+							</Text> · {formatDate(latestWeight.date)}
+						</Text>
+					) : (
+						<Text style={{ fontSize: 12, color: C.mutedText, marginBottom: 14 }}>
+							No weight entries yet — use the + button to log one
+						</Text>
+					)}
 
 					<LineGraph
 						data={weightGraphData}
@@ -749,11 +750,11 @@ export function ChildDetailScreen({
 					{/* Recent weight list */}
 					{weightGraphData.length > 0 && (
 						<View style={{ marginTop: 16, borderTopWidth: 1, borderTopColor: C.borderLight, paddingTop: 14, gap: 2 }}>
-							<Text style={{ fontSize: 12, fontWeight: "700", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Recent entries</Text>
+							<Text style={{ fontSize: 12, fontFamily: "NunitoSans_700Bold", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Recent entries</Text>
 							{[...weightGraphData].reverse().slice(0, 5).map((w) => (
 								<View key={w.id} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
 									<Text style={{ flex: 1, fontSize: 13, color: C.mutedText }}>{formatDate(w.date)}</Text>
-									<Text style={{ fontSize: 15, fontWeight: "700", color: C.primaryPurple, marginRight: 14 }}>
+									<Text style={{ fontSize: 15, fontFamily: "NunitoSans_700Bold", color: C.primaryPurple, marginRight: 14 }}>
 										{formatWeight(w.value_kg, weightPreference)}
 									</Text>
 									<TouchableOpacity
@@ -780,8 +781,10 @@ export function ChildDetailScreen({
 				{/* ── Milk intake graph (Pro) ── */}
 				{isPro ? (
 					<View style={s.card}>
-						<Text style={s.sectionTitle}>Milk Intake</Text>
-						<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 3, marginBottom: 16 }}>Daily total · last 14 days (ml)</Text>
+						<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+							<Text style={s.sectionTitle}>Milk Intake</Text>
+						</View>
+						<Text style={{ fontSize: 12, color: C.mutedText, marginBottom: 16 }}>Daily total · last 14 days (ml)</Text>
 						<LineGraph
 							data={milkGraphData}
 							color="#2a5f8f"
@@ -792,8 +795,10 @@ export function ChildDetailScreen({
 				) : (
 					<ProLock title="Milk Intake Graph" onUpgradePro={onUpgradePro}>
 						<View style={[s.card, { opacity: 0.35 }]}>
-							<Text style={s.sectionTitle}>Milk Intake</Text>
-							<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 3, marginBottom: 16 }}>Daily total · last 14 days (ml)</Text>
+							<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+								<Text style={s.sectionTitle}>Milk Intake</Text>
+							</View>
+							<Text style={{ fontSize: 12, color: C.mutedText, marginBottom: 16 }}>Daily total · last 14 days (ml)</Text>
 							<View style={{ height: GRAPH_H, backgroundColor: C.bgPurple, borderRadius: 12 }} />
 						</View>
 					</ProLock>
@@ -818,7 +823,7 @@ export function ChildDetailScreen({
 									<Icon name="sparkle" size={20} color="#7c3aed" />
 								</View>
 								<View>
-									<Text style={{ fontWeight: "800", fontSize: 16, color: C.primaryPinkDark }}>Smart Insights</Text>
+									<Text style={{ fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 16, color: C.primaryPinkDark }}>Smart Insights</Text>
 									<Text style={{ fontSize: 12, color: C.mutedText }}>AI-powered growth &amp; nutrition insights</Text>
 								</View>
 							</View>
@@ -833,9 +838,11 @@ export function ChildDetailScreen({
 				{/* ── Photo Gallery (Pro) ── */}
 				{isPro ? (
 					<View style={s.card}>
-						<Text style={[s.sectionTitle, { marginBottom: 14 }]}>
-							Food Photos{photoEntries.length > 0 ? ` · ${photoEntries.length}` : ""}
-						</Text>
+						<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+							<Text style={s.sectionTitle}>
+								Food Photos{photoEntries.length > 0 ? ` · ${photoEntries.length}` : ""}
+							</Text>
+						</View>
 						{photoEntries.length === 0 ? (
 							<View style={{ alignItems: "center", paddingVertical: 24, gap: 8 }}>
 								<Icon name="Camera" size={36} color={C.secondaryPurple} />
@@ -856,7 +863,7 @@ export function ChildDetailScreen({
 												style={{ width: THUMB, height: THUMB, borderRadius: 10, overflow: "hidden", backgroundColor: C.bgPurple }}>
 												<Image source={{ uri: item.photoUri }} style={{ width: THUMB, height: THUMB }} resizeMode="cover" />
 												<View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.45)", paddingHorizontal: 5, paddingVertical: 4 }}>
-													<Text style={{ fontSize: 9, fontWeight: "700", color: "#fff" }} numberOfLines={1}>{item.name}</Text>
+													<Text style={{ fontSize: 9, fontFamily: "NunitoSans_700Bold", color: "#fff" }} numberOfLines={1}>{item.name}</Text>
 												</View>
 											</TouchableOpacity>
 										))}
@@ -868,7 +875,9 @@ export function ChildDetailScreen({
 				) : (
 					<ProLock title="Photo Gallery" onUpgradePro={onUpgradePro}>
 						<View style={[s.card, { opacity: 0.35 }]}>
-							<Text style={[s.sectionTitle, { marginBottom: 14 }]}>Food Photos</Text>
+							<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+								<Text style={s.sectionTitle}>Food Photos</Text>
+							</View>
 							<View style={{ flexDirection: "row", gap: 4 }}>
 								{[0, 1, 2].map((i) => (
 									<View key={i} style={{ width: THUMB, height: THUMB, borderRadius: 10, backgroundColor: C.bgPurple }} />
@@ -891,7 +900,7 @@ export function ChildDetailScreen({
 						</TouchableOpacity>
 						<ZoomableImage uri={lightboxPhoto.photoUri} />
 						<View style={{ backgroundColor: "rgba(0,0,0,0.7)", paddingHorizontal: 24, paddingVertical: 18, paddingBottom: Platform.OS === "ios" ? 36 : 18 }}>
-							<Text style={{ fontSize: 18, fontWeight: "800", color: "#fff", marginBottom: 4 }}>{lightboxPhoto.name}</Text>
+							<Text style={{ fontSize: 18, fontFamily: "PlusJakartaSans_700Bold", color: "#fff", marginBottom: 4 }}>{lightboxPhoto.name}</Text>
 							<View style={{ flexDirection: "row", gap: 12 }}>
 								{lightboxPhoto.date     && <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>{formatDate(lightboxPhoto.date)}</Text>}
 								{lightboxPhoto.reaction && <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>· {lightboxPhoto.reaction}</Text>}

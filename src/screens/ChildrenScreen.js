@@ -83,9 +83,22 @@ export function ChildrenScreen({
 
 			<ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
 				{children.length === 0 && (
-					<View style={[s.card, { alignItems: "center", paddingVertical: 40 }]}>
-						<Icon name="users" size={44} color={C.secondaryPurple} />
-						<Text style={{ color: C.mutedText, fontWeight: "600", marginTop: 14, fontSize: 15 }}>No children added yet</Text>
+					<View style={[s.card, { alignItems: "center", paddingVertical: 40, paddingHorizontal: 28 }]}>
+						<Svg width={80} height={80} viewBox="0 0 80 80">
+							<Circle cx="40" cy="40" r="38" fill={C.bgPurple} />
+							{/* Two people silhouettes */}
+							<Circle cx="30" cy="28" r="8" fill={C.primaryPurple + "50"} />
+							<Path fill={C.primaryPurple + "50"} d="M16 52 Q16 40 30 40 Q44 40 44 52 Z" />
+							<Circle cx="50" cy="30" r="7" fill={C.primaryPurple + "80"} />
+							<Path fill={C.primaryPurple + "80"} d="M38 52 Q38 42 50 42 Q62 42 62 52 Z" />
+							<Path stroke="#f9a825" strokeWidth="1.5" strokeLinecap="round" fill="none" d="M58 18 L58 13 M55 15 L61 15" />
+						</Svg>
+						<Text style={{ fontFamily: "PlusJakartaSans_700Bold", fontSize: 20, color: C.primaryPinkDark, marginTop: 16, marginBottom: 6 }}>
+							Add your family
+						</Text>
+						<Text style={{ fontFamily: "NunitoSans_400Regular", color: C.mutedText, fontSize: 14, textAlign: "center", lineHeight: 21 }}>
+							Add your little one to start tracking their food journey
+						</Text>
 					</View>
 				)}
 				{children.map((child) => {
@@ -95,7 +108,7 @@ export function ChildrenScreen({
 					return (
 						<View
 							key={child.id}
-							style={[s.card, { borderWidth: 2, borderColor: isActive ? C.primaryPurple : "transparent", backgroundColor: isActive ? C.bgPurple : C.white }]}>
+							style={[s.card, { borderWidth: isActive ? 2 : 1, borderColor: isActive ? C.primaryPurple : C.borderLight, backgroundColor: isActive ? C.bgPurple : C.white }]}>
 							<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
 								<View style={{ flex: 1 }}>
 									<View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 6 }}>
@@ -115,10 +128,10 @@ export function ChildrenScreen({
 											</View>
 										</TouchableOpacity>
 										<View>
-											<Text style={{ fontWeight: "700", fontSize: 17, color: C.primaryPinkDark }}>{child.name}</Text>
+											<Text style={{ fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 17, color: C.primaryPinkDark }}>{child.name}</Text>
 											{isActive && (
 												<View style={{ backgroundColor: C.primaryPurple, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, alignSelf: "flex-start", marginTop: 2 }}>
-													<Text style={{ fontSize: 9, fontWeight: "700", color: C.white, textTransform: "uppercase" }}>Active</Text>
+													<Text style={{ fontSize: 9, fontFamily: "NunitoSans_700Bold", color: C.white, textTransform: "uppercase" }}>Active</Text>
 												</View>
 											)}
 										</View>
@@ -165,7 +178,7 @@ export function ChildrenScreen({
 							<Icon name="crown" size={20} color="#f5c842" />
 						</View>
 						<View style={{ flex: 1 }}>
-							<Text style={{ fontWeight: "800", fontSize: 14, color: "#fff" }}>Unlimited Profiles — Pro</Text>
+							<Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 14, color: "#fff" }}>Unlimited Profiles — Pro</Text>
 							<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", marginTop: 2 }}>
 								Upgrade to add more children and share with family
 							</Text>
@@ -194,7 +207,7 @@ export function ChildrenScreen({
 											<Icon name="Camera" size={28} color={C.mutedText} />
 										)}
 									</View>
-									<Text style={{ fontSize: 12, color: C.primaryPurple, fontWeight: "700", marginTop: 8 }}>
+									<Text style={{ fontSize: 12, color: C.primaryPurple, fontFamily: "NunitoSans_700Bold", marginTop: 8 }}>
 										{childPhoto ? "Change or Remove Photo" : "Add Photo (optional)"}
 									</Text>
 								</TouchableOpacity>
@@ -223,7 +236,7 @@ export function ChildrenScreen({
 													key={u}
 													onPress={() => { set("initialWeightUnit", u); set("initialWeight", ""); set("initialWeightOz", ""); }}
 													style={{ flex: 1, paddingVertical: 10, alignItems: "center", backgroundColor: form.initialWeightUnit === u ? C.primaryPurple : "transparent" }}>
-													<Text style={{ fontWeight: "700", fontSize: 13, color: form.initialWeightUnit === u ? C.white : C.mutedText }}>{u}</Text>
+													<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 13, color: form.initialWeightUnit === u ? C.white : C.mutedText }}>{u}</Text>
 												</TouchableOpacity>
 											))}
 										</View>

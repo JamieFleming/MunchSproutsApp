@@ -174,7 +174,7 @@ function ListTabBar({ lists, activeKey, onSelect, onAdd, onManage }) {
 				const canManage = !list.isDefault;
 				const bg     = active ? (sh ? SHARED_COLORS.active : C.primaryPurple) : (sh ? SHARED_COLORS.inactiveBg : C.white);
 				const border = active ? (sh ? SHARED_COLORS.active : C.primaryPurple) : (sh ? SHARED_COLORS.inactiveBorder : C.borderLight);
-				const textCol= active ? "#fff" : (sh ? SHARED_COLORS.inactiveText : C.textCharcoal);
+				const textCol= active ? "#fff" : (sh ? SHARED_COLORS.inactiveText : C.mutedText);
 				return (
 					<TouchableOpacity
 						key={key}
@@ -188,7 +188,7 @@ function ListTabBar({ lists, activeKey, onSelect, onAdd, onManage }) {
 							borderWidth: 1.5, borderColor: border,
 						}}>
 						{sh && <Icon name="users" size={11} color={active ? "#fff" : SHARED_COLORS.active} />}
-						<Text style={{ fontSize: 13, fontWeight: "700", color: textCol }}>{list.name}</Text>
+						<Text style={{ fontSize: 13, fontFamily: active ? "NunitoSans_700Bold" : "NunitoSans_600SemiBold", color: textCol }}>{list.name}</Text>
 						{canManage && (
 							<TouchableOpacity
 								onPress={() => onManage(list)}
@@ -210,7 +210,7 @@ function ListTabBar({ lists, activeKey, onSelect, onAdd, onManage }) {
 					borderWidth: 1.5, borderColor: C.primaryPurple + "40",
 				}}>
 				<Icon name="plus" size={13} color={C.primaryPurple} />
-				<Text style={{ fontSize: 13, fontWeight: "700", color: C.primaryPurple }}>New list</Text>
+				<Text style={{ fontSize: 13, fontFamily: "NunitoSans_700Bold", color: C.primaryPurple }}>New list</Text>
 			</TouchableOpacity>
 		</ScrollView>
 	);
@@ -251,7 +251,7 @@ function ListManageSheet({ visible, list, activeChild, canDelete, onRename, onTo
 				paddingTop: 8, paddingBottom: 40, paddingHorizontal: 20,
 			}}>
 				<View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: C.borderLight, alignSelf: "center", marginBottom: 16 }} />
-				<Text style={{ fontSize: 16, fontWeight: "800", color: C.textCharcoal, marginBottom: 16 }}>
+				<Text style={{ fontSize: 16, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, marginBottom: 16 }}>
 					{list?.name}
 				</Text>
 
@@ -271,11 +271,11 @@ function ListManageSheet({ visible, list, activeChild, canDelete, onRename, onTo
 						<View style={{ flexDirection: "row", gap: 8 }}>
 							<TouchableOpacity onPress={() => setEditing(false)}
 								style={{ flex: 1, backgroundColor: C.bgPurple, borderRadius: 12, paddingVertical: 12, alignItems: "center" }}>
-								<Text style={{ fontWeight: "700", color: C.mutedText }}>Cancel</Text>
+								<Text style={{ fontFamily: "NunitoSans_700Bold", color: C.mutedText }}>Cancel</Text>
 							</TouchableOpacity>
 							<TouchableOpacity onPress={handleSaveName}
 								style={{ flex: 1, backgroundColor: C.primaryPurple, borderRadius: 12, paddingVertical: 12, alignItems: "center" }}>
-								<Text style={{ fontWeight: "700", color: "#fff" }}>Save</Text>
+								<Text style={{ fontFamily: "NunitoSans_700Bold", color: "#fff" }}>Save</Text>
 							</TouchableOpacity>
 						</View>
 					</View>
@@ -283,7 +283,7 @@ function ListManageSheet({ visible, list, activeChild, canDelete, onRename, onTo
 					<TouchableOpacity onPress={() => setEditing(true)} activeOpacity={0.8}
 						style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
 						<Icon name="edit" size={18} color={C.primaryPurple} />
-						<Text style={{ fontSize: 15, fontWeight: "600", color: C.textCharcoal }}>Rename list</Text>
+						<Text style={{ fontSize: 15, fontFamily: "NunitoSans_600SemiBold", color: C.textCharcoal }}>Rename list</Text>
 					</TouchableOpacity>
 				)}
 
@@ -295,7 +295,7 @@ function ListManageSheet({ visible, list, activeChild, canDelete, onRename, onTo
 						style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
 						<Icon name="users" size={18} color={list?.isShared ? "#2a5f8f" : C.mutedText} />
 						<View style={{ flex: 1 }}>
-							<Text style={{ fontSize: 15, fontWeight: "600", color: C.textCharcoal }}>
+							<Text style={{ fontSize: 15, fontFamily: "NunitoSans_600SemiBold", color: C.textCharcoal }}>
 								{list?.isShared ? "Stop sharing with family" : `Share with ${activeChild.name}'s family`}
 							</Text>
 							{!list?.isShared && (
@@ -324,7 +324,7 @@ function ListManageSheet({ visible, list, activeChild, canDelete, onRename, onTo
 						activeOpacity={0.8}
 						style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14 }}>
 						<Icon name="trash" size={18} color="#c0392b" />
-						<Text style={{ fontSize: 15, fontWeight: "600", color: "#c0392b" }}>Delete list</Text>
+						<Text style={{ fontSize: 15, fontFamily: "NunitoSans_600SemiBold", color: "#c0392b" }}>Delete list</Text>
 					</TouchableOpacity>
 				)}
 			</View>
@@ -349,7 +349,7 @@ function ListPickerSheet({ visible, lists, onSelect, onClose }) {
 				paddingTop: 8, paddingBottom: 40,
 			}}>
 				<View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: C.borderLight, alignSelf: "center", marginBottom: 16 }} />
-				<Text style={{ fontSize: 17, fontWeight: "800", color: C.textCharcoal, paddingHorizontal: 20, marginBottom: 8 }}>
+				<Text style={{ fontSize: 17, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, paddingHorizontal: 20, marginBottom: 8 }}>
 					Add to which list?
 				</Text>
 				{lists.map((list) => (
@@ -366,7 +366,7 @@ function ListPickerSheet({ visible, lists, onSelect, onClose }) {
 							<Icon name={list.isShared ? "users" : "cart"} size={17} color={list.isShared ? SHARED_COLORS.active : C.primaryPurple} />
 						</View>
 						<View style={{ flex: 1 }}>
-							<Text style={{ fontSize: 15, fontWeight: "700", color: C.textCharcoal }}>{list.name}</Text>
+							<Text style={{ fontSize: 15, fontFamily: "NunitoSans_700Bold", color: C.textCharcoal }}>{list.name}</Text>
 							{list.isShared && (
 								<Text style={{ fontSize: 11, color: SHARED_COLORS.active, marginTop: 1 }}>Shared with family</Text>
 							)}
@@ -413,7 +413,7 @@ function CreateListModal({ visible, onCreate, onClose }) {
 					paddingTop: 8, paddingBottom: 40, paddingHorizontal: 20,
 				}}>
 					<View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: C.borderLight, alignSelf: "center", marginBottom: 16 }} />
-					<Text style={{ fontSize: 17, fontWeight: "800", color: C.textCharcoal, marginBottom: 16 }}>New List</Text>
+					<Text style={{ fontSize: 17, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, marginBottom: 16 }}>New List</Text>
 					<TextInput
 						ref={inputRef}
 						value={name}
@@ -428,13 +428,13 @@ function CreateListModal({ visible, onCreate, onClose }) {
 					<View style={{ flexDirection: "row", gap: 10 }}>
 						<TouchableOpacity onPress={onClose}
 							style={{ flex: 1, backgroundColor: C.bgPurple, borderRadius: 14, paddingVertical: 14, alignItems: "center" }}>
-							<Text style={{ fontWeight: "700", color: C.mutedText }}>Cancel</Text>
+							<Text style={{ fontFamily: "NunitoSans_700Bold", color: C.mutedText }}>Cancel</Text>
 						</TouchableOpacity>
 						<TouchableOpacity
 							onPress={handleCreate}
 							disabled={!name.trim()}
 							style={{ flex: 1, backgroundColor: name.trim() ? C.primaryPurple : C.borderLight, borderRadius: 14, paddingVertical: 14, alignItems: "center" }}>
-							<Text style={{ fontWeight: "800", color: "#fff" }}>Create</Text>
+							<Text style={{ fontFamily: "NunitoSans_800ExtraBold", color: "#fff" }}>Create</Text>
 						</TouchableOpacity>
 					</View>
 				</View>
@@ -448,16 +448,10 @@ function CreateListModal({ visible, onCreate, onClose }) {
 function EmptyState() {
 	const { C } = useTheme();
 	return (
-		<View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32, paddingBottom: 80 }}>
-			<View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center", marginBottom: 18 }}>
-				<Icon name="cart" size={36} color={C.primaryPurple} />
-			</View>
-			<Text style={{ fontSize: 20, fontWeight: "800", color: C.textCharcoal, textAlign: "center", marginBottom: 8 }}>
-				List is empty
-			</Text>
-			<Text style={{ fontSize: 14, color: C.mutedText, textAlign: "center", lineHeight: 20 }}>
-				Add items below or tap "From Recipe" to import ingredients straight from a recipe.
-			</Text>
+		<View style={{ alignItems: "center", paddingVertical: 48 }}>
+			<Icon name="list" size={40} color={C.borderLight} />
+			<Text style={{ fontFamily: "PlusJakartaSans_700Bold", fontSize: 18, color: C.primaryPinkDark, marginTop: 16, marginBottom: 6 }}>List is empty</Text>
+			<Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 14, color: C.mutedText, textAlign: "center" }}>Add items above or import from a recipe</Text>
 		</View>
 	);
 }
@@ -477,24 +471,24 @@ function ItemRow({ item, onToggle, onRemove, currentUserId, isListShared }) {
 		: null;
 
 	return (
-		<Animated.View style={{ opacity: fadeAnim, flexDirection: "row", alignItems: "center", backgroundColor: C.white, borderRadius: 14, marginBottom: 8, paddingHorizontal: 14, paddingVertical: 12, shadowColor: "#000", shadowOpacity: 0.03, shadowRadius: 4, elevation: 1 }}>
+		<Animated.View style={{ opacity: fadeAnim, flexDirection: "row", alignItems: "center", backgroundColor: C.white, borderRadius: 14, marginBottom: 8, paddingHorizontal: 16, paddingVertical: 13, shadowColor: "#000", shadowOpacity: 0.03, shadowRadius: 4, elevation: 1 }}>
 			<TouchableOpacity onPress={() => onToggle(item.id)} activeOpacity={0.7}
-				style={{ width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: item.checked ? C.primaryPurple : C.borderLight, backgroundColor: item.checked ? C.primaryPurple : "transparent", alignItems: "center", justifyContent: "center", marginRight: 12 }}>
-				{item.checked && <Icon name="check" size={13} color="#fff" />}
+				style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: item.checked ? C.primaryPurple : C.borderLight, backgroundColor: item.checked ? C.primaryPurple : "transparent", alignItems: "center", justifyContent: "center", marginRight: 12 }}>
+				{item.checked && <Icon name="check" size={11} color="#fff" />}
 			</TouchableOpacity>
 			<View style={{ flex: 1, gap: 3 }}>
-				<Text style={{ fontSize: 15, fontWeight: "600", color: item.checked ? C.mutedText : C.textCharcoal, textDecorationLine: item.checked ? "line-through" : "none" }} numberOfLines={2}>
+				<Text style={{ fontSize: 15, fontFamily: "NunitoSans_600SemiBold", color: item.checked ? C.mutedText : C.textCharcoal, textDecorationLine: item.checked ? "line-through" : "none" }} numberOfLines={2}>
 					{item.name}
 				</Text>
 				<View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
 					{!!item.quantity && (
-						<View style={{ backgroundColor: "#f0f6fc", borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
-							<Text style={{ fontSize: 11, color: "#2a5f8f", fontWeight: "600" }}>{item.quantity}</Text>
+						<View style={{ backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
+							<Text style={{ fontSize: 11, color: C.primaryPurple, fontFamily: "NunitoSans_700Bold" }}>{item.quantity}</Text>
 						</View>
 					)}
 					{!!item.recipeTitle && (
 						<View style={{ backgroundColor: C.bgPurple, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
-							<Text style={{ fontSize: 11, color: C.primaryPurple, fontWeight: "600" }}>📖 {item.recipeTitle}</Text>
+							<Text style={{ fontSize: 11, color: C.primaryPurple, fontFamily: "NunitoSans_600SemiBold" }}>📖 {item.recipeTitle}</Text>
 						</View>
 					)}
 					{addedByLabel && (
@@ -561,7 +555,7 @@ function RecipePickerModal({ visible, recipes, onClose, onAddIngredients }) {
 								</TouchableOpacity>
 							)}
 							<View style={{ flex: 1 }}>
-								<Text style={{ fontSize: 18, fontWeight: "800", color: C.textCharcoal }}>
+								<Text style={{ fontSize: 18, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal }}>
 									{step === "recipes" ? "Choose a Recipe" : selectedRecipe?.title}
 								</Text>
 								{step === "ingredients" && (
@@ -600,7 +594,7 @@ function RecipePickerModal({ visible, recipes, onClose, onAddIngredients }) {
 										<Icon name="chef" size={20} color={C.primaryPurple} />
 									</View>
 									<View style={{ flex: 1 }}>
-										<Text style={{ fontWeight: "700", fontSize: 14, color: C.textCharcoal }} numberOfLines={1}>{r.title}</Text>
+										<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: C.textCharcoal }} numberOfLines={1}>{r.title}</Text>
 										<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>
 											{(r.ingredients || []).length} ingredient{(r.ingredients || []).length !== 1 ? "s" : ""}
 											{r.time ? ` · ${r.time}` : ""}
@@ -622,7 +616,7 @@ function RecipePickerModal({ visible, recipes, onClose, onAddIngredients }) {
 										<View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: checked[i] ? C.primaryPurple : C.borderLight, backgroundColor: checked[i] ? C.primaryPurple : "transparent", alignItems: "center", justifyContent: "center" }}>
 											{checked[i] && <Icon name="check" size={12} color="#fff" />}
 										</View>
-										<Text style={{ flex: 1, fontSize: 14, color: C.textCharcoal, fontWeight: "500" }}>{ing}</Text>
+										<Text style={{ flex: 1, fontSize: 14, color: C.textCharcoal, fontFamily: "NunitoSans_400Regular" }}>{ing}</Text>
 									</TouchableOpacity>
 								))}
 								<View style={{ height: 20 }} />
@@ -631,7 +625,7 @@ function RecipePickerModal({ visible, recipes, onClose, onAddIngredients }) {
 								<TouchableOpacity onPress={handleAdd} disabled={selectedCount === 0} activeOpacity={0.85}
 									style={{ backgroundColor: selectedCount === 0 ? C.borderLight : C.primaryPurple, borderRadius: 16, paddingVertical: 15, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}>
 									<Icon name="cart" size={18} color="#fff" />
-									<Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>
+									<Text style={{ color: "#fff", fontFamily: "NunitoSans_800ExtraBold", fontSize: 15 }}>
 										Add {selectedCount > 0 ? `${selectedCount} item${selectedCount !== 1 ? "s" : ""}` : "items"} to list
 									</Text>
 								</TouchableOpacity>
@@ -648,6 +642,7 @@ function RecipePickerModal({ visible, recipes, onClose, onAddIngredients }) {
 
 export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], visible = true, activeChild = null }) {
 	const { C } = useTheme();
+	const s = useStyles();
 	const insets = useSafeAreaInsets();
 
 	// ── List state ─────────────────────────────────────────────────────────────
@@ -861,7 +856,7 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 			{isShared && (
 				<View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#d4eef5", borderRadius: 10, marginHorizontal: 14, marginBottom: 2, paddingHorizontal: 12, paddingVertical: 7 }}>
 					<Icon name="users" size={13} color="#2a5f8f" />
-					<Text style={{ fontSize: 12, fontWeight: "700", color: "#2a5f8f" }}>
+					<Text style={{ fontSize: 12, fontFamily: "NunitoSans_700Bold", color: "#2a5f8f" }}>
 						Shared list — updates visible to all family members
 					</Text>
 				</View>
@@ -872,11 +867,18 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 				<TouchableOpacity onPress={onUpgradePro} activeOpacity={0.85}
 					style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#fef9c3", borderRadius: 10, marginHorizontal: 14, marginBottom: 4, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: "#f5c84240" }}>
 					<Icon name="crown" size={13} color="#c8920a" />
-					<Text style={{ fontSize: 12, fontWeight: "700", color: "#c8920a", flex: 1 }}>
+					<Text style={{ fontSize: 12, fontFamily: "NunitoSans_700Bold", color: "#c8920a", flex: 1 }}>
 						Upgrade to Pro to share lists and create multiple lists
 					</Text>
 					<Icon name="chevRight" size={12} color="#c8920a" />
 				</TouchableOpacity>
+			)}
+
+			{/* Active list name */}
+			{activeList && (
+				<Text style={{ fontSize: 18, fontFamily: "PlusJakartaSans_600SemiBold", color: C.textCharcoal, paddingHorizontal: 14, paddingTop: 6, paddingBottom: 2 }}>
+					{activeList.name}
+				</Text>
 			)}
 
 			{/* Action bar */}
@@ -884,21 +886,21 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 				<TouchableOpacity onPress={() => { Keyboard.dismiss(); setShowRecipes(true); }} activeOpacity={0.85}
 					style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9, borderWidth: 1.5, borderColor: C.primaryPurple + "30" }}>
 					<Icon name="chef" size={15} color={C.primaryPurple} />
-					<Text style={{ fontSize: 13, fontWeight: "700", color: C.primaryPurple }}>From Recipe</Text>
+					<Text style={{ fontSize: 13, fontFamily: "NunitoSans_700Bold", color: C.primaryPurple }}>From Recipe</Text>
 				</TouchableOpacity>
 				<View style={{ flex: 1 }} />
 				{checked.length > 0 && (
 					<TouchableOpacity onPress={clearChecked} activeOpacity={0.8}
 						style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#fde8e8", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9 }}>
 						<Icon name="trash" size={14} color="#c0392b" />
-						<Text style={{ fontSize: 13, fontWeight: "700", color: "#c0392b" }}>Clear done ({checked.length})</Text>
+						<Text style={{ fontSize: 13, fontFamily: "NunitoSans_700Bold", color: "#c0392b" }}>Clear done ({checked.length})</Text>
 					</TouchableOpacity>
 				)}
 				{items.length > 0 && checked.length === 0 && (
 					<TouchableOpacity onPress={clearAll} activeOpacity={0.8}
 						style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#fde8e8", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9 }}>
 						<Icon name="trash" size={14} color="#c0392b" />
-						<Text style={{ fontSize: 13, fontWeight: "700", color: "#c0392b" }}>Clear all</Text>
+						<Text style={{ fontSize: 13, fontFamily: "NunitoSans_700Bold", color: "#c0392b" }}>Clear all</Text>
 					</TouchableOpacity>
 				)}
 			</View>
@@ -912,13 +914,10 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 						<ItemRow key={item.id} item={item} onToggle={toggleItem} onRemove={removeItem} currentUserId={user?.uid} isListShared={activeList?.isShared} />
 					))}
 					{checked.length > 0 && (
-						<View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 10 }}>
+						<View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 4, marginTop: 16, marginBottom: 8 }}>
+							<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 11, color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.6 }}>In basket</Text>
 							<View style={{ flex: 1, height: 1, backgroundColor: C.borderLight }} />
-							<View style={{ flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-								<Icon name="cartCheck" size={13} color={C.primaryPurple} />
-								<Text style={{ fontSize: 11, fontWeight: "700", color: C.primaryPurple }}>In basket ({checked.length})</Text>
-							</View>
-							<View style={{ flex: 1, height: 1, backgroundColor: C.borderLight }} />
+							<Text style={{ fontFamily: "NunitoSans_600SemiBold", fontSize: 11, color: C.mutedText }}>{checked.length}</Text>
 						</View>
 					)}
 					{checked.map((item) => (
@@ -928,30 +927,32 @@ export function ShoppingListScreen({ user, isPro, onUpgradePro, recipes = [], vi
 			)}
 
 			{/* Sticky input */}
-			<View style={{ backgroundColor: C.white, borderTopWidth: 1, borderTopColor: C.borderLight, paddingHorizontal: 14, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 8 }}>
-				<TextInput
-					ref={nameRef}
-					value={newName}
-					onChangeText={setNewName}
-					onSubmitEditing={addItem}
-					returnKeyType="done"
-					placeholder="Add an item…"
-					placeholderTextColor={C.mutedText}
-					style={{ flex: 1, fontSize: 15, color: C.textCharcoal, backgroundColor: C.bgPurple, borderRadius: 12, paddingHorizontal: 13, paddingVertical: 11, fontWeight: "500" }}
-				/>
-				<TextInput
-					value={newQty}
-					onChangeText={setNewQty}
-					onSubmitEditing={addItem}
-					returnKeyType="done"
-					placeholder="Qty"
-					placeholderTextColor={C.mutedText}
-					style={{ width: 68, fontSize: 14, color: C.textCharcoal, backgroundColor: C.bgPurple, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 11, fontWeight: "500", textAlign: "center" }}
-				/>
-				<TouchableOpacity onPress={addItem} activeOpacity={0.85}
-					style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: C.primaryPurple, alignItems: "center", justifyContent: "center" }}>
-					<Icon name="plus" size={22} color="#fff" />
-				</TouchableOpacity>
+			<View style={{ backgroundColor: C.white, borderTopWidth: 1, borderTopColor: C.borderLight, paddingHorizontal: 14, paddingVertical: 10 }}>
+				<View style={[s.input, { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: C.white }]}>
+					<TextInput
+						ref={nameRef}
+						value={newName}
+						onChangeText={setNewName}
+						onSubmitEditing={addItem}
+						returnKeyType="done"
+						placeholder="Add an item…"
+						placeholderTextColor={C.mutedText}
+						style={{ flex: 1, fontSize: 15, color: C.textCharcoal, fontFamily: "NunitoSans_600SemiBold" }}
+					/>
+					<TextInput
+						value={newQty}
+						onChangeText={setNewQty}
+						onSubmitEditing={addItem}
+						returnKeyType="done"
+						placeholder="Qty"
+						placeholderTextColor={C.mutedText}
+						style={{ width: 56, fontSize: 14, color: C.textCharcoal, fontFamily: "NunitoSans_400Regular", textAlign: "center" }}
+					/>
+					<TouchableOpacity onPress={addItem} activeOpacity={0.85}
+						style={{ backgroundColor: C.primaryPurple, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 }}>
+						<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 13, color: "#fff" }}>Add</Text>
+					</TouchableOpacity>
+				</View>
 			</View>
 
 			{/* Modals */}

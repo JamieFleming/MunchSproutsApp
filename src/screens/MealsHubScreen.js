@@ -37,7 +37,7 @@ function ListPickerModal({ visible, lists, loading, onSelect, onClose }) {
 			<TouchableOpacity style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)" }} activeOpacity={1} onPress={onClose} />
 			<View style={{ backgroundColor: C.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 8, paddingBottom: 40 }}>
 				<View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: C.borderLight, alignSelf: "center", marginBottom: 16 }} />
-				<Text style={{ fontSize: 17, fontWeight: "800", color: C.textCharcoal, paddingHorizontal: 20, marginBottom: 8 }}>
+				<Text style={{ fontSize: 17, fontFamily: "PlusJakartaSans_700Bold", color: C.primaryPinkDark, paddingHorizontal: 20, marginBottom: 8 }}>
 					Add to which list?
 				</Text>
 				{loading ? (
@@ -54,8 +54,8 @@ function ListPickerModal({ visible, lists, loading, onSelect, onClose }) {
 							<Icon name={list.isShared ? "users" : "cart"} size={17} color={list.isShared ? "#2a5f8f" : C.primaryPurple} />
 						</View>
 						<View style={{ flex: 1 }}>
-							<Text style={{ fontSize: 15, fontWeight: "700", color: C.textCharcoal }}>{list.name}</Text>
-							{list.isShared && <Text style={{ fontSize: 11, color: "#2a5f8f", marginTop: 1 }}>Shared with family</Text>}
+							<Text style={{ fontSize: 15, fontFamily: "NunitoSans_700Bold", color: C.textCharcoal }}>{list.name}</Text>
+							{list.isShared && <Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 11, color: "#2a5f8f", marginTop: 1 }}>Shared with family</Text>}
 						</View>
 						<Icon name="chevRight" size={15} color={C.mutedText} />
 					</TouchableOpacity>
@@ -89,11 +89,13 @@ function HubCard({
 				backgroundColor: C.white,
 				borderRadius: 20,
 				padding: 20,
+				borderWidth: 1,
+				borderColor: C.borderLight,
 				shadowColor: accentColor || "#9b7fe8",
-				shadowOpacity: disabled ? 0.05 : 0.12,
-				shadowRadius: 14,
-				shadowOffset: { width: 0, height: 5 },
-				elevation: disabled ? 1 : 4,
+				shadowOpacity: disabled ? 0.03 : 0.08,
+				shadowRadius: 10,
+				shadowOffset: { width: 0, height: 3 },
+				elevation: disabled ? 1 : 3,
 				opacity: disabled ? 0.65 : 1,
 				overflow: "hidden",
 			}}>
@@ -143,7 +145,7 @@ function HubCard({
 					<Text
 						style={{
 							fontSize: 10,
-							fontWeight: "800",
+							fontFamily: "NunitoSans_800ExtraBold",
 							color:
 								badge === "Pro"
 									? "#c8920a"
@@ -161,14 +163,14 @@ function HubCard({
 			<Text
 				style={{
 					fontSize: 17,
-					fontWeight: "800",
-					color: C.textCharcoal,
+					fontFamily: "PlusJakartaSans_600SemiBold",
+					color: C.primaryPinkDark,
 					marginBottom: 4,
 				}}>
 				{title}
 			</Text>
 			<Text
-				style={{ fontSize: 12, color: C.mutedText, lineHeight: 17 }}
+				style={{ fontFamily: "NunitoSans_400Regular", fontSize: 12, color: C.mutedText, lineHeight: 17 }}
 				numberOfLines={2}>
 				{subtitle}
 			</Text>
@@ -223,11 +225,13 @@ function RowCard({
 				borderRadius: 16,
 				paddingHorizontal: 16,
 				paddingVertical: 14,
+				borderWidth: 1,
+				borderColor: C.borderLight,
 				shadowColor: accentColor || "#9b7fe8",
-				shadowOpacity: 0.08,
-				shadowRadius: 10,
-				shadowOffset: { width: 0, height: 3 },
-				elevation: 2,
+				shadowOpacity: 0.05,
+				shadowRadius: 6,
+				shadowOffset: { width: 0, height: 2 },
+				elevation: 1,
 			}}>
 			<View
 				style={{
@@ -250,7 +254,7 @@ function RowCard({
 						marginBottom: 2,
 					}}>
 					<Text
-						style={{ fontSize: 15, fontWeight: "800", color: C.textCharcoal }}>
+						style={{ fontSize: 15, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal }}>
 						{title}
 					</Text>
 					{badge && (
@@ -264,7 +268,7 @@ function RowCard({
 							<Text
 								style={{
 									fontSize: 9,
-									fontWeight: "800",
+									fontFamily: "NunitoSans_800ExtraBold",
 									color: "#c8920a",
 									textTransform: "uppercase",
 									letterSpacing: 0.4,
@@ -275,7 +279,7 @@ function RowCard({
 					)}
 				</View>
 				<Text
-					style={{ fontSize: 12, color: C.mutedText, lineHeight: 16 }}
+					style={{ fontFamily: "NunitoSans_400Regular", fontSize: 12, color: C.mutedText, lineHeight: 16 }}
 					numberOfLines={1}>
 					{subtitle}
 				</Text>
@@ -308,6 +312,10 @@ function MealsHub({ onNavigate, isPro, onUpgradePro }) {
 		<ScrollView
 			showsVerticalScrollIndicator={false}
 			contentContainerStyle={{ paddingBottom: 32, gap: 14 }}>
+			{/* Page title */}
+			<Text style={{ fontFamily: "PlusJakartaSans_700Bold", fontSize: 24, color: C.primaryPinkDark, marginBottom: 2 }}>
+				Meals
+			</Text>
 			{/* Recipes — large full-width */}
 			<HubCard
 				icon="chef"
@@ -401,7 +409,7 @@ function BackBreadcrumb({ label, onBack }) {
 			<View style={{ transform: [{ rotate: "180deg" }] }}>
 				<Icon name="chevRight" size={13} color={C.primaryPurple} />
 			</View>
-			<Text style={{ fontSize: 13, fontWeight: "700", color: C.primaryPurple }}>
+			<Text style={{ fontSize: 13, fontFamily: "NunitoSans_700Bold", color: C.primaryPurple }}>
 				{label}
 			</Text>
 		</TouchableOpacity>

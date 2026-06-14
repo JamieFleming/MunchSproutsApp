@@ -52,7 +52,7 @@ export function LogRecipeModal({ visible, recipe, childName, onConfirm, onClose 
 					<View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: C.bgPurple, borderRadius: 14, padding: 14, marginBottom: 20 }}>
 						<CategoryIcon category={recipe.category} size={44} />
 						<View style={{ flex: 1 }}>
-							<Text style={{ fontWeight: "700", fontSize: 14, color: C.primaryPinkDark }}>
+							<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: C.primaryPinkDark }}>
 								{recipe.title}
 							</Text>
 							<View style={{ flexDirection: "row", gap: 6, marginTop: 4 }}>
@@ -84,7 +84,7 @@ export function LogRecipeModal({ visible, recipe, childName, onConfirm, onClose 
 									}}
 									activeOpacity={0.8}>
 									<ReactionFace reaction={r.value} size={32} />
-									<Text style={{ fontWeight: "700", fontSize: 10, color: sel ? r.color : C.mutedText, textAlign: "center" }}>
+									<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 10, color: sel ? r.color : C.mutedText, textAlign: "center" }}>
 										{r.value}
 									</Text>
 								</TouchableOpacity>

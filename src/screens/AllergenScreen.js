@@ -84,7 +84,7 @@ function CheckInCard({ allergen: a, onAllergenCheckIn }) {
 		<View
 			style={{
 				backgroundColor: "#ffffff",
-				borderRadius: 12,
+				borderRadius: 16,
 				padding: 12,
 				marginBottom: 8,
 				borderWidth: 1,
@@ -99,7 +99,7 @@ function CheckInCard({ allergen: a, onAllergenCheckIn }) {
 				}}>
 				<AllergenIcon allergen={a.value} size={38} />
 				<View style={{ flex: 1 }}>
-					<Text style={{ fontWeight: "700", fontSize: 14, color: "#a85a1a" }}>
+					<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: "#a85a1a" }}>
 						{a.value}
 					</Text>
 					<Text style={{ fontSize: 11, color: "#d4860a", marginTop: 2 }}>
@@ -126,7 +126,7 @@ function CheckInCard({ allergen: a, onAllergenCheckIn }) {
 						borderColor: "#2d7a5533",
 					}}>
 					<Icon name="check" size={14} color="#2d7a55" />
-					<Text style={{ fontWeight: "700", fontSize: 13, color: "#2d7a55" }}>
+					<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 13, color: "#2d7a55" }}>
 						No reaction ✓
 					</Text>
 				</TouchableOpacity>
@@ -146,7 +146,7 @@ function CheckInCard({ allergen: a, onAllergenCheckIn }) {
 						borderColor: "#c0392b33",
 					}}>
 					<Icon name="alert" size={14} color="#c0392b" />
-					<Text style={{ fontWeight: "700", fontSize: 13, color: "#c0392b" }}>
+					<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 13, color: "#c0392b" }}>
 						Delayed reaction
 					</Text>
 				</TouchableOpacity>
@@ -194,7 +194,7 @@ function AllergenRow({ al, index, total, onViewInLog, onAddWithPrefill }) {
 			</View>
 			<View style={{ flex: 1 }}>
 				<Text
-					style={{ fontWeight: "700", fontSize: 14, color: C.primaryPinkDark }}>
+					style={{ fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 14, color: C.primaryPinkDark }}>
 					{al.value}
 				</Text>
 				{al.firstDate ? (
@@ -206,7 +206,7 @@ function AllergenRow({ al, index, total, onViewInLog, onAddWithPrefill }) {
 						{al.count > 1 ? ` · ${al.count} entries` : ""}
 					</Text>
 				) : (
-					<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 2 }}>
+					<Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 11, color: C.mutedText, marginTop: 2 }}>
 						Not yet introduced
 					</Text>
 				)}
@@ -226,7 +226,7 @@ function AllergenRow({ al, index, total, onViewInLog, onAddWithPrefill }) {
 							borderColor: "#2980b933",
 						}}>
 						<Icon name="clock" size={9} color="#2980b9" />
-						<Text style={{ fontSize: 9, fontWeight: "700", color: "#2980b9" }}>
+						<Text style={{ fontSize: 9, fontFamily: "NunitoSans_700Bold", color: "#2980b9" }}>
 							Awaiting 48hrs
 						</Text>
 					</View>
@@ -245,7 +245,7 @@ function AllergenRow({ al, index, total, onViewInLog, onAddWithPrefill }) {
 							borderColor: "#d4860a44",
 						}}>
 						<Icon name="clock" size={9} color="#d4860a" />
-						<Text style={{ fontSize: 9, fontWeight: "700", color: "#a85a1a" }}>
+						<Text style={{ fontSize: 9, fontFamily: "NunitoSans_700Bold", color: "#a85a1a" }}>
 							Check in
 						</Text>
 					</View>
@@ -259,7 +259,7 @@ function AllergenRow({ al, index, total, onViewInLog, onAddWithPrefill }) {
 						borderWidth: 1,
 						borderColor: cfg.border,
 					}}>
-					<Text style={{ fontSize: 10, fontWeight: "700", color: cfg.color }}>
+					<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: cfg.color }}>
 						{cfg.label}
 					</Text>
 				</View>
@@ -315,7 +315,7 @@ function StepRow({ item, isLast }) {
 			<View style={{ flex: 1, paddingTop: 2 }}>
 				<Text
 					style={{
-						fontWeight: "800",
+						fontFamily: "NunitoSans_800ExtraBold",
 						fontSize: 13,
 						color: C.primaryPinkDark,
 						marginBottom: 4,
@@ -346,7 +346,7 @@ function TipRow({ tip, index }) {
 					marginTop: 1,
 				}}>
 				<Text
-					style={{ fontSize: 10, fontWeight: "800", color: C.primaryPurple }}>
+					style={{ fontSize: 10, fontFamily: "NunitoSans_800ExtraBold", color: C.primaryPurple }}>
 					{index + 1}
 				</Text>
 			</View>
@@ -412,7 +412,7 @@ export function AllergenScreen({
 							marginBottom: 8,
 						}}>
 						<Icon name="clock" size={16} color="#d4860a" />
-						<Text style={{ fontWeight: "800", fontSize: 14, color: "#a85a1a" }}>
+						<Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 14, color: "#a85a1a" }}>
 							48-Hour Reaction Check
 						</Text>
 					</View>
@@ -464,14 +464,16 @@ export function AllergenScreen({
 						style={{
 							flex: 1,
 							backgroundColor: stat.bg,
-							borderRadius: 14,
-							padding: 12,
+							borderRadius: 16,
+							padding: 14,
 							alignItems: "center",
+							borderWidth: 1,
+							borderColor: C.borderLight,
 						}}>
 						<Text
 							style={{
 								fontSize: 22,
-								fontWeight: "900",
+								fontFamily: "PlusJakartaSans_700Bold",
 								color: stat.color,
 								lineHeight: 26,
 							}}>
@@ -480,7 +482,7 @@ export function AllergenScreen({
 						<Text
 							style={{
 								fontSize: 9,
-								fontWeight: "700",
+								fontFamily: "NunitoSans_700Bold",
 								color: stat.color,
 								textAlign: "center",
 								marginTop: 3,
@@ -512,14 +514,14 @@ export function AllergenScreen({
 						<Text
 							style={{
 								fontSize: 28,
-								fontWeight: "900",
+								fontFamily: "PlusJakartaSans_700Bold",
 								color: C.primaryPinkDark,
 								lineHeight: 30,
 							}}>
 							{introduced}
 						</Text>
 						<Text
-							style={{ fontSize: 11, color: C.mutedText, fontWeight: "600" }}>
+							style={{ fontSize: 11, color: C.mutedText, fontFamily: "NunitoSans_600SemiBold" }}>
 							of {ALLERGENS.length}
 						</Text>
 					</View>
@@ -577,11 +579,11 @@ export function AllergenScreen({
 						backgroundColor: C.primaryPurple,
 						margin: 14,
 						marginTop: 4,
-						borderRadius: 12,
-						paddingVertical: 13,
+						borderRadius: 14,
+						paddingVertical: 14,
 					}}>
 					<Icon name="plus" size={16} color="#ffffff" />
-					<Text style={{ fontWeight: "800", fontSize: 14, color: "#ffffff" }}>
+					<Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 14, color: "#ffffff" }}>
 						Log a Food with an Allergen
 					</Text>
 				</TouchableOpacity>
@@ -630,7 +632,7 @@ export function AllergenScreen({
 					</View>
 					<Text
 						style={{
-							fontWeight: "800",
+							fontFamily: "PlusJakartaSans_600SemiBold",
 							fontSize: 15,
 							color: C.primaryPinkDark,
 							flex: 1,
@@ -659,7 +661,7 @@ export function AllergenScreen({
 					}}
 					activeOpacity={0.8}>
 					<Icon name="info" size={16} color="#2a5f8f" />
-					<Text style={{ fontWeight: "700", fontSize: 14, color: "#2a5f8f" }}>
+					<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: "#2a5f8f" }}>
 						View NHS Allergen Guidance
 					</Text>
 				</TouchableOpacity>
@@ -673,13 +675,15 @@ export function AllergenScreen({
 					padding: 14,
 					flexDirection: "row",
 					gap: 10,
+					borderWidth: 1,
+					borderColor: "#ffe0a0",
 				}}>
 				<Icon name="alert" size={18} color="#d4860a" />
 				<Text
 					style={{ fontSize: 12, color: "#7a5a1a", lineHeight: 19, flex: 1 }}>
-					<Text style={{ fontWeight: "800" }}>For general guidance only.</Text>{" "}
+					<Text style={{ fontFamily: "NunitoSans_800ExtraBold" }}>For general guidance only.</Text>{" "}
 					This tracker is{" "}
-					<Text style={{ fontWeight: "700" }}>
+					<Text style={{ fontFamily: "NunitoSans_700Bold" }}>
 						not a substitute for medical advice.
 					</Text>{" "}
 					Always consult your GP, Health Visitor or a registered dietitian

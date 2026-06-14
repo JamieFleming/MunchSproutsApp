@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/jamie/Documents/Websites/MunchSproutsAppNative/MunchSproutsNative remote get-url origin)",
+      "Bash(git filter-repo *)",
+      "Bash(rm /Users/jamie/Documents/Websites/MunchSproutsAppNative/MunchSproutsNative/.git/filter-repo/already_ran)",
+      "Bash(git -C /Users/jamie/Documents/Websites/MunchSproutsAppNative/MunchSproutsNative filter-repo --invert-paths --path google-services.json --force)",
+      "Bash(git -C /Users/jamie/Documents/Websites/MunchSproutsAppNative/MunchSproutsNative remote add origin git@github.com:JamieFleming/MunchSproutsApp.git)",
+      "Bash(git -C /Users/jamie/Documents/Websites/MunchSproutsAppNative/MunchSproutsNative add .gitignore)",
+      "Bash(git -C /Users/jamie/Documents/Websites/MunchSproutsAppNative/MunchSproutsNative commit -m ' *)",
+      "Bash(git -C /Users/jamie/Documents/Websites/MunchSproutsAppNative/MunchSproutsNative push --force origin main)",
+      "Bash(gh repo *)",
+      "Bash(curl -s \"https://api.github.com/repos/JamieFleming/MunchSproutsApp\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('visibility','unknown'\\), '/ private:', d.get\\('private','unknown'\\)\\)\")",
+      "Bash(echo \"OTA push started in background \\(PID $!\\)\")",
+      "Bash(ls -la *.json 2>/dev/null && find /Users/jamie/Documents/Websites/MunchSproutsAppNative -name \"google-services.json\" 2>/dev/null)",
+      "Read(//Users/jamie/Documents/Websites/MunchSproutsAppNative/**)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); c=d['client'][0]; print\\('Package:', c['client_info']['android_client_info']['android_package_name']\\); print\\('Project:', d['project_info']['project_id']\\)\")",
+      "Bash(python3 -c ' *)",
+      "Bash(eas env:create --name GOOGLE_SERVICES_JSON --type file --value /Users/jamie/Documents/Websites/MunchSproutsAppNative/MunchSproutsNative/google-services.json --visibility secret --environment production --non-interactive)",
+      "Bash(eas env:list --environment production)"
+    ]
+  }
+}

@@ -11,7 +11,7 @@ import {
 	KeyboardAvoidingView,
 	Platform,
 } from "react-native";
-import { useTheme } from "../ThemeContext";
+import { useTheme, useStyles } from "../ThemeContext";
 import { Icon } from "../components/Icon";
 import { parseIngredient } from "../helpers";
 
@@ -140,6 +140,7 @@ function formatWeekLabel(weekDays) {
 
 function AddMealModal({ visible, onClose, onAdd, recipes, smartRecipes, mealCfg }) {
 	const { C } = useTheme();
+	const s = useStyles();
 	const [tab, setTab]               = useState("recipes");
 	const [search, setSearch]         = useState("");
 	const [customName, setCustomName] = useState("");
@@ -200,13 +201,11 @@ function AddMealModal({ visible, onClose, onAdd, recipes, smartRecipes, mealCfg 
 					behavior={Platform.OS === "ios" ? "padding" : "height"}
 					style={{ flex: 1, justifyContent: "flex-end" }}>
 					<View
-						style={{
-							backgroundColor: C.white,
-							borderTopLeftRadius: 28,
-							borderTopRightRadius: 28,
+						style={[s.modalSheet, {
 							height: "92%",
 							overflow: "hidden",
-						}}>
+							padding: 0,
+						}]}>
 
 						{/* Handle bar */}
 						<View style={{ width: 36, height: 4, backgroundColor: C.borderLight, borderRadius: 2, alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
@@ -214,7 +213,7 @@ function AddMealModal({ visible, onClose, onAdd, recipes, smartRecipes, mealCfg 
 						{/* Header */}
 						<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4 }}>
 							<View>
-								<Text style={{ fontSize: 20, fontWeight: "800", color: C.primaryPinkDark }}>
+								<Text style={s.modalTitle}>
 									Add {mealLabel}
 								</Text>
 								{mealCfg && (
@@ -222,13 +221,13 @@ function AddMealModal({ visible, onClose, onAdd, recipes, smartRecipes, mealCfg 
 										<View style={{ width: 18, height: 18, borderRadius: 5, backgroundColor: mealCfg.bg, alignItems: "center", justifyContent: "center" }}>
 											<Icon name={mealCfg.icon} size={10} color={mealCfg.color} />
 										</View>
-										<Text style={{ fontSize: 12, color: C.mutedText, fontWeight: "600" }}>{mealCfg.label}</Text>
+										<Text style={{ fontSize: 12, color: C.mutedText, fontFamily: "NunitoSans_600SemiBold" }}>{mealCfg.label}</Text>
 									</View>
 								)}
 							</View>
 							<TouchableOpacity
 								onPress={onClose}
-								style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center" }}>
+								style={{ backgroundColor: C.bgPurple, borderRadius: 10, padding: 8 }}>
 								<Icon name="close" size={14} color={C.primaryPurple} />
 							</TouchableOpacity>
 						</View>
@@ -265,7 +264,7 @@ function AddMealModal({ visible, onClose, onAdd, recipes, smartRecipes, mealCfg 
 									<Text
 										style={{
 											fontSize: 13,
-											fontWeight: "700",
+											fontFamily: "NunitoSans_700Bold",
 											color: tab === t.key ? C.primaryPurple : C.mutedText,
 										}}>
 										{t.label}
@@ -328,13 +327,13 @@ function AddMealModal({ visible, onClose, onAdd, recipes, smartRecipes, mealCfg 
 													<View style={{ flex: 1 }}>
 														<View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
 															<Text
-																style={{ fontSize: 14, fontWeight: "700", color: C.textCharcoal, flex: 1 }}
+																style={{ fontSize: 14, fontFamily: "NunitoSans_700Bold", color: C.textCharcoal, flex: 1 }}
 																numberOfLines={1}>
 																{r.title}
 															</Text>
 															{r._source === "smart" && (
 																<View style={{ backgroundColor: "#fdf4ff", borderRadius: 6, paddingHorizontal: 5, paddingVertical: 2 }}>
-																	<Text style={{ fontSize: 9, fontWeight: "800", color: "#9333ea" }}>AI</Text>
+																	<Text style={{ fontSize: 9, fontFamily: "NunitoSans_800ExtraBold", color: "#9333ea" }}>AI</Text>
 																</View>
 															)}
 														</View>
@@ -361,7 +360,7 @@ function AddMealModal({ visible, onClose, onAdd, recipes, smartRecipes, mealCfg 
 										keyboardShouldPersistTaps="handled"
 										contentContainerStyle={{ gap: 20, paddingBottom: 16 }}>
 										<View>
-											<Text style={{ fontSize: 11, fontWeight: "800", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
+											<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
 												Meal Name *
 											</Text>
 											<TextInput
@@ -369,19 +368,13 @@ function AddMealModal({ visible, onClose, onAdd, recipes, smartRecipes, mealCfg 
 												onChangeText={setCustomName}
 												placeholder="e.g. Banana porridge with blueberries"
 												placeholderTextColor={C.mutedText}
-												style={{
-													backgroundColor: C.bgPurple,
-													borderRadius: 14,
-													padding: 16,
-													fontSize: 15,
-													color: C.textCharcoal,
-												}}
+												style={s.input}
 											/>
 										</View>
 										<View>
-											<Text style={{ fontSize: 11, fontWeight: "800", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
+											<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
 												Food Categories{" "}
-												<Text style={{ fontWeight: "500", fontSize: 11, textTransform: "none" }}>(select all that apply)</Text>
+												<Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 11, textTransform: "none" }}>(select all that apply)</Text>
 											</Text>
 											<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
 												{["Grains","Proteins","Vegetables","Fruits","Dairy","Legumes","Fish","Eggs","Other"].map((cat) => {
@@ -402,7 +395,7 @@ function AddMealModal({ visible, onClose, onAdd, recipes, smartRecipes, mealCfg 
 																gap: 5,
 															}}>
 															{selected && <Icon name="check" size={11} color={C.white} />}
-															<Text style={{ fontSize: 13, fontWeight: "700", color: selected ? C.white : C.mutedText }}>
+															<Text style={{ fontSize: 13, fontFamily: "NunitoSans_700Bold", color: selected ? C.white : C.mutedText }}>
 																{cat}
 															</Text>
 														</TouchableOpacity>
@@ -415,15 +408,8 @@ function AddMealModal({ visible, onClose, onAdd, recipes, smartRecipes, mealCfg 
 									<TouchableOpacity
 										onPress={handleAddCustom}
 										disabled={!customName.trim()}
-										style={{
-											backgroundColor: customName.trim() ? C.primaryPurple : C.borderLight,
-											borderRadius: 16,
-											paddingVertical: 17,
-											alignItems: "center",
-											marginTop: 10,
-											marginBottom: 36,
-										}}>
-										<Text style={{ color: C.white, fontWeight: "800", fontSize: 15 }}>
+										style={[s.btnPrimary, { marginTop: 10, marginBottom: 36, opacity: customName.trim() ? 1 : 0.5 }]}>
+										<Text style={s.btnPrimaryText}>
 											Add to Plan
 										</Text>
 									</TouchableOpacity>
@@ -505,7 +491,7 @@ function GenerateOptionsModal({ visible, onClose, onGenerate, childName }) {
 								{/* Header */}
 								<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 22 }}>
 									<View style={{ flex: 1 }}>
-										<Text style={{ fontSize: 20, fontWeight: "800", color: C.primaryPinkDark }}>
+										<Text style={{ fontSize: 20, fontFamily: "NunitoSans_800ExtraBold", color: C.primaryPinkDark }}>
 											Customise AI Plan ✨
 										</Text>
 										<Text style={{ fontSize: 13, color: C.mutedText, marginTop: 4 }}>
@@ -520,7 +506,7 @@ function GenerateOptionsModal({ visible, onClose, onGenerate, childName }) {
 								</View>
 
 								{/* Days */}
-								<Text style={{ fontSize: 11, fontWeight: "800", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
+								<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
 									Days to generate
 								</Text>
 								<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 22 }}>
@@ -540,7 +526,7 @@ function GenerateOptionsModal({ visible, onClose, onGenerate, childName }) {
 													gap: 4,
 												}}>
 												{sel && <Icon name="check" size={10} color={C.white} />}
-												<Text style={{ fontSize: 12, fontWeight: "700", color: sel ? C.white : C.mutedText }}>
+												<Text style={{ fontSize: 12, fontFamily: "NunitoSans_700Bold", color: sel ? C.white : C.mutedText }}>
 													{DAY_SHORT[i]}
 												</Text>
 											</TouchableOpacity>
@@ -549,7 +535,7 @@ function GenerateOptionsModal({ visible, onClose, onGenerate, childName }) {
 								</View>
 
 								{/* Preferences */}
-								<Text style={{ fontSize: 11, fontWeight: "800", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
+								<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
 									Preferences (optional)
 								</Text>
 								<TextInput
@@ -571,7 +557,7 @@ function GenerateOptionsModal({ visible, onClose, onGenerate, childName }) {
 								/>
 
 								{/* Dislikes */}
-								<Text style={{ fontSize: 11, fontWeight: "800", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
+								<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
 									Skip this week (optional)
 								</Text>
 								<TextInput
@@ -611,7 +597,7 @@ function GenerateOptionsModal({ visible, onClose, onGenerate, childName }) {
 										gap: 8,
 									}}>
 									<Icon name="sparkle" size={16} color="#fff" />
-									<Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>
+									<Text style={{ color: "#fff", fontFamily: "NunitoSans_800ExtraBold", fontSize: 15 }}>
 										{btnLabel}
 									</Text>
 								</TouchableOpacity>
@@ -658,7 +644,7 @@ function MealEatenModal({ visible, meal, child, onClose, onLog }) {
 							{/* Handle bar */}
 							<View style={{ width: 36, height: 4, backgroundColor: C.borderLight, borderRadius: 2, alignSelf: "center", marginBottom: 22 }} />
 
-							<Text style={{ fontSize: 20, fontWeight: "800", color: C.primaryPinkDark, marginBottom: 4 }}>
+							<Text style={{ fontSize: 20, fontFamily: "NunitoSans_800ExtraBold", color: C.primaryPinkDark, marginBottom: 4 }}>
 								How did it go? 🍽️
 							</Text>
 							<Text style={{ fontSize: 13, color: C.mutedText, marginBottom: 22 }} numberOfLines={2}>
@@ -681,7 +667,7 @@ function MealEatenModal({ visible, meal, child, onClose, onLog }) {
 											gap: 14,
 										}}>
 										<Text style={{ fontSize: 26 }}>{r.emoji}</Text>
-										<Text style={{ flex: 1, fontSize: 15, fontWeight: "800", color: r.color }}>
+										<Text style={{ flex: 1, fontSize: 15, fontFamily: "NunitoSans_800ExtraBold", color: r.color }}>
 											{r.label}
 										</Text>
 										<Icon name="chevRight" size={14} color={r.color} />
@@ -690,7 +676,7 @@ function MealEatenModal({ visible, meal, child, onClose, onLog }) {
 							</View>
 
 							<TouchableOpacity onPress={() => onLog(null)} style={{ alignItems: "center", paddingVertical: 8 }}>
-								<Text style={{ fontSize: 13, color: C.mutedText, fontWeight: "600" }}>
+								<Text style={{ fontSize: 13, color: C.mutedText, fontFamily: "NunitoSans_600SemiBold" }}>
 									Just mark as eaten (skip diary)
 								</Text>
 							</TouchableOpacity>
@@ -708,6 +694,7 @@ function MealEatenModal({ visible, meal, child, onClose, onLog }) {
 
 function ExposureModal({ visible, onClose, onSave }) {
 	const { C } = useTheme();
+	const s = useStyles();
 	const [foodName, setFoodName] = useState("");
 	const [stage, setStage]       = useState("tasted");
 	const [reaction, setReaction] = useState("liked");
@@ -728,26 +715,19 @@ function ExposureModal({ visible, onClose, onSave }) {
 		<Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
 			<View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}>
 				<KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
-					<View
-						style={{
-							backgroundColor: C.white,
-							borderTopLeftRadius: 28,
-							borderTopRightRadius: 28,
-							padding: 24,
-							paddingBottom: 44,
-						}}>
+					<View style={[s.modalSheet, { paddingBottom: 44 }]}>
 						<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-							<Text style={{ fontSize: 18, fontWeight: "800", color: C.primaryPinkDark }}>
+							<Text style={s.modalTitle}>
 								Log Food Exposure
 							</Text>
 							<TouchableOpacity
 								onPress={onClose}
-								style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center" }}>
+								style={{ backgroundColor: C.bgPurple, borderRadius: 10, padding: 8 }}>
 								<Icon name="close" size={14} color={C.primaryPurple} />
 							</TouchableOpacity>
 						</View>
 
-						<Text style={{ fontSize: 12, fontWeight: "700", color: C.mutedText, marginBottom: 6 }}>
+						<Text style={{ fontSize: 12, fontFamily: "NunitoSans_700Bold", color: C.mutedText, marginBottom: 6 }}>
 							Food or Meal *
 						</Text>
 						<TextInput
@@ -755,17 +735,10 @@ function ExposureModal({ visible, onClose, onSave }) {
 							onChangeText={setFoodName}
 							placeholder="e.g. Broccoli, Scrambled egg, Avocado..."
 							placeholderTextColor={C.mutedText}
-							style={{
-								backgroundColor: C.bgPurple,
-								borderRadius: 12,
-								padding: 14,
-								fontSize: 14,
-								color: C.textCharcoal,
-								marginBottom: 18,
-							}}
+							style={[s.input, { marginBottom: 18 }]}
 						/>
 
-						<Text style={{ fontSize: 12, fontWeight: "700", color: C.mutedText, marginBottom: 8 }}>
+						<Text style={{ fontSize: 12, fontFamily: "NunitoSans_700Bold", color: C.mutedText, marginBottom: 8 }}>
 							What happened?
 						</Text>
 						<View style={{ flexDirection: "row", gap: 8, marginBottom: 18 }}>
@@ -785,7 +758,7 @@ function ExposureModal({ visible, onClose, onSave }) {
 									<Text
 										style={{
 											fontSize: 9,
-											fontWeight: "700",
+											fontFamily: "NunitoSans_700Bold",
 											color: stage === s.key ? C.white : C.mutedText,
 											textAlign: "center",
 										}}>
@@ -795,7 +768,7 @@ function ExposureModal({ visible, onClose, onSave }) {
 							))}
 						</View>
 
-						<Text style={{ fontSize: 12, fontWeight: "700", color: C.mutedText, marginBottom: 8 }}>
+						<Text style={{ fontSize: 12, fontFamily: "NunitoSans_700Bold", color: C.mutedText, marginBottom: 8 }}>
 							Reaction
 						</Text>
 						<View style={{ flexDirection: "row", gap: 8, marginBottom: 22 }}>
@@ -817,7 +790,7 @@ function ExposureModal({ visible, onClose, onSave }) {
 									<Text
 										style={{
 											fontSize: 9,
-											fontWeight: "700",
+											fontFamily: "NunitoSans_700Bold",
 											color: reaction === r.key ? r.color : C.mutedText,
 											textAlign: "center",
 										}}>
@@ -830,16 +803,11 @@ function ExposureModal({ visible, onClose, onSave }) {
 						<TouchableOpacity
 							onPress={handleSave}
 							disabled={!foodName.trim() || saving}
-							style={{
-								backgroundColor: foodName.trim() ? C.primaryPurple : C.borderLight,
-								borderRadius: 16,
-								paddingVertical: 16,
-								alignItems: "center",
-							}}>
+							style={[s.btnPrimary, { opacity: foodName.trim() ? 1 : 0.5 }]}>
 							{saving ? (
 								<ActivityIndicator color="#fff" />
 							) : (
-								<Text style={{ color: C.white, fontWeight: "800", fontSize: 15 }}>
+								<Text style={s.btnPrimaryText}>
 									Log Exposure
 								</Text>
 							)}
@@ -876,7 +844,7 @@ function ShoppingPreviewModal({ visible, onClose, onConfirm, items, adding }) {
 					{/* Header */}
 					<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
 						<View>
-							<Text style={{ fontSize: 18, fontWeight: "800", color: C.primaryPinkDark }}>
+							<Text style={{ fontSize: 18, fontFamily: "NunitoSans_800ExtraBold", color: C.primaryPinkDark }}>
 								Add to Shopping List
 							</Text>
 							<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>
@@ -893,7 +861,7 @@ function ShoppingPreviewModal({ visible, onClose, onConfirm, items, adding }) {
 					<ScrollView showsVerticalScrollIndicator={false} style={{ marginVertical: 14 }}>
 						{items.map((recipe, ri) => (
 							<View key={ri} style={{ marginBottom: 14 }}>
-								<Text style={{ fontSize: 11, fontWeight: "800", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+								<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
 									{recipe.title}
 								</Text>
 								{recipe.ingredients.map((ing, ii) => {
@@ -917,7 +885,7 @@ function ShoppingPreviewModal({ visible, onClose, onConfirm, items, adding }) {
 													backgroundColor: C.primaryPurple,
 												}}
 											/>
-											<Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: C.textCharcoal }}>
+											<Text style={{ flex: 1, fontSize: 13, fontFamily: "NunitoSans_600SemiBold", color: C.textCharcoal }}>
 												{parsed.name}
 											</Text>
 											{parsed.quantity ? (
@@ -948,7 +916,7 @@ function ShoppingPreviewModal({ visible, onClose, onConfirm, items, adding }) {
 						) : (
 							<>
 								<Icon name="cart" size={16} color="#fff" />
-								<Text style={{ color: C.white, fontWeight: "800", fontSize: 15 }}>
+								<Text style={{ color: C.white, fontFamily: "NunitoSans_800ExtraBold", fontSize: 15 }}>
 									Add All &amp; Open Shopping List
 								</Text>
 							</>
@@ -966,21 +934,22 @@ function ShoppingPreviewModal({ visible, onClose, onConfirm, items, adding }) {
 
 function MealSection({ config, meals, onAdd, onRemove, onMarkEaten }) {
 	const { C } = useTheme();
+	const s = useStyles();
 	return (
-		<View>
+		<View style={[s.card, { padding: 12 }]}>
 			<View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
 				<View
 					style={{
-						width: 28,
-						height: 28,
-						borderRadius: 8,
+						width: 32,
+						height: 32,
+						borderRadius: 10,
 						backgroundColor: config.bg,
 						alignItems: "center",
 						justifyContent: "center",
 					}}>
-					<Icon name={config.icon} size={13} color={config.color} />
+					<Icon name={config.icon} size={14} color={config.color} />
 				</View>
-				<Text style={{ fontSize: 12, fontWeight: "800", color: C.textCharcoal, flex: 1 }}>
+				<Text style={{ fontSize: 13, fontFamily: "NunitoSans_700Bold", color: C.textCharcoal, flex: 1 }}>
 					{config.label}
 				</Text>
 				<TouchableOpacity
@@ -1005,7 +974,7 @@ function MealSection({ config, meals, onAdd, onRemove, onMarkEaten }) {
 						borderWidth: 1.5,
 						borderColor: C.borderLight,
 						borderStyle: "dashed",
-						borderRadius: 10,
+						borderRadius: 14,
 						paddingVertical: 10,
 						alignItems: "center",
 					}}>
@@ -1049,20 +1018,20 @@ function MealSection({ config, meals, onAdd, onRemove, onMarkEaten }) {
 
 							{meal.isLeftover && (
 								<View style={{ backgroundColor: "#fef9c3", borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2 }}>
-									<Text style={{ fontSize: 7, fontWeight: "800", color: "#92400e", letterSpacing: 0.3 }}>LEFTOVER</Text>
+									<Text style={{ fontSize: 7, fontFamily: "NunitoSans_800ExtraBold", color: "#92400e", letterSpacing: 0.3 }}>LEFTOVER</Text>
 								</View>
 							)}
 							{(meal.type === "ai" || meal.type === "smart") && !meal.isLeftover && (
 								<View style={{ backgroundColor: "#fdf4ff", borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2 }}>
-									<Text style={{ fontSize: 7, fontWeight: "800", color: "#9333ea" }}>AI</Text>
+									<Text style={{ fontSize: 7, fontFamily: "NunitoSans_800ExtraBold", color: "#9333ea" }}>AI</Text>
 								</View>
 							)}
 							<Text
 								style={{
 									flex: 1,
-									fontSize: 12,
-									fontWeight: "600",
-									color: meal.eaten ? "#16a34a" : C.textCharcoal,
+									fontSize: 13,
+									fontFamily: "NunitoSans_600SemiBold",
+									color: meal.eaten ? "#16a34a" : C.primaryPinkDark,
 									textDecorationLine: meal.eaten ? "line-through" : "none",
 								}}
 								numberOfLines={2}>
@@ -1080,7 +1049,7 @@ function MealSection({ config, meals, onAdd, onRemove, onMarkEaten }) {
 						activeOpacity={0.7}
 						style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 2, paddingTop: 2 }}>
 						<Icon name="plus" size={11} color={C.primaryPurple} />
-						<Text style={{ fontSize: 11, color: C.primaryPurple, fontWeight: "600" }}>
+						<Text style={{ fontSize: 11, color: C.primaryPurple, fontFamily: "NunitoSans_600SemiBold" }}>
 							Add another
 						</Text>
 					</TouchableOpacity>
@@ -1124,26 +1093,26 @@ function DayCard({ day, dayData, onAddMeal, onRemoveMeal, onMarkEaten, recipes, 
 				{/* Day bubble */}
 				<View
 					style={{
-						width: 46,
-						height: 46,
-						borderRadius: 13,
+						width: 52,
+						height: 52,
+						borderRadius: 12,
 						backgroundColor: day.isToday ? C.primaryPurple : C.bgPurple,
 						alignItems: "center",
 						justifyContent: "center",
 					}}>
 					<Text
 						style={{
-							fontSize: 9,
-							fontWeight: "700",
-							color: day.isToday ? "rgba(255,255,255,0.75)" : C.mutedText,
+							fontSize: 13,
+							fontFamily: "NunitoSans_700Bold",
+							color: day.isToday ? "rgba(255,255,255,0.85)" : C.mutedText,
 							marginBottom: 1,
 						}}>
 						{day.shortLabel}
 					</Text>
 					<Text
 						style={{
-							fontSize: 16,
-							fontWeight: "900",
+							fontSize: 14,
+							fontFamily: "PlusJakartaSans_700Bold",
 							color: day.isToday ? C.white : C.textCharcoal,
 						}}>
 						{day.day}
@@ -1151,7 +1120,7 @@ function DayCard({ day, dayData, onAddMeal, onRemoveMeal, onMarkEaten, recipes, 
 				</View>
 
 				<View style={{ flex: 1 }}>
-					<Text style={{ fontSize: 15, fontWeight: "800", color: C.textCharcoal }}>
+					<Text style={{ fontSize: 15, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal }}>
 						{day.fullLabel}
 					</Text>
 					{score ? (
@@ -1164,7 +1133,7 @@ function DayCard({ day, dayData, onAddMeal, onRemoveMeal, onMarkEaten, recipes, 
 								alignSelf: "flex-start",
 								marginTop: 4,
 							}}>
-							<Text style={{ fontSize: 10, fontWeight: "700", color: score.color }}>
+							<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: score.color }}>
 								{score.text}
 							</Text>
 						</View>
@@ -1188,7 +1157,7 @@ function DayCard({ day, dayData, onAddMeal, onRemoveMeal, onMarkEaten, recipes, 
 								paddingVertical: 4,
 								marginRight: 4,
 							}}>
-							<Text style={{ fontSize: 11, fontWeight: "700", color: C.primaryPurple }}>
+							<Text style={{ fontSize: 11, fontFamily: "NunitoSans_700Bold", color: C.primaryPurple }}>
 								{total}
 							</Text>
 						</View>
@@ -1282,15 +1251,15 @@ function PlanTab({
 				</TouchableOpacity>
 
 				<View style={{ alignItems: "center" }}>
-					<Text style={{ fontSize: 15, fontWeight: "800", color: C.textCharcoal }}>
+					<Text style={{ fontSize: 15, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal }}>
 						{weekLabel}
 					</Text>
-					<Text style={{ fontSize: 10, color: C.mutedText, fontWeight: "600", marginTop: 1 }}>
+					<Text style={{ fontSize: 10, color: C.mutedText, fontFamily: "NunitoSans_600SemiBold", marginTop: 1 }}>
 						{weekOffsetLabel}
 					</Text>
 					{onReset && (
 						<TouchableOpacity onPress={onReset} style={{ marginTop: 4 }}>
-							<Text style={{ fontSize: 10, color: "#dc2626", fontWeight: "600" }}>
+							<Text style={{ fontSize: 10, color: "#dc2626", fontFamily: "NunitoSans_600SemiBold" }}>
 								Reset week
 							</Text>
 						</TouchableOpacity>
@@ -1332,14 +1301,14 @@ function PlanTab({
 				{generating ? (
 					<>
 						<ActivityIndicator color={isPro ? "#fff" : "#7c3aed"} size="small" />
-						<Text style={{ fontSize: 14, fontWeight: "800", color: isPro ? "#fff" : "#7c3aed" }}>
+						<Text style={{ fontSize: 14, fontFamily: "NunitoSans_800ExtraBold", color: isPro ? "#fff" : "#7c3aed" }}>
 							Generating your plan…
 						</Text>
 					</>
 				) : (
 					<>
 						<Icon name="sparkle" size={18} color={isPro ? "#fff" : "#7c3aed"} />
-						<Text style={{ fontSize: 14, fontWeight: "800", color: isPro ? "#fff" : "#7c3aed" }}>
+						<Text style={{ fontSize: 14, fontFamily: "NunitoSans_800ExtraBold", color: isPro ? "#fff" : "#7c3aed" }}>
 							{isPro ? "Customise & Generate AI Plan ✨" : "Generate AI Week Plan — Pro ✨"}
 						</Text>
 					</>
@@ -1384,7 +1353,7 @@ function PlanTab({
 								marginTop: 4,
 							}}>
 							<Icon name="cart" size={16} color="#1d4ed8" />
-							<Text style={{ fontSize: 13, fontWeight: "700", color: "#1d4ed8" }}>
+							<Text style={{ fontSize: 13, fontFamily: "NunitoSans_700Bold", color: "#1d4ed8" }}>
 								Add Week's Ingredients to Shopping List
 							</Text>
 						</TouchableOpacity>
@@ -1438,7 +1407,7 @@ function PantryTab({ items, input, setInput, category, setCategory, onAdd, onRem
 				}}>
 				<Text style={{ fontSize: 18 }}>🥕</Text>
 				<View style={{ flex: 1 }}>
-					<Text style={{ fontSize: 12, fontWeight: "800", color: "#15803d", marginBottom: 2 }}>
+					<Text style={{ fontSize: 12, fontFamily: "NunitoSans_800ExtraBold", color: "#15803d", marginBottom: 2 }}>
 						What's in your pantry?
 					</Text>
 					<Text style={{ fontSize: 11, color: "#166534", lineHeight: 16 }}>
@@ -1491,12 +1460,14 @@ function PantryTab({ items, input, setInput, category, setCategory, onAdd, onRem
 								paddingVertical: 7,
 								borderRadius: 20,
 								marginRight: 8,
-								backgroundColor: category === cat ? C.primaryPurple : C.bgPurple,
+								backgroundColor: category === cat ? C.primaryPurple : "transparent",
+								borderWidth: category === cat ? 0 : 1.5,
+								borderColor: C.borderLight,
 							}}>
 							<Text
 								style={{
-									fontSize: 11,
-									fontWeight: "700",
+									fontSize: 12,
+									fontFamily: "NunitoSans_700Bold",
 									color: category === cat ? C.white : C.mutedText,
 								}}>
 								{cat}
@@ -1510,7 +1481,7 @@ function PantryTab({ items, input, setInput, category, setCategory, onAdd, onRem
 			{items.length === 0 ? (
 				<View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 10, paddingBottom: 40 }}>
 					<Text style={{ fontSize: 48 }}>🧺</Text>
-					<Text style={{ fontSize: 15, fontWeight: "800", color: C.textCharcoal }}>
+					<Text style={{ fontSize: 15, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal }}>
 						Empty pantry
 					</Text>
 					<Text style={{ fontSize: 12, color: C.mutedText, textAlign: "center", lineHeight: 18 }}>
@@ -1524,7 +1495,7 @@ function PantryTab({ items, input, setInput, category, setCategory, onAdd, onRem
 							<Text
 								style={{
 									fontSize: 10,
-									fontWeight: "800",
+									fontFamily: "NunitoSans_800ExtraBold",
 									color: C.mutedText,
 									textTransform: "uppercase",
 									letterSpacing: 0.6,
@@ -1554,7 +1525,7 @@ function PantryTab({ items, input, setInput, category, setCategory, onAdd, onRem
 											style={{
 												flex: 1,
 												fontSize: 14,
-												fontWeight: "600",
+												fontFamily: "NunitoSans_600SemiBold",
 												color: C.textCharcoal,
 											}}>
 											{item.name}
@@ -1599,7 +1570,7 @@ function ExposureTab({ exposures, onLogNew, activeChild }) {
 					marginBottom: 14,
 				}}>
 				<Icon name="plus" size={16} color="#fff" />
-				<Text style={{ fontSize: 14, fontWeight: "800", color: "#fff" }}>
+				<Text style={{ fontSize: 14, fontFamily: "NunitoSans_800ExtraBold", color: "#fff" }}>
 					Log Food Exposure
 				</Text>
 			</TouchableOpacity>
@@ -1621,7 +1592,7 @@ function ExposureTab({ exposures, onLogNew, activeChild }) {
 				<View
 					style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 10, paddingBottom: 40 }}>
 					<Text style={{ fontSize: 48 }}>🌱</Text>
-					<Text style={{ fontSize: 15, fontWeight: "800", color: C.textCharcoal }}>
+					<Text style={{ fontSize: 15, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal }}>
 						No exposures tracked yet
 					</Text>
 					<Text style={{ fontSize: 12, color: C.mutedText, textAlign: "center", lineHeight: 18 }}>
@@ -1680,7 +1651,7 @@ function ExposureTab({ exposures, onLogNew, activeChild }) {
 
 								<View style={{ flex: 1 }}>
 									<Text
-										style={{ fontSize: 14, fontWeight: "800", color: C.textCharcoal, marginBottom: 4 }}>
+										style={{ fontSize: 14, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, marginBottom: 4 }}>
 										{item.foodName}
 									</Text>
 									<View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
@@ -1691,7 +1662,7 @@ function ExposureTab({ exposures, onLogNew, activeChild }) {
 												paddingHorizontal: 7,
 												paddingVertical: 3,
 											}}>
-											<Text style={{ fontSize: 10, fontWeight: "700", color: C.primaryPurple }}>
+											<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: C.primaryPurple }}>
 												{item.timesExposed}× tried
 											</Text>
 										</View>
@@ -1706,7 +1677,7 @@ function ExposureTab({ exposures, onLogNew, activeChild }) {
 												<Text
 													style={{
 														fontSize: 10,
-														fontWeight: "700",
+														fontFamily: "NunitoSans_700Bold",
 														color: reactionCfgItem.color,
 													}}>
 													{reactionCfgItem.emoji} {reactionCfgItem.label}
@@ -1721,7 +1692,7 @@ function ExposureTab({ exposures, onLogNew, activeChild }) {
 													paddingHorizontal: 7,
 													paddingVertical: 3,
 												}}>
-												<Text style={{ fontSize: 10, fontWeight: "600", color: C.mutedText }}>
+												<Text style={{ fontSize: 10, fontFamily: "NunitoSans_600SemiBold", color: C.mutedText }}>
 													{stageCfgItem.emoji} {stageCfgItem.label}
 												</Text>
 											</View>
@@ -1757,6 +1728,7 @@ export function MealPlannerScreen({
 	childFoodLog,
 }) {
 	const { C } = useTheme();
+	const s = useStyles();
 
 	// ── Tab state ─────────────────────────────────────────────────────────────
 	const [tab, setTab] = useState("plan");
@@ -2264,7 +2236,7 @@ export function MealPlannerScreen({
 						<Text
 							style={{
 								fontSize: 12,
-								fontWeight: "700",
+								fontFamily: "NunitoSans_700Bold",
 								color: tab === t.key ? C.primaryPurple : C.mutedText,
 							}}>
 							{t.label}

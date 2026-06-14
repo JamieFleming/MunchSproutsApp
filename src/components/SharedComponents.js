@@ -11,7 +11,7 @@ export function Pill({ bg, color, children, border, style }) {
 	return (
 		<View style={[{ backgroundColor: bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, ...(border && { borderWidth: 1, borderColor: border }) }, style]}>
 			{typeof children === "string"
-				? <Text style={{ fontSize: 10, fontWeight: "700", color }}>{children}</Text>
+				? <Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color }}>{children}</Text>
 				: children}
 		</View>
 	);
@@ -54,7 +54,7 @@ export function ReactionBadge({ reaction }) {
 	return (
 		<View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: r.bg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 }}>
 			<ReactionFace reaction={reaction} size={18} />
-			<Text style={{ color: r.color, fontSize: 12, fontWeight: "700" }}>{reaction}</Text>
+			<Text style={{ color: r.color, fontSize: 12, fontFamily: "NunitoSans_700Bold" }}>{reaction}</Text>
 		</View>
 	);
 }

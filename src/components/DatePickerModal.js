@@ -72,7 +72,7 @@ export function DatePickerModal({
 							<TouchableOpacity
 								onPress={() => setShowDay(true)}
 								style={[s.input, { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}>
-								<Text style={{ color: C.textCharcoal, fontWeight: "600" }}>{day}</Text>
+								<Text style={{ color: C.textCharcoal, fontFamily: "NunitoSans_600SemiBold" }}>{day}</Text>
 								<Icon name="chevDown" size={14} color={C.mutedText} />
 							</TouchableOpacity>
 						</View>
@@ -81,7 +81,7 @@ export function DatePickerModal({
 							<TouchableOpacity
 								onPress={() => setShowMonth(true)}
 								style={[s.input, { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}>
-								<Text style={{ color: C.textCharcoal, fontWeight: "600" }}>{MONTHS[month]}</Text>
+								<Text style={{ color: C.textCharcoal, fontFamily: "NunitoSans_600SemiBold" }}>{MONTHS[month]}</Text>
 								<Icon name="chevDown" size={14} color={C.mutedText} />
 							</TouchableOpacity>
 						</View>
@@ -90,13 +90,13 @@ export function DatePickerModal({
 							<TouchableOpacity
 								onPress={() => setShowYear(true)}
 								style={[s.input, { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}>
-								<Text style={{ color: C.textCharcoal, fontWeight: "600" }}>{year}</Text>
+								<Text style={{ color: C.textCharcoal, fontFamily: "NunitoSans_600SemiBold" }}>{year}</Text>
 								<Icon name="chevDown" size={14} color={C.mutedText} />
 							</TouchableOpacity>
 						</View>
 					</View>
 					<View style={{ backgroundColor: C.bgPurple, borderRadius: 12, padding: 12, marginBottom: 16, alignItems: "center" }}>
-						<Text style={{ color: C.primaryPinkDark, fontWeight: "700", fontSize: 14 }}>
+						<Text style={{ color: C.primaryPinkDark, fontFamily: "NunitoSans_700Bold", fontSize: 14 }}>
 							{formatDate(`${year}-${String(month + 1).padStart(2, "0")}-${day}`)}
 						</Text>
 					</View>
@@ -122,7 +122,7 @@ export function DateField({ label, value, onChange, minYear, maxYear }) {
 			<TouchableOpacity
 				onPress={() => setOpen(true)}
 				style={[s.input, { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}>
-				<Text style={{ color: value ? C.textCharcoal : C.mutedText, fontWeight: "600" }}>
+				<Text style={{ color: value ? C.textCharcoal : C.mutedText, fontFamily: "NunitoSans_600SemiBold" }}>
 					{value ? formatDate(value) : "Select date…"}
 				</Text>
 				<Icon name="calendar" size={16} color={C.mutedText} />

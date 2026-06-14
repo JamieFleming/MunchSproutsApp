@@ -465,7 +465,7 @@ const THEMES = [
 function SectionLabel({ children, mt = 6 }) {
 	const s = useStyles();
 	return (
-		<Text style={[s.smallLabel, { paddingLeft: 4, marginBottom: 10, marginTop: mt }]}>
+		<Text style={[s.smallLabel, { paddingHorizontal: 4, marginBottom: 8, marginTop: mt }]}>
 			{children}
 		</Text>
 	);
@@ -490,8 +490,8 @@ function DashRow({ icon, iconBg, iconColor, label, sublabel, value, onPress, mt 
 				<Icon name={icon} size={20} color={iconColor} />
 			</View>
 			<View style={{ flex: 1 }}>
-				<Text style={{ fontWeight: "700", fontSize: 14, color: C.textCharcoal }}>{label}</Text>
-				<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>{sublabel}</Text>
+				<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: C.primaryPinkDark }}>{label}</Text>
+				<Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 12, color: C.mutedText, marginTop: 2 }}>{sublabel}</Text>
 			</View>
 			<Toggle value={value} onPress={onPress} />
 		</TouchableOpacity>
@@ -502,15 +502,15 @@ function MoreRow({ icon, iconBg, label, sublabel, onPress, color, right }) {
 	const { C } = useTheme();
 	return (
 		<TouchableOpacity onPress={onPress} activeOpacity={0.8}
-			style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 16, backgroundColor: C.white, borderRadius: 16, marginBottom: 10, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 }}>
-			<View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: iconBg || C.bgPurple, alignItems: "center", justifyContent: "center" }}>
-				<Icon name={icon} size={20} color={color || C.primaryPurple} />
+			style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: C.white, borderRadius: 16, marginBottom: 10, borderWidth: 1, borderColor: C.borderLight }}>
+			<View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: iconBg || C.bgPurple, alignItems: "center", justifyContent: "center" }}>
+				<Icon name={icon} size={18} color={color || C.primaryPurple} />
 			</View>
 			<View style={{ flex: 1 }}>
-				<Text style={{ fontWeight: "700", fontSize: 15, color: color || C.textCharcoal }}>{label}</Text>
-				{sublabel && <Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>{sublabel}</Text>}
+				<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 15, color: color || C.primaryPinkDark }}>{label}</Text>
+				{sublabel && <Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 12, color: C.mutedText, marginTop: 2 }}>{sublabel}</Text>}
 			</View>
-			{right !== undefined ? right : <Icon name="chevRight" size={16} color={C.mutedText} />}
+			{right !== undefined ? right : <Icon name="chevRight" size={14} color={C.borderLight} />}
 		</TouchableOpacity>
 	);
 }
@@ -767,25 +767,25 @@ export function MoreScreen({
 				</View>
 				<View style={{ flex: 1 }}>
 					{displayName ? (
-						<Text style={{ fontWeight: "700", fontSize: 15, color: C.primaryPinkDark }}>{displayName}</Text>
+						<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 15, color: C.primaryPinkDark }}>{displayName}</Text>
 					) : null}
-					<Text style={{ fontWeight: displayName ? "400" : "700", fontSize: displayName ? 12 : 15, color: displayName ? C.mutedText : C.primaryPinkDark }}>{displayEmail ?? "No email"}</Text>
+					<Text style={{ fontFamily: displayName ? "NunitoSans_400Regular" : "NunitoSans_700Bold", fontSize: displayName ? 12 : 15, color: displayName ? C.mutedText : C.primaryPinkDark }}>{displayEmail ?? "No email"}</Text>
 					<View style={{ marginTop: 4 }}>
 						<View style={{ backgroundColor: isPro ? C.statGreenBg : C.bgPurple, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, alignSelf: "flex-start" }}>
-							<Text style={{ fontSize: 11, fontWeight: "700", color: isPro ? C.statGreenText : C.mutedText }}>
+							<Text style={{ fontSize: 11, fontFamily: "NunitoSans_700Bold", color: isPro ? C.statGreenText : C.mutedText }}>
 								{isPro ? "PRO ACCOUNT" : "FREE ACCOUNT"}
 							</Text>
 						</View>
 						{isPro && (
 							<TouchableOpacity onPress={() => Linking.openURL("https://apps.apple.com/account/subscriptions")} style={{ marginTop: 5 }}>
-								<Text style={{ fontSize: 11, color: C.primaryPurple, fontWeight: "600" }}>Manage subscription →</Text>
+								<Text style={{ fontSize: 11, color: C.primaryPurple, fontFamily: "NunitoSans_600SemiBold" }}>Manage subscription →</Text>
 							</TouchableOpacity>
 						)}
 					</View>
 				</View>
 				<View style={{ alignItems: "center", gap: 4 }}>
 					<Icon name="settings" size={16} color={C.mutedText} />
-					<Text style={{ fontSize: 9, color: C.mutedText, fontWeight: "600" }}>Edit</Text>
+					<Text style={{ fontSize: 9, color: C.mutedText, fontFamily: "NunitoSans_600SemiBold" }}>Edit</Text>
 				</View>
 			</TouchableOpacity>
 
@@ -795,13 +795,13 @@ export function MoreScreen({
 					{/* Header */}
 					<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: Platform.OS === "ios" ? 20 : 20, paddingBottom: 16, backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
 						<TouchableOpacity onPress={() => setShowProfileEdit(false)} hitSlop={8}>
-							<Text style={{ fontSize: 15, color: C.primaryPurple, fontWeight: "600" }}>Cancel</Text>
+							<Text style={{ fontSize: 15, color: C.primaryPurple, fontFamily: "NunitoSans_600SemiBold" }}>Cancel</Text>
 						</TouchableOpacity>
-						<Text style={{ fontSize: 17, fontWeight: "800", color: C.textCharcoal }}>Edit Profile</Text>
+						<Text style={{ fontSize: 20, fontFamily: "PlusJakartaSans_700Bold", color: C.primaryPinkDark }}>Edit Profile</Text>
 						<TouchableOpacity onPress={handleSaveProfile} disabled={profileSaving} hitSlop={8}>
 							{profileSaving
 								? <ActivityIndicator size="small" color={C.primaryPurple} />
-								: <Text style={{ fontSize: 15, color: C.primaryPurple, fontWeight: "700" }}>Save</Text>}
+								: <Text style={{ fontSize: 15, color: C.primaryPurple, fontFamily: "NunitoSans_700Bold" }}>Save</Text>}
 						</TouchableOpacity>
 					</View>
 
@@ -818,23 +818,23 @@ export function MoreScreen({
 									<Icon name="Camera" size={13} color="#fff" />
 								</View>
 							</TouchableOpacity>
-							<Text style={{ fontSize: 13, color: C.mutedText, fontWeight: "500" }}>Tap to change photo</Text>
+							<Text style={{ fontSize: 13, color: C.mutedText, fontFamily: "NunitoSans_400Regular" }}>Tap to change photo</Text>
 							{profilePhoto ? (
 								<TouchableOpacity onPress={handleRemoveProfilePhoto}>
-									<Text style={{ fontSize: 12, color: "#c0392b", fontWeight: "700" }}>Remove photo</Text>
+									<Text style={{ fontSize: 12, color: "#c0392b", fontFamily: "NunitoSans_700Bold" }}>Remove photo</Text>
 								</TouchableOpacity>
 							) : null}
 						</View>
 
 						{/* Name */}
 						<View style={{ gap: 6 }}>
-							<Text style={{ fontSize: 12, fontWeight: "700", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5 }}>Display Name</Text>
+							<Text style={{ fontSize: 12, fontFamily: "NunitoSans_700Bold", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5 }}>Display Name</Text>
 							<TextInput
 								value={editName}
 								onChangeText={setEditName}
 								placeholder="Your name"
 								placeholderTextColor={C.mutedText}
-								style={{ backgroundColor: C.white, borderRadius: 12, borderWidth: 1.5, borderColor: C.borderLight, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, color: C.textCharcoal, fontWeight: "500" }}
+								style={{ backgroundColor: C.white, borderRadius: 12, borderWidth: 1.5, borderColor: C.borderLight, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, color: C.textCharcoal, fontFamily: "NunitoSans_400Regular" }}
 								autoCapitalize="words"
 								returnKeyType="next"
 							/>
@@ -842,21 +842,21 @@ export function MoreScreen({
 
 						{/* Email */}
 						<View style={{ gap: 6 }}>
-							<Text style={{ fontSize: 12, fontWeight: "700", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5 }}>Email Address</Text>
+							<Text style={{ fontSize: 12, fontFamily: "NunitoSans_700Bold", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5 }}>Email Address</Text>
 							{isEmailUser ? (
 								<TextInput
 									value={editEmail}
 									onChangeText={setEditEmail}
 									placeholder="your@email.com"
 									placeholderTextColor={C.mutedText}
-									style={{ backgroundColor: C.white, borderRadius: 12, borderWidth: 1.5, borderColor: C.borderLight, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, color: C.textCharcoal, fontWeight: "500" }}
+									style={{ backgroundColor: C.white, borderRadius: 12, borderWidth: 1.5, borderColor: C.borderLight, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, color: C.textCharcoal, fontFamily: "NunitoSans_400Regular" }}
 									autoCapitalize="none"
 									keyboardType="email-address"
 									returnKeyType="done"
 								/>
 							) : (
 								<View style={{ backgroundColor: C.bgPurple, borderRadius: 12, borderWidth: 1.5, borderColor: C.borderLight, paddingHorizontal: 14, paddingVertical: 13, flexDirection: "row", alignItems: "center", gap: 8 }}>
-									<Text style={{ flex: 1, fontSize: 15, color: C.mutedText, fontWeight: "500" }}>{displayEmail ?? "No email"}</Text>
+									<Text style={{ flex: 1, fontSize: 15, color: C.mutedText, fontFamily: "NunitoSans_400Regular" }}>{displayEmail ?? "No email"}</Text>
 									<Text style={{ fontSize: 11, color: C.mutedText }}>Managed by {user?.providerData?.[0]?.providerId === "apple.com" ? "Apple" : "Google"}</Text>
 								</View>
 							)}
@@ -870,7 +870,7 @@ export function MoreScreen({
 							style={{ backgroundColor: C.primaryPurple, borderRadius: 14, paddingVertical: 15, alignItems: "center", justifyContent: "center", opacity: profileSaving ? 0.7 : 1 }}>
 							{profileSaving
 								? <ActivityIndicator color="#fff" />
-								: <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>Save Changes</Text>}
+								: <Text style={{ color: "#fff", fontFamily: "NunitoSans_800ExtraBold", fontSize: 15 }}>Save Changes</Text>}
 						</TouchableOpacity>
 
 						<View style={{ height: 1, backgroundColor: C.borderLight, marginVertical: 4 }} />
@@ -885,7 +885,7 @@ export function MoreScreen({
 									<Icon name="key" size={16} color={C.primaryPurple} />
 								</View>
 								<View style={{ flex: 1 }}>
-									<Text style={{ fontWeight: "700", fontSize: 14, color: C.textCharcoal }}>Change Password</Text>
+									<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: C.textCharcoal }}>Change Password</Text>
 									<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 1 }}>Update your account password</Text>
 								</View>
 								<Icon name="chevron-right" size={14} color={C.mutedText} />
@@ -901,7 +901,7 @@ export function MoreScreen({
 								<Icon name="logout" size={16} color="#c0392b" />
 							</View>
 							<View style={{ flex: 1 }}>
-								<Text style={{ fontWeight: "700", fontSize: 14, color: "#c0392b" }}>Sign Out</Text>
+								<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: "#c0392b" }}>Sign Out</Text>
 								<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 1 }}>Sign out of your account</Text>
 							</View>
 						</TouchableOpacity>
@@ -922,8 +922,8 @@ export function MoreScreen({
 							<Icon name="crown" size={17} color="#2d1f5e" />
 						</View>
 						<View>
-							<Text style={{ fontWeight: "900", fontSize: 17, color: C.white, letterSpacing: -0.3 }}>Munch Sprouts Pro</Text>
-							<Text style={{ fontSize: 12, color: "#f5c842", fontWeight: "700" }}>
+							<Text style={{ fontFamily: "PlusJakartaSans_700Bold", fontSize: 17, color: C.white, letterSpacing: -0.3 }}>Munch Sprouts Pro</Text>
+							<Text style={{ fontSize: 12, color: "#f5c842", fontFamily: "NunitoSans_700Bold" }}>
 								{upgradePlan === "lifetime" ? "£39.99 one-off" : upgradePlan === "yearly" ? "£19.99 / year" : "£2.99 / month"}
 							</Text>
 						</View>
@@ -947,16 +947,16 @@ export function MoreScreen({
 										backgroundColor: active ? "#f5c842" : "transparent",
 									}}>
 									<View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-										<Text style={{ fontWeight: "800", fontSize: 13, color: active ? "#2d1f5e" : "rgba(255,255,255,0.6)" }}>
+										<Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 13, color: active ? "#2d1f5e" : "rgba(255,255,255,0.6)" }}>
 											{label}
 										</Text>
 										{badge && (
 											<View style={{ backgroundColor: active ? "#2d1f5e" : "rgba(245,200,66,0.25)", borderRadius: 999, paddingHorizontal: 5, paddingVertical: 1 }}>
-												<Text style={{ fontSize: 9, fontWeight: "700", color: active ? "#f5c842" : "#f5c842" }}>{badge}</Text>
+												<Text style={{ fontSize: 9, fontFamily: "NunitoSans_700Bold", color: active ? "#f5c842" : "#f5c842" }}>{badge}</Text>
 											</View>
 										)}
 									</View>
-									<Text style={{ fontSize: 11, fontWeight: "600", color: active ? "#2d1f5e" : "rgba(255,255,255,0.45)", marginTop: 1 }}>{price}</Text>
+									<Text style={{ fontSize: 11, fontFamily: "NunitoSans_600SemiBold", color: active ? "#2d1f5e" : "rgba(255,255,255,0.45)", marginTop: 1 }}>{price}</Text>
 								</TouchableOpacity>
 							);
 						})}
@@ -981,10 +981,10 @@ export function MoreScreen({
 								<Text style={{ fontSize: 16, width: 26, textAlign: "center" }}>{icon}</Text>
 								<View style={{ flex: 1 }}>
 									<View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-										<Text style={{ fontSize: 13, fontWeight: "700", color: C.white }}>{label}</Text>
+										<Text style={{ fontSize: 13, fontFamily: "NunitoSans_700Bold", color: C.white }}>{label}</Text>
 										{soon && (
 											<View style={{ backgroundColor: "rgba(245,200,66,0.2)", borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 }}>
-												<Text style={{ fontSize: 9, fontWeight: "700", color: "#f5c842" }}>SOON</Text>
+												<Text style={{ fontSize: 9, fontFamily: "NunitoSans_700Bold", color: "#f5c842" }}>SOON</Text>
 											</View>
 										)}
 									</View>
@@ -1003,7 +1003,7 @@ export function MoreScreen({
 						{upgradeLoading ? <ActivityIndicator color="#2d1f5e" /> : (
 							<>
 								<Icon name="crown" size={15} color="#2d1f5e" />
-								<Text style={{ color: "#2d1f5e", fontWeight: "800", fontSize: 15 }}>
+								<Text style={{ color: "#2d1f5e", fontFamily: "NunitoSans_800ExtraBold", fontSize: 15 }}>
 									{upgradePlan === "lifetime"
 										? "Get Lifetime Access — £39.99"
 										: upgradePlan === "yearly"
@@ -1015,11 +1015,11 @@ export function MoreScreen({
 					</TouchableOpacity>
 					<View style={{ flexDirection: "row", justifyContent: "center", gap: 20, paddingTop: 10 }}>
 						<TouchableOpacity onPress={onRestorePurchases}>
-							<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontWeight: "600" }}>Restore purchase</Text>
+							<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontFamily: "NunitoSans_600SemiBold" }}>Restore purchase</Text>
 						</TouchableOpacity>
-						<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: "600" }}>·</Text>
+						<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontFamily: "NunitoSans_600SemiBold" }}>·</Text>
 						<TouchableOpacity onPress={() => Linking.openURL("https://apps.apple.com/account/subscriptions")}>
-							<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontWeight: "600" }}>Manage subscription</Text>
+							<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontFamily: "NunitoSans_600SemiBold" }}>Manage subscription</Text>
 						</TouchableOpacity>
 					</View>
 					<Text style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", textAlign: "center", paddingTop: 8, paddingHorizontal: 8, lineHeight: 15 }}>
@@ -1031,12 +1031,12 @@ export function MoreScreen({
 					<View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingTop: 10, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.1)", marginTop: 8 }}>
 						<TouchableOpacity onPress={() => Linking.openURL(LEGAL_URLS.privacy)} activeOpacity={0.7}
 							style={{ paddingVertical: 4, paddingHorizontal: 6 }}>
-							<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", fontWeight: "600", textDecorationLine: "underline" }}>Privacy Policy</Text>
+							<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", fontFamily: "NunitoSans_600SemiBold", textDecorationLine: "underline" }}>Privacy Policy</Text>
 						</TouchableOpacity>
-						<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: "600" }}>·</Text>
+						<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontFamily: "NunitoSans_600SemiBold" }}>·</Text>
 						<TouchableOpacity onPress={() => Linking.openURL(LEGAL_URLS.terms)} activeOpacity={0.7}
 							style={{ paddingVertical: 4, paddingHorizontal: 6 }}>
-							<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", fontWeight: "600", textDecorationLine: "underline" }}>Terms of Use</Text>
+							<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", fontFamily: "NunitoSans_600SemiBold", textDecorationLine: "underline" }}>Terms of Use</Text>
 						</TouchableOpacity>
 					</View>
 				</View>
@@ -1044,8 +1044,8 @@ export function MoreScreen({
 
 			{/* Appearance */}
 			<SectionLabel>Appearance</SectionLabel>
-			<View style={{ backgroundColor: C.white, borderRadius: 16, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 }}>
-				<Text style={{ fontWeight: "700", fontSize: 14, color: C.textCharcoal, marginBottom: 12 }}>Colour Theme</Text>
+			<View style={{ backgroundColor: C.white, borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: C.borderLight }}>
+				<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: C.primaryPinkDark, marginBottom: 12 }}>Colour Theme</Text>
 				{THEMES.map((t) => (
 					<TouchableOpacity key={t.id} onPress={() => setTheme(t.id)} activeOpacity={0.8}
 						style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 12, backgroundColor: theme === t.id ? C.bgPurple : "transparent", borderRadius: 12, marginBottom: 4, borderWidth: 1.5, borderColor: theme === t.id ? C.primaryPurple : "transparent" }}>
@@ -1053,12 +1053,12 @@ export function MoreScreen({
 							{theme === t.id && <Icon name="check" size={16} color="#fff" />}
 						</View>
 						<View style={{ flex: 1 }}>
-							<Text style={{ fontWeight: "700", fontSize: 14, color: theme === t.id ? C.primaryPurple : C.textCharcoal }}>{t.label}</Text>
+							<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: theme === t.id ? C.primaryPurple : C.textCharcoal }}>{t.label}</Text>
 							<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>{t.sublabel}</Text>
 						</View>
 						{theme === t.id && (
 							<View style={{ backgroundColor: C.primaryPurple, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
-								<Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>Active</Text>
+								<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: "#fff" }}>Active</Text>
 							</View>
 						)}
 					</TouchableOpacity>
@@ -1067,7 +1067,7 @@ export function MoreScreen({
 
 			{/* Dashboard */}
 			<SectionLabel>Dashboard</SectionLabel>
-			<View style={{ backgroundColor: C.white, borderRadius: 16, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 }}>
+			<View style={{ backgroundColor: C.white, borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: C.borderLight }}>
 				<DashRow
 					icon="bottle" iconBg="#d4e8f5" iconColor="#2a5f8f"
 					label="Show Milk on Dashboard" sublabel="Display today's bottle feeds on the home screen"
@@ -1080,12 +1080,12 @@ export function MoreScreen({
 				/>
 				{/* Weight unit preference */}
 				<View style={{ flexDirection: "row", alignItems: "center", gap: 14, marginTop: 16 }}>
-					<View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: "#e6f7ef", alignItems: "center", justifyContent: "center" }}>
-						<Icon name="scale" size={20} color="#2d7a55" />
+					<View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#e6f7ef", alignItems: "center", justifyContent: "center" }}>
+						<Icon name="scale" size={18} color="#2d7a55" />
 					</View>
 					<View style={{ flex: 1 }}>
-						<Text style={{ fontWeight: "700", fontSize: 14, color: C.textCharcoal }}>Weight Unit</Text>
-						<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>Preferred display for weight measurements</Text>
+						<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: C.primaryPinkDark }}>Weight Unit</Text>
+						<Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 12, color: C.mutedText, marginTop: 2 }}>Preferred display for weight measurements</Text>
 					</View>
 					<View style={{ flexDirection: "row", backgroundColor: C.bgPurple, borderRadius: 10, overflow: "hidden" }}>
 						{["lbs", "kg"].map((u) => (
@@ -1093,7 +1093,7 @@ export function MoreScreen({
 								key={u}
 								onPress={() => onSetWeightPreference?.(u)}
 								style={{ paddingHorizontal: 14, paddingVertical: 7, backgroundColor: weightPreference === u ? C.primaryPurple : "transparent" }}>
-								<Text style={{ fontWeight: "700", fontSize: 13, color: weightPreference === u ? "#fff" : C.mutedText }}>{u}</Text>
+								<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 13, color: weightPreference === u ? "#fff" : C.mutedText }}>{u}</Text>
 							</TouchableOpacity>
 						))}
 					</View>
@@ -1102,15 +1102,15 @@ export function MoreScreen({
 
 			{/* Notifications */}
 			<SectionLabel>Notifications</SectionLabel>
-			<View style={{ backgroundColor: C.white, borderRadius: 16, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 }}>
+			<View style={{ backgroundColor: C.white, borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: C.borderLight }}>
 				{/* Toggle row */}
 				<View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-					<View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: "#d4e8f5", alignItems: "center", justifyContent: "center" }}>
-						<Icon name="bottle" size={20} color="#2a5f8f" />
+					<View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#d4e8f5", alignItems: "center", justifyContent: "center" }}>
+						<Icon name="bottle" size={18} color="#2a5f8f" />
 					</View>
 					<View style={{ flex: 1 }}>
-						<Text style={{ fontWeight: "700", fontSize: 14, color: C.textCharcoal }}>Bottle Feeding Reminders</Text>
-						<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>Get daily reminders to feed your baby</Text>
+						<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: C.primaryPinkDark }}>Bottle Feeding Reminders</Text>
+						<Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 12, color: C.mutedText, marginTop: 2 }}>Get daily reminders to feed your baby</Text>
 					</View>
 					<Switch
 						value={bottleRemindersEnabled}
@@ -1130,7 +1130,7 @@ export function MoreScreen({
 						) : (
 							bottleReminderTimes.map((t, i) => (
 								<View key={i} style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#f0f6fc", borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 8 }}>
-									<Text style={{ flex: 1, fontWeight: "700", fontSize: 14, color: "#2a5f8f" }}>
+									<Text style={{ flex: 1, fontFamily: "NunitoSans_700Bold", fontSize: 14, color: "#2a5f8f" }}>
 										{fmt24(t.hour, t.minute)}
 									</Text>
 									<TouchableOpacity onPress={() => onRemoveBottleReminderTime?.(i)}
@@ -1143,7 +1143,7 @@ export function MoreScreen({
 						<TouchableOpacity onPress={() => setShowTimePicker(true)}
 							style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: C.bgPurple, borderRadius: 10, paddingVertical: 11, marginTop: 4 }}>
 							<Icon name="plus" size={16} color={C.primaryPurple} />
-							<Text style={{ fontWeight: "700", fontSize: 14, color: C.primaryPurple }}>Add Time</Text>
+							<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: C.primaryPurple }}>Add Time</Text>
 						</TouchableOpacity>
 					</View>
 				)}
@@ -1153,7 +1153,7 @@ export function MoreScreen({
 			<Modal visible={showTimePicker} transparent animationType="fade" onRequestClose={() => setShowTimePicker(false)}>
 				<View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" }}>
 					<View style={{ backgroundColor: C.white, borderRadius: 20, padding: 24, width: "85%", shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 16, elevation: 10 }}>
-						<Text style={{ fontWeight: "800", fontSize: 17, color: C.textCharcoal, textAlign: "center", marginBottom: 24 }}>Set Reminder Time</Text>
+						<Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 17, color: C.textCharcoal, textAlign: "center", marginBottom: 24 }}>Set Reminder Time</Text>
 
 						<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12 }}>
 							{/* Hour picker */}
@@ -1163,16 +1163,16 @@ export function MoreScreen({
 									<Icon name="chevUp" size={18} color={C.primaryPurple} />
 								</TouchableOpacity>
 								<View style={{ width: 64, height: 52, backgroundColor: "#f0f6fc", borderRadius: 12, alignItems: "center", justifyContent: "center" }}>
-									<Text style={{ fontWeight: "800", fontSize: 26, color: "#2a5f8f" }}>{String(pickerHour).padStart(2, "0")}</Text>
+									<Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 26, color: "#2a5f8f" }}>{String(pickerHour).padStart(2, "0")}</Text>
 								</View>
 								<TouchableOpacity onPress={() => setPickerHour((h) => h === 1 ? 12 : h - 1)}
 									style={{ backgroundColor: C.bgPurple, borderRadius: 10, padding: 10 }}>
 									<Icon name="chevDown" size={18} color={C.primaryPurple} />
 								</TouchableOpacity>
-								<Text style={{ fontSize: 11, color: C.mutedText, fontWeight: "600" }}>Hour</Text>
+								<Text style={{ fontSize: 11, color: C.mutedText, fontFamily: "NunitoSans_600SemiBold" }}>Hour</Text>
 							</View>
 
-							<Text style={{ fontSize: 28, fontWeight: "800", color: C.textCharcoal, marginBottom: 20 }}>:</Text>
+							<Text style={{ fontSize: 28, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, marginBottom: 20 }}>:</Text>
 
 							{/* Minute picker */}
 							<View style={{ alignItems: "center", gap: 8 }}>
@@ -1181,13 +1181,13 @@ export function MoreScreen({
 									<Icon name="chevUp" size={18} color={C.primaryPurple} />
 								</TouchableOpacity>
 								<View style={{ width: 64, height: 52, backgroundColor: "#f0f6fc", borderRadius: 12, alignItems: "center", justifyContent: "center" }}>
-									<Text style={{ fontWeight: "800", fontSize: 26, color: "#2a5f8f" }}>{String(pickerMinute).padStart(2, "0")}</Text>
+									<Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 26, color: "#2a5f8f" }}>{String(pickerMinute).padStart(2, "0")}</Text>
 								</View>
 								<TouchableOpacity onPress={() => setPickerMinute((m) => m === 0 ? 55 : m - 5)}
 									style={{ backgroundColor: C.bgPurple, borderRadius: 10, padding: 10 }}>
 									<Icon name="chevDown" size={18} color={C.primaryPurple} />
 								</TouchableOpacity>
-								<Text style={{ fontSize: 11, color: C.mutedText, fontWeight: "600" }}>Minute</Text>
+								<Text style={{ fontSize: 11, color: C.mutedText, fontFamily: "NunitoSans_600SemiBold" }}>Minute</Text>
 							</View>
 
 							{/* AM/PM */}
@@ -1195,7 +1195,7 @@ export function MoreScreen({
 								{["AM", "PM"].map((p) => (
 									<TouchableOpacity key={p} onPress={() => setPickerAmPm(p)}
 										style={{ width: 52, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: pickerAmPm === p ? "#2a5f8f" : C.bgPurple }}>
-										<Text style={{ fontWeight: "700", fontSize: 13, color: pickerAmPm === p ? "#fff" : C.mutedText }}>{p}</Text>
+										<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 13, color: pickerAmPm === p ? "#fff" : C.mutedText }}>{p}</Text>
 									</TouchableOpacity>
 								))}
 							</View>
@@ -1204,11 +1204,11 @@ export function MoreScreen({
 						<View style={{ flexDirection: "row", gap: 10, marginTop: 24 }}>
 							<TouchableOpacity onPress={() => setShowTimePicker(false)}
 								style={{ flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: C.bgPurple, alignItems: "center" }}>
-								<Text style={{ fontWeight: "700", color: C.mutedText }}>Cancel</Text>
+								<Text style={{ fontFamily: "NunitoSans_700Bold", color: C.mutedText }}>Cancel</Text>
 							</TouchableOpacity>
 							<TouchableOpacity onPress={handleConfirmTime}
 								style={{ flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: "#2a5f8f", alignItems: "center" }}>
-								<Text style={{ fontWeight: "700", color: "#fff" }}>Add Time</Text>
+								<Text style={{ fontFamily: "NunitoSans_700Bold", color: "#fff" }}>Add Time</Text>
 							</TouchableOpacity>
 						</View>
 					</View>
@@ -1229,17 +1229,17 @@ export function MoreScreen({
 								{/* Header */}
 								<View style={{ flexDirection: "row", alignItems: "center", marginBottom: 22 }}>
 									<View style={{ flex: 1 }}>
-										<Text style={{ fontSize: 20, fontWeight: "800", color: C.textCharcoal }}>Export as PDF</Text>
-										<Text style={{ fontSize: 13, color: C.mutedText, marginTop: 2 }}>Choose what to include in your report</Text>
+										<Text style={{ fontSize: 22, fontFamily: "PlusJakartaSans_700Bold", color: C.primaryPinkDark }}>Export as PDF</Text>
+										<Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 13, color: C.mutedText, marginTop: 2 }}>Choose what to include in your report</Text>
 									</View>
 									<TouchableOpacity onPress={() => setShowExportModal(false)}
-										style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center" }}>
+										style={{ backgroundColor: C.bgPurple, borderRadius: 10, padding: 8 }}>
 										<Icon name="close" size={16} color={C.mutedText} />
 									</TouchableOpacity>
 								</View>
 
 								{/* ── Date range ── */}
-								<Text style={{ fontSize: 11, fontWeight: "700", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Date Range</Text>
+								<Text style={{ fontSize: 11, fontFamily: "NunitoSans_700Bold", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 }}>Date Range</Text>
 								<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
 									{[
 										{ key: "7d",     label: "Last 7 days"  },
@@ -1254,10 +1254,10 @@ export function MoreScreen({
 										return (
 											<TouchableOpacity key={key} onPress={() => locked ? onUpgradePro?.() : setExportRange(key)} activeOpacity={0.75}
 												style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: active ? C.primaryPurple : C.bgPurple, borderWidth: 1.5, borderColor: active ? C.primaryPurple : "transparent", opacity: locked ? 0.55 : 1 }}>
-												<Text style={{ fontSize: 13, fontWeight: "700", color: active ? "#fff" : C.mutedText }}>{label}</Text>
+												<Text style={{ fontSize: 13, fontFamily: "NunitoSans_700Bold", color: active ? "#fff" : C.mutedText }}>{label}</Text>
 												{locked && (
 													<View style={{ backgroundColor: "#f5c84233", borderRadius: 999, paddingHorizontal: 5, paddingVertical: 1 }}>
-														<Text style={{ fontSize: 9, fontWeight: "800", color: "#c8920a" }}>PRO</Text>
+														<Text style={{ fontSize: 9, fontFamily: "NunitoSans_800ExtraBold", color: "#c8920a" }}>PRO</Text>
 													</View>
 												)}
 											</TouchableOpacity>
@@ -1268,7 +1268,7 @@ export function MoreScreen({
 									<TouchableOpacity onPress={onUpgradePro} activeOpacity={0.85}
 										style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#fef9c3", borderRadius: 10, padding: 10, marginBottom: 14, borderWidth: 1, borderColor: "#f5c84240" }}>
 										<Icon name="crown" size={13} color="#c8920a" />
-										<Text style={{ flex: 1, fontSize: 12, color: "#c8920a", fontWeight: "600" }}>
+										<Text style={{ flex: 1, fontSize: 12, color: "#c8920a", fontFamily: "NunitoSans_600SemiBold" }}>
 											Upgrade to Pro to export more than 7 days
 										</Text>
 										<Icon name="chevRight" size={12} color="#c8920a" />
@@ -1279,7 +1279,7 @@ export function MoreScreen({
 								{exportRange === "custom" && (
 									<View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>
 										<View style={{ flex: 1 }}>
-											<Text style={{ fontSize: 11, fontWeight: "700", color: C.mutedText, marginBottom: 6 }}>From</Text>
+											<Text style={{ fontSize: 11, fontFamily: "NunitoSans_700Bold", color: C.mutedText, marginBottom: 6 }}>From</Text>
 											<TextInput
 												value={exportFromInput}
 												onChangeText={(t) => setExportFromInput(autoFormatDate(t, exportFromInput))}
@@ -1287,11 +1287,11 @@ export function MoreScreen({
 												placeholderTextColor={C.mutedText}
 												keyboardType="number-pad"
 												maxLength={10}
-												style={{ backgroundColor: C.bgPurple, borderRadius: 12, padding: 12, fontSize: 15, fontWeight: "600", color: C.textCharcoal, borderWidth: 1.5, borderColor: exportFromInput.length === 10 ? C.primaryPurple : "transparent" }}
+												style={{ backgroundColor: C.bgPurple, borderRadius: 12, padding: 12, fontSize: 15, fontFamily: "NunitoSans_600SemiBold", color: C.textCharcoal, borderWidth: 1.5, borderColor: exportFromInput.length === 10 ? C.primaryPurple : "transparent" }}
 											/>
 										</View>
 										<View style={{ flex: 1 }}>
-											<Text style={{ fontSize: 11, fontWeight: "700", color: C.mutedText, marginBottom: 6 }}>To</Text>
+											<Text style={{ fontSize: 11, fontFamily: "NunitoSans_700Bold", color: C.mutedText, marginBottom: 6 }}>To</Text>
 											<TextInput
 												value={exportToInput}
 												onChangeText={(t) => setExportToInput(autoFormatDate(t, exportToInput))}
@@ -1299,14 +1299,14 @@ export function MoreScreen({
 												placeholderTextColor={C.mutedText}
 												keyboardType="number-pad"
 												maxLength={10}
-												style={{ backgroundColor: C.bgPurple, borderRadius: 12, padding: 12, fontSize: 15, fontWeight: "600", color: C.textCharcoal, borderWidth: 1.5, borderColor: exportToInput.length === 10 ? C.primaryPurple : "transparent" }}
+												style={{ backgroundColor: C.bgPurple, borderRadius: 12, padding: 12, fontSize: 15, fontFamily: "NunitoSans_600SemiBold", color: C.textCharcoal, borderWidth: 1.5, borderColor: exportToInput.length === 10 ? C.primaryPurple : "transparent" }}
 											/>
 										</View>
 									</View>
 								)}
 
 								{/* ── Sections ── */}
-								<Text style={{ fontSize: 11, fontWeight: "700", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 12 }}>Include</Text>
+								<Text style={{ fontSize: 11, fontFamily: "NunitoSans_700Bold", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 12 }}>Include</Text>
 								<View style={{ backgroundColor: C.bgPurple, borderRadius: 16, overflow: "hidden", marginBottom: 20 }}>
 									{[
 										{ label: "Food Log",       sublabel: "All food attempts & reactions", icon: "food",   color: "#5a2d7a", bg: "#ede8f7", value: exportFood,      set: setExportFood,      count: foodLog.length   },
@@ -1320,7 +1320,7 @@ export function MoreScreen({
 												<Icon name={icon} size={18} color={color} />
 											</View>
 											<View style={{ flex: 1 }}>
-												<Text style={{ fontWeight: "700", fontSize: 14, color: C.textCharcoal }}>{label}</Text>
+												<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: C.textCharcoal }}>{label}</Text>
 												<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>{count > 0 ? sublabel : "No data yet"}</Text>
 											</View>
 											<Toggle value={value && count > 0} onPress={() => count > 0 && set((v) => !v)} />
@@ -1342,14 +1342,14 @@ export function MoreScreen({
 									return parts.length > 0 ? (
 										<View style={{ backgroundColor: "#f0f6fc", borderRadius: 12, padding: 12, marginBottom: 18, flexDirection: "row", alignItems: "center", gap: 10 }}>
 											<Icon name="info" size={16} color="#2a5f8f" />
-											<Text style={{ flex: 1, fontSize: 12, color: "#2a5f8f", fontWeight: "600" }}>
+											<Text style={{ flex: 1, fontSize: 12, color: "#2a5f8f", fontFamily: "NunitoSans_600SemiBold" }}>
 												{`Will include: ${parts.join(", ")}`}
 											</Text>
 										</View>
 									) : (
 										<View style={{ backgroundColor: "#fde8e8", borderRadius: 12, padding: 12, marginBottom: 18, flexDirection: "row", alignItems: "center", gap: 10 }}>
 											<Icon name="info" size={16} color="#c0392b" />
-											<Text style={{ flex: 1, fontSize: 12, color: "#c0392b", fontWeight: "600" }}>
+											<Text style={{ flex: 1, fontSize: 12, color: "#c0392b", fontFamily: "NunitoSans_600SemiBold" }}>
 												No data found for the selected range and sections
 											</Text>
 										</View>
@@ -1363,7 +1363,7 @@ export function MoreScreen({
 										? <ActivityIndicator color="#fff" />
 										: <>
 											<Icon name="pdf" size={18} color="#fff" />
-											<Text style={{ color: "#fff", fontWeight: "800", fontSize: 16 }}>Generate PDF</Text>
+											<Text style={{ color: "#fff", fontFamily: "NunitoSans_800ExtraBold", fontSize: 16 }}>Generate PDF</Text>
 										</>
 									}
 								</TouchableOpacity>
@@ -1383,7 +1383,7 @@ export function MoreScreen({
 				onPress={isPro ? () => setShowGallery(true) : onUpgradePro}
 				right={isPro ? undefined : (
 					<View style={{ backgroundColor: C.warningStroke, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
-						<Text style={{ fontSize: 10, fontWeight: "700", color: C.white }}>PRO</Text>
+						<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: C.white }}>PRO</Text>
 					</View>
 				)}
 			/>
@@ -1410,7 +1410,7 @@ export function MoreScreen({
 				onPress={isPro ? () => setShowSharing(true) : onUpgradePro}
 				right={isPro ? undefined : (
 					<View style={{ backgroundColor: C.warningStroke, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
-						<Text style={{ fontSize: 10, fontWeight: "700", color: C.white }}>PRO</Text>
+						<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: C.white }}>PRO</Text>
 					</View>
 				)}
 			/>
@@ -1441,8 +1441,8 @@ export function MoreScreen({
 				<View style={{ flex: 1, backgroundColor: C.bgMain }}>
 					<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: Platform.OS === "ios" ? 56 : 20, paddingBottom: 16, backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
 						<View>
-							<Text style={{ fontWeight: "800", fontSize: 20, color: C.primaryPinkDark }}>Photo Gallery</Text>
-							<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>
+							<Text style={{ fontFamily: "PlusJakartaSans_700Bold", fontSize: 20, color: C.primaryPinkDark }}>Photo Gallery</Text>
+							<Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 12, color: C.mutedText, marginTop: 2 }}>
 								{photoEntries.length} food photo{photoEntries.length !== 1 ? "s" : ""}
 							</Text>
 						</View>
@@ -1454,7 +1454,7 @@ export function MoreScreen({
 					{photoEntries.length === 0 ? (
 						<View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12 }}>
 							<Icon name="Camera" size={52} color={C.secondaryPurple} />
-							<Text style={{ fontWeight: "700", fontSize: 16, color: C.mutedText }}>No photos yet</Text>
+							<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 16, color: C.mutedText }}>No photos yet</Text>
 							<Text style={{ fontSize: 13, color: C.mutedText, textAlign: "center", paddingHorizontal: 40 }}>
 								Add photos when logging food to see them here
 							</Text>
@@ -1468,10 +1468,10 @@ export function MoreScreen({
 							columnWrapperStyle={{ gap: 4, marginBottom: 4 }}
 							renderItem={({ item }) => (
 								<TouchableOpacity onPress={() => setLightboxPhoto(item)} activeOpacity={0.85}
-									style={{ width: THUMB_SIZE, height: THUMB_SIZE, borderRadius: 10, overflow: "hidden", backgroundColor: C.bgPurple }}>
+									style={{ width: THUMB_SIZE, height: THUMB_SIZE, borderRadius: 12, overflow: "hidden", backgroundColor: C.bgPurple, borderWidth: 1, borderColor: C.borderLight }}>
 									<Image source={{ uri: item.photoUri }} style={{ width: THUMB_SIZE, height: THUMB_SIZE }} resizeMode="cover" />
 									<View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.45)", paddingHorizontal: 5, paddingVertical: 4 }}>
-										<Text style={{ fontSize: 9, fontWeight: "700", color: "#fff" }} numberOfLines={1}>{item.name}</Text>
+										<Text style={{ fontSize: 9, fontFamily: "NunitoSans_700Bold", color: "#fff" }} numberOfLines={1}>{item.name}</Text>
 									</View>
 								</TouchableOpacity>
 							)}
@@ -1490,7 +1490,7 @@ export function MoreScreen({
 								Pinch to zoom · Double-tap to reset
 							</Text>
 							<View style={{ backgroundColor: "rgba(0,0,0,0.7)", paddingHorizontal: 24, paddingVertical: 18, paddingBottom: Platform.OS === "ios" ? 36 : 18 }}>
-								<Text style={{ fontSize: 18, fontWeight: "800", color: "#fff", marginBottom: 4 }}>{lightboxPhoto.name}</Text>
+								<Text style={{ fontSize: 18, fontFamily: "PlusJakartaSans_700Bold", color: "#fff", marginBottom: 4 }}>{lightboxPhoto.name}</Text>
 								<View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
 									{lightboxPhoto.date     && <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>{lightboxPhoto.date}</Text>}
 									{lightboxPhoto.reaction && <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>· {lightboxPhoto.reaction}</Text>}

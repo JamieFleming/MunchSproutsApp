@@ -57,20 +57,19 @@ function GoogleLogo({ size = 20 }) {
 }
 
 const C = {
-	// bgMain: "#fdf5e2",
-	bgMain: "#fff",
-	bgPurple: "#ede8f7",
-	bgGreen: "#e8f7ee",
-	bgWarning: "#fff4e5",
-	primaryPurple: "#9b7fe8",
+	bgMain:          "#fbf7ef",
+	bgPurple:        "#f0ecfc",
+	primaryPurple:   "#9b7fe8",
+	primaryPinkDark: "#2e2440",
+	textCharcoal:    "#2e2440",
+	mutedText:       "#8a7aaa",
+	white:           "#ffffff",
+	border:          "#ede8fb",
+	borderLight:     "#ede8fb",
 	secondaryPurple: "#c4b0f0",
-	primaryPinkDark: "#5a2d7a",
-	textCharcoal: "#3d3d3d",
-	warningStroke: "#e07b39",
-	white: "#ffffff",
-	border: "#d9d0f0",
-	borderLight: "#ece8f9",
-	mutedText: "#8a7aaa",
+	warningStroke:   "#e07b39",
+	bgGreen:         "#e8f7ee",
+	bgWarning:       "#fff4e5",
 };
 
 function EyeIcon({ visible }) {
@@ -301,15 +300,15 @@ export default function AuthScreen() {
 					contentContainerStyle={styles.scroll}
 					keyboardShouldPersistTaps="handled"
 					showsVerticalScrollIndicator={false}>
-					<View style={styles.logoArea}>
-						{/* <Text style={styles.logoText}>🌱</Text> */}
-						<Image
-							source={require("./assets/logo.png")}
-							style={{ width: 100, height: 100, borderRadius: 10 }}
-							resizeMode="contain"
-						/>
-						<Text style={styles.appName}>Munch Sprouts</Text>
-						<Text style={styles.tagline}>Reset Your Password</Text>
+					<View style={{ alignItems: "center", marginBottom: 32 }}>
+						<Svg width={64} height={64} viewBox="0 0 64 64">
+							<Circle cx="32" cy="32" r="30" fill={C.bgPurple} />
+							<Path stroke="#7dcf9e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" d="M32 52 L32 28" />
+							<Path stroke="#7dcf9e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="#7dcf9e30" d="M32 40 Q20 36 18 24 Q30 22 32 34 Z" />
+							<Path stroke="#7dcf9e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="#7dcf9e30" d="M32 36 Q44 32 46 20 Q34 18 32 30 Z" />
+						</Svg>
+						<Text style={{ fontFamily: "PlusJakartaSans_700Bold", fontSize: 26, color: C.primaryPinkDark, marginTop: 12, letterSpacing: 0.3 }}>MunchSprouts</Text>
+						<Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 14, color: C.mutedText, marginTop: 4 }}>Reset Your Password</Text>
 					</View>
 					<View style={styles.card}>
 						<Text style={styles.cardTitle}>Forgot Password</Text>
@@ -363,17 +362,29 @@ export default function AuthScreen() {
 				contentContainerStyle={styles.scroll}
 				keyboardShouldPersistTaps="handled"
 				showsVerticalScrollIndicator={false}>
-				<View style={styles.logoArea}>
-					{/* <Text style={styles.logoText}>🌱</Text> */}
-					<Image
-						source={require("./assets/logo.png")}
-						style={{ width: 100, height: 100, borderRadius: 10 }}
-						resizeMode="contain"
-					/>
-					<Text style={styles.appName}>Munch Sprouts</Text>
-					<Text style={styles.tagline}>Baby Led Weaning Tracker</Text>
+				<View style={{ alignItems: "center", marginBottom: 32 }}>
+					<Svg width={64} height={64} viewBox="0 0 64 64">
+						<Circle cx="32" cy="32" r="30" fill={C.bgPurple} />
+						<Path stroke="#7dcf9e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" d="M32 52 L32 28" />
+						<Path stroke="#7dcf9e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="#7dcf9e30" d="M32 40 Q20 36 18 24 Q30 22 32 34 Z" />
+						<Path stroke="#7dcf9e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="#7dcf9e30" d="M32 36 Q44 32 46 20 Q34 18 32 30 Z" />
+					</Svg>
+					<Text style={{ fontFamily: "PlusJakartaSans_700Bold", fontSize: 26, color: C.primaryPinkDark, marginTop: 12, letterSpacing: 0.3 }}>MunchSprouts</Text>
+					<Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 14, color: C.mutedText, marginTop: 4 }}>Your baby's food journey</Text>
 				</View>
 				<View style={styles.card}>
+					<View style={{ flexDirection: "row", backgroundColor: C.bgPurple, borderRadius: 12, padding: 4, marginBottom: 24 }}>
+						{["Sign In", "Sign Up"].map((label, i) => {
+							const active = (i === 0 && mode === "signin") || (i === 1 && mode === "signup");
+							return (
+								<TouchableOpacity key={label} onPress={() => setMode(i === 0 ? "signin" : "signup")}
+									style={{ flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: active ? C.white : "transparent", alignItems: "center",
+										shadowColor: active ? "#2e2440" : "transparent", shadowOpacity: active ? 0.08 : 0, shadowRadius: 6, elevation: active ? 2 : 0 }}>
+									<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: active ? C.primaryPinkDark : C.mutedText }}>{label}</Text>
+								</TouchableOpacity>
+							);
+						})}
+					</View>
 					<Text style={styles.cardTitle}>
 						{mode === "signin" ? "Welcome back" : "Create your account"}
 					</Text>
@@ -472,9 +483,9 @@ export default function AuthScreen() {
 							style={{ alignSelf: "flex-end", marginTop: -4, marginBottom: 4 }}>
 							<Text
 								style={{
+									fontFamily: "NunitoSans_600SemiBold",
 									fontSize: 13,
 									color: C.primaryPurple,
-									fontWeight: "700",
 								}}>
 								Forgot password?
 							</Text>
@@ -495,24 +506,26 @@ export default function AuthScreen() {
 					</TouchableOpacity>
 
 					{/* ── Divider ── */}
-					<View style={styles.dividerRow}>
-						<View style={styles.dividerLine} />
-						<Text style={styles.dividerText}>or continue with</Text>
-						<View style={styles.dividerLine} />
+					<View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginVertical: 18 }}>
+						<View style={{ flex: 1, height: 1, backgroundColor: C.borderLight }} />
+						<Text style={{ fontFamily: "NunitoSans_600SemiBold", fontSize: 12, color: C.mutedText }}>or</Text>
+						<View style={{ flex: 1, height: 1, backgroundColor: C.borderLight }} />
 					</View>
 
 					{/* ── Google Sign-In ── */}
 					<TouchableOpacity
 						onPress={() => promptAsync()}
 						disabled={isExpoGo || !request || googleLoading}
-						style={[styles.btnGoogle, (isExpoGo || !request || googleLoading) && { opacity: 0.5 }]}
+						style={[{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
+							backgroundColor: C.white, borderRadius: 16, paddingVertical: 14,
+							borderWidth: 1.5, borderColor: C.borderLight }, (isExpoGo || !request || googleLoading) && { opacity: 0.5 }]}
 						activeOpacity={0.85}>
 						{googleLoading ? (
 							<ActivityIndicator color={C.textCharcoal} />
 						) : (
 							<>
 								<GoogleLogo size={20} />
-								<Text style={styles.btnGoogleText}>
+								<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: C.textCharcoal }}>
 									{isExpoGo ? "Google Sign-In (not available in Expo Go)" : "Sign in with Google"}
 								</Text>
 							</>
@@ -575,11 +588,11 @@ export default function AuthScreen() {
 				</Text>
 				<View style={{ flexDirection: "row", justifyContent: "center", gap: 16, marginTop: 4 }}>
 					<TouchableOpacity onPress={() => Linking.openURL(LEGAL_URLS.privacy)}>
-						<Text style={styles.legalLink}>Privacy Policy</Text>
+						<Text style={{ fontFamily: "NunitoSans_600SemiBold", fontSize: 11, color: C.primaryPurple }}>Privacy Policy</Text>
 					</TouchableOpacity>
-					<Text style={styles.legalDivider}>·</Text>
+					<Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 11, color: C.mutedText }}>·</Text>
 					<TouchableOpacity onPress={() => Linking.openURL(LEGAL_URLS.terms)}>
-						<Text style={styles.legalLink}>Terms of Use</Text>
+						<Text style={{ fontFamily: "NunitoSans_600SemiBold", fontSize: 11, color: C.primaryPurple }}>Terms of Use</Text>
 					</TouchableOpacity>
 				</View>
 			</ScrollView>
@@ -599,13 +612,13 @@ const styles = StyleSheet.create({
 	logoArea: { alignItems: "center", gap: 6, marginBottom: 8 },
 	logoText: { fontSize: 56 },
 	appName: {
-		fontSize: 28,
-		fontWeight: "700",
+		fontFamily: "PlusJakartaSans_700Bold",
+		fontSize: 26,
 		color: C.primaryPinkDark,
-		textTransform: "uppercase",
-		letterSpacing: 1,
+		letterSpacing: 0.3,
+		marginTop: 12,
 	},
-	tagline: { fontSize: 14, color: C.mutedText, fontWeight: "600" },
+	tagline: { fontFamily: "NunitoSans_400Regular", fontSize: 14, color: C.mutedText, marginTop: 4 },
 	card: {
 		backgroundColor: C.white,
 		borderRadius: 20,
@@ -620,13 +633,13 @@ const styles = StyleSheet.create({
 		gap: 16,
 	},
 	cardTitle: {
+		fontFamily: "PlusJakartaSans_700Bold",
 		fontSize: 20,
-		fontWeight: "700",
 		color: C.primaryPinkDark,
-		textTransform: "uppercase",
-		letterSpacing: 0.5,
+		letterSpacing: 0.3,
 	},
 	cardSubtitle: {
+		fontFamily: "NunitoSans_400Regular",
 		fontSize: 13,
 		color: C.mutedText,
 		lineHeight: 20,
@@ -634,21 +647,21 @@ const styles = StyleSheet.create({
 	},
 	fieldGroup: { gap: 6 },
 	label: {
+		fontFamily: "NunitoSans_700Bold",
 		fontSize: 11,
-		fontWeight: "700",
 		color: C.mutedText,
 		textTransform: "uppercase",
 		letterSpacing: 0.7,
 	},
 	input: {
-		borderWidth: 2,
-		borderColor: C.border,
-		borderRadius: 12,
-		paddingHorizontal: 14,
-		paddingVertical: 12,
-		backgroundColor: C.bgMain,
+		borderWidth: 1.5,
+		borderColor: C.borderLight,
+		borderRadius: 16,
+		paddingHorizontal: 16,
+		paddingVertical: 13,
+		backgroundColor: C.white,
 		color: C.textCharcoal,
-		fontWeight: "600",
+		fontFamily: "NunitoSans_600SemiBold",
 		fontSize: 15,
 	},
 	inputWrapper: {
@@ -667,63 +680,26 @@ const styles = StyleSheet.create({
 	},
 	btnPrimary: {
 		backgroundColor: C.primaryPurple,
-		borderRadius: 12,
+		borderRadius: 18,
 		paddingVertical: 15,
 		alignItems: "center",
 		justifyContent: "center",
 		marginTop: 4,
 		shadowColor: C.primaryPurple,
 		shadowOpacity: 0.35,
-		shadowRadius: 8,
-		shadowOffset: { width: 0, height: 4 },
-		elevation: 4,
+		shadowRadius: 10,
+		shadowOffset: { width: 0, height: 5 },
+		elevation: 5,
 	},
 	btnPrimaryText: {
-		color: C.white,
-		fontWeight: "700",
-		fontSize: 14,
-		textTransform: "uppercase",
-		letterSpacing: 0.6,
+		color: "#fff",
+		fontFamily: "NunitoSans_700Bold",
+		fontSize: 15,
+		letterSpacing: 0.3,
 	},
 	toggleBtn: { alignItems: "center", paddingVertical: 4 },
-	toggleText: { fontSize: 13, color: C.mutedText },
-	toggleTextBold: { color: C.primaryPurple, fontWeight: "700" },
-	dividerRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 10,
-	},
-	dividerLine: {
-		flex: 1,
-		height: 1,
-		backgroundColor: C.borderLight,
-	},
-	dividerText: {
-		fontSize: 12,
-		color: C.mutedText,
-		fontWeight: "600",
-	},
-	btnGoogle: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "center",
-		gap: 12,
-		backgroundColor: C.white,
-		borderWidth: 2,
-		borderColor: C.border,
-		borderRadius: 12,
-		paddingVertical: 14,
-		shadowColor: "#000",
-		shadowOpacity: 0.06,
-		shadowRadius: 6,
-		shadowOffset: { width: 0, height: 2 },
-		elevation: 2,
-	},
-	btnGoogleText: {
-		fontSize: 14,
-		fontWeight: "700",
-		color: C.textCharcoal,
-	},
+	toggleText: { fontFamily: "NunitoSans_400Regular", fontSize: 13, color: C.mutedText },
+	toggleTextBold: { fontFamily: "NunitoSans_700Bold", color: C.primaryPurple },
 	btnApple: {
 		width: "100%",
 		height: 50,
@@ -743,14 +719,14 @@ const styles = StyleSheet.create({
 		gap: 8,
 	},
 	passwordRuleDot: {
+		fontFamily: "NunitoSans_700Bold",
 		fontSize: 13,
-		fontWeight: "800",
 		width: 16,
 		textAlign: "center",
 	},
 	passwordRuleText: {
+		fontFamily: "NunitoSans_600SemiBold",
 		fontSize: 12,
-		fontWeight: "600",
 	},
 	proBadge: {
 		backgroundColor: C.bgWarning,
@@ -763,13 +739,13 @@ const styles = StyleSheet.create({
 		gap: 6,
 	},
 	proBadgeTitle: {
+		fontFamily: "PlusJakartaSans_700Bold",
 		fontSize: 15,
-		fontWeight: "800",
 		color: C.warningStroke,
 	},
 	proBadgeSubtitle: {
+		fontFamily: "NunitoSans_600SemiBold",
 		fontSize: 12,
-		fontWeight: "600",
 		color: C.warningStroke,
 		opacity: 0.8,
 	},
@@ -790,29 +766,21 @@ const styles = StyleSheet.create({
 		opacity: 0.25,
 	},
 	proPricingAmount: {
+		fontFamily: "PlusJakartaSans_700Bold",
 		fontSize: 15,
-		fontWeight: "800",
 		color: C.warningStroke,
 	},
 	proPricingLabel: {
+		fontFamily: "NunitoSans_600SemiBold",
 		fontSize: 11,
-		fontWeight: "600",
 		color: C.warningStroke,
 		opacity: 0.75,
 	},
 	footer: {
+		fontFamily: "NunitoSans_400Regular",
 		textAlign: "center",
 		fontSize: 12,
 		color: C.mutedText,
 		lineHeight: 18,
-	},
-	legalLink: {
-		fontSize: 11,
-		color: C.primaryPurple,
-		fontWeight: "500",
-	},
-	legalDivider: {
-		fontSize: 11,
-		color: C.mutedText,
 	},
 });

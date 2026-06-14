@@ -103,7 +103,7 @@ function ChipRow({ options, value, onChange, C }) {
 							<Text
 								style={{
 									fontSize: 13,
-									fontWeight: "700",
+									fontFamily: "NunitoSans_700Bold",
 									color: active ? "#ffffff" : C.textCharcoal,
 								}}>
 								{opt.label}
@@ -210,7 +210,7 @@ export function RemindersModal({ visible, onClose, prefs: initialPrefs, onSave }
 							}}>
 							<Icon name="bell" size={18} color={C.primaryPurple} />
 						</View>
-						<Text style={{ fontWeight: "800", fontSize: 20, color: C.primaryPinkDark }}>
+						<Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 20, color: C.primaryPinkDark }}>
 							Reminders
 						</Text>
 					</View>
@@ -251,7 +251,7 @@ export function RemindersModal({ visible, onClose, prefs: initialPrefs, onSave }
 								/>
 							</View>
 							<View style={{ flex: 1 }}>
-								<Text style={{ fontWeight: "700", fontSize: 15, color: C.textCharcoal }}>
+								<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 15, color: C.textCharcoal }}>
 									Log Reminders
 								</Text>
 								<Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>
@@ -270,7 +270,7 @@ export function RemindersModal({ visible, onClose, prefs: initialPrefs, onSave }
 							<SectionCard C={C}>
 								<View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 }}>
 									<Icon name="clock" size={16} color={C.primaryPurple} />
-									<Text style={{ fontWeight: "700", fontSize: 14, color: C.textCharcoal }}>
+									<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: C.textCharcoal }}>
 										Reminder Interval
 									</Text>
 								</View>
@@ -289,7 +289,7 @@ export function RemindersModal({ visible, onClose, prefs: initialPrefs, onSave }
 							<SectionCard C={C}>
 								<View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 }}>
 									<Icon name="moon" size={16} color="#7b5ea7" />
-									<Text style={{ fontWeight: "700", fontSize: 14, color: C.textCharcoal }}>
+									<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: C.textCharcoal }}>
 										Quiet Hours
 									</Text>
 								</View>
@@ -297,7 +297,7 @@ export function RemindersModal({ visible, onClose, prefs: initialPrefs, onSave }
 									No reminders will be sent during this time
 								</Text>
 
-								<Text style={{ fontSize: 12, fontWeight: "700", color: C.mutedText, marginBottom: 2 }}>
+								<Text style={{ fontSize: 12, fontFamily: "NunitoSans_700Bold", color: C.mutedText, marginBottom: 2 }}>
 									DO NOT DISTURB FROM
 								</Text>
 								<ChipRow
@@ -307,7 +307,7 @@ export function RemindersModal({ visible, onClose, prefs: initialPrefs, onSave }
 									C={C}
 								/>
 
-								<Text style={{ fontSize: 12, fontWeight: "700", color: C.mutedText, marginTop: 16, marginBottom: 2 }}>
+								<Text style={{ fontSize: 12, fontFamily: "NunitoSans_700Bold", color: C.mutedText, marginTop: 16, marginBottom: 2 }}>
 									UNTIL
 								</Text>
 								<ChipRow
@@ -329,7 +329,7 @@ export function RemindersModal({ visible, onClose, prefs: initialPrefs, onSave }
 										gap: 10,
 									}}>
 									<Icon name="moon" size={14} color={C.primaryPurple} />
-									<Text style={{ fontSize: 12, color: C.primaryPurple, fontWeight: "600", flex: 1 }}>
+									<Text style={{ fontSize: 12, color: C.primaryPurple, fontFamily: "NunitoSans_600SemiBold", flex: 1 }}>
 										{`Quiet from ${formatTime(prefs.quietStart)} to ${formatTime(prefs.quietEnd)}`}
 									</Text>
 								</View>
@@ -339,7 +339,7 @@ export function RemindersModal({ visible, onClose, prefs: initialPrefs, onSave }
 							<SectionCard C={C}>
 								<View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14 }}>
 									<Icon name="volume" size={16} color={C.primaryPurple} />
-									<Text style={{ fontWeight: "700", fontSize: 14, color: C.textCharcoal }}>
+									<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: C.textCharcoal }}>
 										Notification Sound
 									</Text>
 								</View>
@@ -369,7 +369,7 @@ export function RemindersModal({ visible, onClose, prefs: initialPrefs, onSave }
 												/>
 												<Text
 													style={{
-														fontWeight: "700",
+														fontFamily: "NunitoSans_700Bold",
 														fontSize: 14,
 														color: active ? C.primaryPurple : C.mutedText,
 													}}>
@@ -408,7 +408,7 @@ export function RemindersModal({ visible, onClose, prefs: initialPrefs, onSave }
 						) : (
 							<>
 								<Icon name="check" size={18} color="#ffffff" />
-								<Text style={{ color: "#ffffff", fontWeight: "800", fontSize: 16 }}>
+								<Text style={{ color: "#ffffff", fontFamily: "NunitoSans_800ExtraBold", fontSize: 16 }}>
 									Save Reminders
 								</Text>
 							</>

@@ -93,7 +93,7 @@ export function FoodForm({
 					<Text style={s.label}>Meal Time</Text>
 					{!isPro && (
 						<View style={{ backgroundColor: C.warningStroke, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-							<Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>PRO</Text>
+							<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: "#fff" }}>PRO</Text>
 						</View>
 					)}
 				</View>
@@ -118,7 +118,7 @@ export function FoodForm({
 									<Text
 										style={{
 											fontSize: 11,
-											fontWeight: "700",
+											fontFamily: "NunitoSans_700Bold",
 											color: sel ? "#fff" : C.mutedText,
 											textAlign: "center",
 										}}
@@ -131,7 +131,7 @@ export function FoodForm({
 					})}
 				</View>
 				{!isPro && (
-					<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 6, textAlign: "center" }}>
+					<Text style={{ fontSize: 11, fontFamily: "NunitoSans_400Regular", color: C.mutedText, marginTop: 6, textAlign: "center" }}>
 						Upgrade to Pro to track meal times
 					</Text>
 				)}
@@ -154,12 +154,12 @@ export function FoodForm({
 				<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
 					<Text style={s.label}>Category</Text>
 					{(form.categories || []).length > 0 && (
-						<Text style={{ fontSize: 11, color: C.primaryPurple, fontWeight: "700" }}>
+						<Text style={{ fontSize: 11, color: C.primaryPurple, fontFamily: "NunitoSans_700Bold" }}>
 							{(form.categories || []).join(" · ")}
 						</Text>
 					)}
 				</View>
-				<Text style={{ fontSize: 11, color: C.mutedText, marginBottom: 10, marginTop: -4 }}>
+				<Text style={{ fontSize: 11, fontFamily: "NunitoSans_400Regular", color: C.mutedText, marginBottom: 10, marginTop: -4 }}>
 					Tap to select — you can pick multiple
 				</Text>
 				<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
@@ -196,7 +196,7 @@ export function FoodForm({
 										</View>
 									)}
 								</View>
-								<Text style={{ fontSize: 9, fontWeight: "700", color: sel ? c.color : C.mutedText, textAlign: "center", textTransform: "uppercase" }}>
+								<Text style={{ fontSize: 9, fontFamily: "NunitoSans_700Bold", color: sel ? c.color : C.mutedText, textAlign: "center", textTransform: "uppercase" }}>
 									{c.value}
 								</Text>
 							</TouchableOpacity>
@@ -214,11 +214,11 @@ export function FoodForm({
 							onChangeText={(v) => set("ml", v.replace(/[^0-9]/g, ""))}
 							placeholder="e.g. 120"
 							keyboardType="number-pad"
-							style={{ flex: 1, color: C.textCharcoal, fontWeight: "600", fontSize: 15 }}
+							style={{ flex: 1, color: C.textCharcoal, fontFamily: "NunitoSans_600SemiBold", fontSize: 15 }}
 							placeholderTextColor={C.mutedText}
 							autoComplete="off"
 						/>
-						<Text style={{ fontSize: 14, fontWeight: "700", color: C.mutedText }}>ml</Text>
+						<Text style={{ fontSize: 14, fontFamily: "NunitoSans_700Bold", color: C.mutedText }}>ml</Text>
 					</View>
 					<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 6 }}>
 						Record how much your baby drank
@@ -231,7 +231,7 @@ export function FoodForm({
 				<TouchableOpacity
 					onPress={() => setShowFormPicker(true)}
 					style={[s.input, { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: C.white }]}>
-					<Text style={{ color: form.form ? C.textCharcoal : C.mutedText, fontWeight: "600" }}>
+					<Text style={{ color: form.form ? C.textCharcoal : C.mutedText, fontFamily: "NunitoSans_600SemiBold" }}>
 						{form.form || "Select form…"}
 					</Text>
 					<Icon name="chevDown" size={14} color={C.mutedText} />
@@ -273,7 +273,7 @@ export function FoodForm({
 								}}
 								activeOpacity={0.8}>
 								<ReactionFace reaction={r.value} size={32} />
-								<Text style={{ fontWeight: "700", fontSize: 10, color: sel ? r.color : C.mutedText, textAlign: "center" }}>
+								<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 10, color: sel ? r.color : C.mutedText, textAlign: "center" }}>
 									{r.value}
 								</Text>
 							</TouchableOpacity>
@@ -321,7 +321,7 @@ export function FoodForm({
 									<Text
 										style={{
 											fontSize: 10,
-											fontWeight: "700",
+											fontFamily: "NunitoSans_700Bold",
 											color: sel ? al.color : C.mutedText,
 											textAlign: "center",
 										}}
@@ -367,7 +367,7 @@ export function FoodForm({
 					{form.favourite && <Icon name="check" size={14} color="#ffffff" />}
 				</View>
 				<Icon name="starFill" size={16} color="#d4a017" />
-				<Text style={{ fontWeight: "700", fontSize: 13, color: C.textCharcoal }}>
+				<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 13, color: C.textCharcoal }}>
 					Mark as Favourite
 				</Text>
 			</TouchableOpacity>
@@ -377,7 +377,7 @@ export function FoodForm({
 					<Text style={s.label}>Memory Photo (optional)</Text>
 					{!isPro && (
 						<View style={{ backgroundColor: C.warningStroke, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-							<Text style={{ fontSize: 10, fontWeight: "700", color: "#ffffff" }}>PRO</Text>
+							<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: "#ffffff" }}>PRO</Text>
 						</View>
 					)}
 				</View>
@@ -410,7 +410,7 @@ export function FoodForm({
 						) : (
 							<View style={{ alignItems: "center", gap: 8, paddingVertical: 24 }}>
 								<Icon name="image" size={32} color={C.mutedText} />
-								<Text style={{ fontSize: 13, color: C.mutedText, fontWeight: "600" }}>
+								<Text style={{ fontSize: 13, color: C.mutedText, fontFamily: "NunitoSans_600SemiBold" }}>
 									Tap to add a photo memory
 								</Text>
 							</View>
@@ -430,7 +430,7 @@ export function FoodForm({
 						}}>
 						<View style={{ alignItems: "center", gap: 8, paddingVertical: 24 }}>
 							<Icon name="lock" size={28} color={C.mutedText} />
-							<Text style={{ fontSize: 13, color: C.mutedText, fontWeight: "600" }}>
+							<Text style={{ fontSize: 13, color: C.mutedText, fontFamily: "NunitoSans_600SemiBold" }}>
 								Photo memories — Pro only
 							</Text>
 							<Text style={{ fontSize: 11, color: C.mutedText, textAlign: "center", paddingHorizontal: 20 }}>

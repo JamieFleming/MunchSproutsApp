@@ -1,7 +1,7 @@
 import { Alert, Platform } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
-import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase";
 import { REACTIONS, MONTHS, ALLERGENS } from "./constants";
 import { CATEGORY_THRESHOLDS, TOTAL_FOOD_MILESTONES, ALLERGEN_MILESTONES } from "./milestones";
@@ -416,11 +416,17 @@ export function isLocalUri(uri) {
  * @returns {Promise<string>} Firebase Storage download URL
  */
 export async function uploadChildPhoto(localUri, userId, filename) {
-	const base64 = await FileSystem.readAsStringAsync(localUri, {
-		encoding: FileSystem.EncodingType.Base64,
-	});
 	const storageRef = ref(storage, `childPhotos/${userId}/${filename}.jpg`);
-	await uploadString(storageRef, base64, "base64", { contentType: "image/jpeg" });
+	const blob = await new Promise((resolve, reject) => {
+		const xhr = new XMLHttpRequest();
+		xhr.onload = () => resolve(xhr.response);
+		xhr.onerror = () => reject(new Error("XHR blob fetch failed"));
+		xhr.responseType = "blob";
+		xhr.open("GET", localUri, true);
+		xhr.send(null);
+	});
+	await uploadBytes(storageRef, blob);
+	blob.close?.();
 	return await getDownloadURL(storageRef);
 }
 

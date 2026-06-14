@@ -7,7 +7,7 @@ export function LoadingScreen() {
 	return (
 		<View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: C.bgMain }}>
 			<ActivityIndicator size="large" color={C.primaryPurple} />
-			<Text style={{ color: C.primaryPurple, fontWeight: "700", marginTop: 12, letterSpacing: 0.5 }}>
+			<Text style={{ color: C.primaryPurple, fontFamily: "NunitoSans_700Bold", marginTop: 12, letterSpacing: 0.5 }}>
 				Loading…
 			</Text>
 		</View>

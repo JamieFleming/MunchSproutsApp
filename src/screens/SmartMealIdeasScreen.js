@@ -17,9 +17,10 @@ import { getFunctions, httpsCallable } from "firebase/functions";
 import { getApp } from "firebase/app";
 import { collection, addDoc, updateDoc, doc, getDoc, getDocs, serverTimestamp } from "firebase/firestore";
 import { db } from "../../firebase";
-import { useTheme } from "../ThemeContext";
+import { useTheme, useStyles } from "../ThemeContext";
 import { Icon } from "../components/Icon";
 import { calcAgeMonths } from "../helpers";
+import Svg, { Circle, Path } from "react-native-svg";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers — derive meal context from the food log
@@ -127,7 +128,7 @@ function MealTypeSelector({ selected, onSelect }) {
 							borderColor: active ? opt.color : "transparent",
 						}}>
 						<Icon name={opt.icon} size={13} color={active ? "#fff" : opt.color} />
-						<Text style={{ fontSize: 13, fontWeight: "700", color: active ? "#fff" : C.textCharcoal }}>
+						<Text style={{ fontSize: 13, fontFamily: "NunitoSans_700Bold", color: active ? "#fff" : C.textCharcoal }}>
 							{opt.label}
 						</Text>
 					</TouchableOpacity>
@@ -150,7 +151,7 @@ function UsageBar({ used, limit, isPro }) {
 			<View style={{ flex: 1, height: 5, backgroundColor: C.bgPurple, borderRadius: 3 }}>
 				<View style={{ height: 5, width: `${pct * 100}%`, backgroundColor: color, borderRadius: 3 }} />
 			</View>
-			<Text style={{ fontSize: 11, fontWeight: "700", color: C.mutedText }}>
+			<Text style={{ fontSize: 11, fontFamily: "NunitoSans_700Bold", color: C.mutedText }}>
 				{used}/{limit} today{isPro ? " · Pro" : ""}
 			</Text>
 		</View>
@@ -192,6 +193,7 @@ const MEAL_COLORS = [
 
 function MealCard({ meal, index, firestoreId, savedRating, onRate, onAddToList, onLogRecipe }) {
 	const { C }        = useTheme();
+	const s            = useStyles();
 	const [open, setOpen]           = useState(false);
 	const [localRating, setLocalRating] = useState(savedRating || null);
 	const { color, bg } = MEAL_COLORS[index % MEAL_COLORS.length];
@@ -202,20 +204,11 @@ function MealCard({ meal, index, firestoreId, savedRating, onRate, onAddToList, 
 	};
 
 	return (
-		<View style={{
-			backgroundColor: C.white,
-			borderRadius: 18,
-			overflow: "hidden",
-			shadowColor: color,
-			shadowOpacity: 0.1,
-			shadowRadius: 12,
-			shadowOffset: { width: 0, height: 4 },
-			elevation: 3,
-		}}>
+		<View style={[s.card, { padding: 16, overflow: "hidden", shadowColor: color }]}>
 			{/* Colour strip */}
-			<View style={{ height: 4, backgroundColor: color }} />
+			<View style={{ height: 4, backgroundColor: color, marginHorizontal: -16, marginTop: -16, marginBottom: 12 }} />
 
-			<TouchableOpacity onPress={() => setOpen((o) => !o)} activeOpacity={0.85} style={{ padding: 16, gap: 10 }}>
+			<TouchableOpacity onPress={() => setOpen((o) => !o)} activeOpacity={0.85} style={{ gap: 10 }}>
 				{/* Header row */}
 				<View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
 					<View style={{
@@ -225,32 +218,32 @@ function MealCard({ meal, index, firestoreId, savedRating, onRate, onAddToList, 
 						<Icon name="chef" size={20} color={color} />
 					</View>
 					<View style={{ flex: 1 }}>
-						<Text style={{ fontSize: 15, fontWeight: "800", color: C.textCharcoal, marginBottom: 4 }}>
+						<Text style={{ fontSize: 17, fontFamily: "PlusJakartaSans_600SemiBold", color: C.primaryPinkDark, marginBottom: 4 }}>
 							{meal.title}
 						</Text>
 						<View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
 							{meal.mealType && (
 								<View style={{ backgroundColor: bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-									<Text style={{ fontSize: 10, fontWeight: "700", color }}>{meal.mealType}</Text>
+									<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color }}>{meal.mealType}</Text>
 								</View>
 							)}
 							{meal.ageGroup && (
 								<View style={{ backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-									<Text style={{ fontSize: 10, fontWeight: "700", color: C.primaryPurple }}>{meal.ageGroup}</Text>
+									<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: C.primaryPurple }}>{meal.ageGroup}</Text>
 								</View>
 							)}
 							{/* Saved badge */}
 							{firestoreId && (
 								<View style={{ flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#f0fdf4", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
 									<Icon name="check" size={9} color="#16a34a" />
-									<Text style={{ fontSize: 9, fontWeight: "800", color: "#16a34a" }}>SAVED</Text>
+									<Text style={{ fontSize: 9, fontFamily: "NunitoSans_800ExtraBold", color: "#16a34a" }}>SAVED</Text>
 								</View>
 							)}
 							{/* Star preview if rated */}
 							{localRating && (
 								<View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
 									<Icon name="starFill" size={11} color="#c49a10" />
-									<Text style={{ fontSize: 10, fontWeight: "700", color: "#c49a10" }}>{localRating}/5</Text>
+									<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: "#c49a10" }}>{localRating}/5</Text>
 								</View>
 							)}
 						</View>
@@ -261,7 +254,7 @@ function MealCard({ meal, index, firestoreId, savedRating, onRate, onAddToList, 
 				</View>
 
 				{/* Description */}
-				<Text style={{ fontSize: 13, color: C.mutedText, lineHeight: 19 }}>{meal.description}</Text>
+				<Text style={{ fontSize: 13, fontFamily: "NunitoSans_400Regular", color: C.mutedText, lineHeight: 20 }}>{meal.description}</Text>
 
 				{/* Why suggested chip */}
 				{meal.whySuggested ? (
@@ -276,7 +269,7 @@ function MealCard({ meal, index, firestoreId, savedRating, onRate, onAddToList, 
 					<View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
 						<View style={{ backgroundColor: "#fef9c3", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexDirection: "row", alignItems: "center", gap: 5 }}>
 							<Icon name="sparkle" size={10} color="#ca8a04" />
-							<Text style={{ fontSize: 11, fontWeight: "700", color: "#ca8a04" }}>New food: {meal.newFood}</Text>
+							<Text style={{ fontSize: 11, fontFamily: "NunitoSans_700Bold", color: "#ca8a04" }}>New food: {meal.newFood}</Text>
 						</View>
 					</View>
 				) : null}
@@ -289,7 +282,7 @@ function MealCard({ meal, index, firestoreId, savedRating, onRate, onAddToList, 
 					{/* Nutrition */}
 					{meal.nutrition && (
 						<View style={{ gap: 8 }}>
-							<Text style={{ fontSize: 11, fontWeight: "800", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5 }}>Approx. nutrition per serving</Text>
+							<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5 }}>Approx. nutrition per serving</Text>
 							<View style={{ flexDirection: "row", gap: 8 }}>
 								{[
 									{ label: "Calories", value: meal.nutrition.calories, unit: "kcal", bg: "#fde8cc", color: "#a85a1a" },
@@ -297,8 +290,8 @@ function MealCard({ meal, index, firestoreId, savedRating, onRate, onAddToList, 
 									{ label: "Carbs",    value: meal.nutrition.carbs,    unit: "g",    bg: "#d4e8f5", color: "#2a5f8f" },
 								].map((item) => (
 									<View key={item.label} style={{ flex: 1, backgroundColor: item.bg, borderRadius: 12, padding: 10, alignItems: "center" }}>
-										<Text style={{ fontSize: 17, fontWeight: "800", color: item.color }}>{item.value}</Text>
-										<Text style={{ fontSize: 9, fontWeight: "700", color: item.color, textTransform: "uppercase", marginTop: 1 }}>{item.unit}</Text>
+										<Text style={{ fontSize: 17, fontFamily: "NunitoSans_800ExtraBold", color: item.color }}>{item.value}</Text>
+										<Text style={{ fontSize: 9, fontFamily: "NunitoSans_700Bold", color: item.color, textTransform: "uppercase", marginTop: 1 }}>{item.unit}</Text>
 										<Text style={{ fontSize: 10, color: item.color, opacity: 0.7, marginTop: 2 }}>{item.label}</Text>
 									</View>
 								))}
@@ -310,11 +303,11 @@ function MealCard({ meal, index, firestoreId, savedRating, onRate, onAddToList, 
 					{/* Allergens */}
 					{meal.allergens?.length > 0 && (
 						<View style={{ marginTop: 12 }}>
-							<Text style={{ fontSize: 11, fontWeight: "800", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Contains</Text>
+							<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Contains</Text>
 							<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
 								{meal.allergens.map((a, i) => (
 									<View key={i} style={{ backgroundColor: "#fef9c3", borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 }}>
-										<Text style={{ fontSize: 11, fontWeight: "700", color: "#92400e" }}>{a}</Text>
+										<Text style={{ fontSize: 11, fontFamily: "NunitoSans_700Bold", color: "#92400e" }}>{a}</Text>
 									</View>
 								))}
 							</View>
@@ -324,7 +317,7 @@ function MealCard({ meal, index, firestoreId, savedRating, onRate, onAddToList, 
 					{/* Ingredients */}
 					{meal.ingredients?.length > 0 && (
 						<View>
-							<Text style={{ fontSize: 11, fontWeight: "800", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Ingredients</Text>
+							<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Ingredients</Text>
 							<View style={{ gap: 5 }}>
 								{meal.ingredients.map((ing, i) => (
 									<View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
@@ -339,12 +332,12 @@ function MealCard({ meal, index, firestoreId, savedRating, onRate, onAddToList, 
 					{/* Steps */}
 					{meal.steps?.length > 0 && (
 						<View>
-							<Text style={{ fontSize: 11, fontWeight: "800", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>How to prepare</Text>
+							<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>How to prepare</Text>
 							<View style={{ gap: 8 }}>
 								{meal.steps.map((step, i) => (
 									<View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
 										<View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: bg, alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
-											<Text style={{ fontSize: 11, fontWeight: "800", color }}>{i + 1}</Text>
+											<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color }}>{i + 1}</Text>
 										</View>
 										<Text style={{ fontSize: 13, color: C.textCharcoal, flex: 1, lineHeight: 20 }}>{step}</Text>
 									</View>
@@ -357,13 +350,13 @@ function MealCard({ meal, index, firestoreId, savedRating, onRate, onAddToList, 
 					{meal.servingSuggestions?.length > 0 && (
 						<View style={{ gap: 8 }}>
 							<View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-								<Text style={{ fontSize: 11, fontWeight: "800", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5 }}>Serve with</Text>
+								<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: C.mutedText, textTransform: "uppercase", letterSpacing: 0.5 }}>Serve with</Text>
 							</View>
 							<View style={{ gap: 6 }}>
 								{meal.servingSuggestions.map((suggestion, i) => (
 									<View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: C.bgPurple, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 }}>
 										<View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color, marginTop: 6, flexShrink: 0 }} />
-										<Text style={{ fontSize: 13, color: C.textCharcoal, fontWeight: "500", flex: 1, lineHeight: 20 }}>{suggestion}</Text>
+										<Text style={{ fontSize: 13, color: C.textCharcoal, fontFamily: "NunitoSans_400Regular", flex: 1, lineHeight: 20 }}>{suggestion}</Text>
 									</View>
 								))}
 							</View>
@@ -384,19 +377,16 @@ function MealCard({ meal, index, firestoreId, savedRating, onRate, onAddToList, 
 									gap: 8, backgroundColor: "#7c3aed", borderRadius: 12, paddingVertical: 12,
 								}}>
 								<Icon name="plus" size={16} color="#fff" />
-								<Text style={{ fontWeight: "700", fontSize: 13, color: "#fff" }}>Log This</Text>
+								<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 13, color: "#fff" }}>Log This</Text>
 							</TouchableOpacity>
 						)}
 						{onAddToList && (
 							<TouchableOpacity
 								onPress={onAddToList}
 								activeOpacity={0.8}
-								style={{
-									flexDirection: "row", alignItems: "center", justifyContent: "center",
-									gap: 8, backgroundColor: "#dbeafe", borderRadius: 12, paddingVertical: 12,
-								}}>
-								<Icon name="cart" size={16} color="#1d4ed8" />
-								<Text style={{ fontWeight: "700", fontSize: 13, color: "#1d4ed8" }}>Add to Shopping List</Text>
+								style={[s.btnOutline, { flexDirection: "row", gap: 8 }]}>
+								<Icon name="cart" size={16} color={C.primaryPurple} />
+								<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 13, color: C.primaryPurple }}>Add to Shopping List</Text>
 							</TouchableOpacity>
 						)}
 					</View>
@@ -404,10 +394,10 @@ function MealCard({ meal, index, firestoreId, savedRating, onRate, onAddToList, 
 					{/* Star rating */}
 					{firestoreId && (
 						<View style={{ gap: 10, backgroundColor: C.bgPurple, borderRadius: 14, padding: 14 }}>
-							<Text style={{ fontSize: 12, fontWeight: "800", color: C.textCharcoal }}>Rate this meal idea</Text>
+							<Text style={{ fontSize: 12, fontFamily: "NunitoSans_700Bold", color: C.textCharcoal }}>Rate this idea</Text>
 							<StarRating rating={localRating} onRate={handleRate} />
 							{localRating ? (
-								<Text style={{ fontSize: 12, color: "#c49a10", fontWeight: "600" }}>
+								<Text style={{ fontSize: 12, color: "#c49a10", fontFamily: "NunitoSans_600SemiBold" }}>
 									{RATING_LABELS[localRating]}
 								</Text>
 							) : (
@@ -427,6 +417,7 @@ function MealCard({ meal, index, firestoreId, savedRating, onRate, onAddToList, 
 
 export function SmartMealIdeasScreen({ child, foodLog = [], user, isPro, onUpgradePro, onAddToShoppingList, onLogRecipe }) {
 	const { C } = useTheme();
+	const s = useStyles();
 
 	const DAILY_LIMIT = 3;
 
@@ -617,12 +608,12 @@ export function SmartMealIdeasScreen({ child, foodLog = [], user, isPro, onUpgra
 			{/* ── Header ── */}
 			<View style={{ gap: 4 }}>
 				<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-					<Text style={{ fontSize: 22, fontWeight: "900", color: C.primaryPinkDark }}>Smart Meal Ideas</Text>
+					<Text style={{ fontSize: 24, fontFamily: "PlusJakartaSans_700Bold", color: C.primaryPinkDark }}>Smart Meal Ideas</Text>
 					<View style={{ backgroundColor: "#7c3aed", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
-						<Text style={{ fontSize: 9, fontWeight: "800", color: "#fff", textTransform: "uppercase", letterSpacing: 0.5 }}>AI</Text>
+						<Text style={{ fontSize: 9, fontFamily: "NunitoSans_800ExtraBold", color: "#fff", textTransform: "uppercase", letterSpacing: 0.5 }}>AI</Text>
 					</View>
 				</View>
-				<Text style={{ fontSize: 13, color: C.mutedText, lineHeight: 19 }}>
+				<Text style={{ fontSize: 13, fontFamily: "NunitoSans_400Regular", color: C.mutedText, lineHeight: 19 }}>
 					Personalised{child?.name ? ` for ${child.name}` : ""} · age-appropriate · safety-first
 				</Text>
 			</View>
@@ -632,18 +623,25 @@ export function SmartMealIdeasScreen({ child, foodLog = [], user, isPro, onUpgra
 
 			{/* ── Meal type selector ── */}
 			<View style={{ gap: 10 }}>
-				<Text style={{ fontSize: 13, fontWeight: "800", color: C.textCharcoal }}>What meal?</Text>
+				<Text style={{ fontSize: 13, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal }}>What meal?</Text>
 				<MealTypeSelector selected={mealType} onSelect={setMealType} />
 			</View>
 
 			{/* ── Context summary ── */}
-			<View style={{ backgroundColor: C.bgPurple, borderRadius: 14, padding: 14, gap: 8 }}>
-				<Text style={{ fontSize: 12, fontWeight: "800", color: C.primaryPurpleDark }}>
-					Generating ideas based on:
-				</Text>
+			<View style={[s.card, { backgroundColor: C.bgPurple, gap: 8 }]}>
+				<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+					<Text style={{ fontSize: 15, fontFamily: "PlusJakartaSans_600SemiBold", color: C.primaryPinkDark }}>
+						Generating ideas based on:
+					</Text>
+					<View style={{ backgroundColor: C.primaryPurple + "20", borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4 }}>
+						<Text style={{ fontSize: 12, fontFamily: "NunitoSans_700Bold", color: C.primaryPurple }}>
+							{textureLevelLabel(ageMonths || 0)}
+						</Text>
+					</View>
+				</View>
 				<View style={{ gap: 5 }}>
 					{[
-						{ icon: "baby",   label: `Age: ${ageMonths != null ? `${ageMonths} months` : "unknown"} · ${textureLevelLabel(ageMonths || 0)}` },
+						{ icon: "baby",   label: `Age: ${ageMonths != null ? `${ageMonths} months` : "unknown"}` },
 						{ icon: "check",  label: foodContext.likedFoods.length > 0 ? `${foodContext.likedFoods.length} liked foods` : "No liked foods logged yet" },
 						{ icon: "list",   label: `${foodContext.foodsTried.length} foods tried so far` },
 						foodContext.allergensAvoid.length > 0
@@ -654,12 +652,12 @@ export function SmartMealIdeasScreen({ child, foodLog = [], user, isPro, onUpgra
 					].map((row, i) => (
 						<View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
 							<Icon name={row.icon} size={12} color={C.primaryPurple} />
-							<Text style={{ fontSize: 12, color: C.mutedText, flex: 1 }}>{row.label}</Text>
+							<Text style={{ fontSize: 12, fontFamily: "NunitoSans_400Regular", color: C.mutedText, flex: 1 }}>{row.label}</Text>
 						</View>
 					))}
 				</View>
 				{!hasEnoughData && (
-					<Text style={{ fontSize: 11, color: "#c2410c", fontWeight: "600", marginTop: 4 }}>
+					<Text style={{ fontSize: 11, color: "#c2410c", fontFamily: "NunitoSans_600SemiBold", marginTop: 4 }}>
 						💡 Log some meals first for more personalised ideas
 					</Text>
 				)}
@@ -669,7 +667,7 @@ export function SmartMealIdeasScreen({ child, foodLog = [], user, isPro, onUpgra
 			{limitReached && (
 				<View style={{ backgroundColor: "#fef2f2", borderRadius: 14, padding: 16, gap: 10, alignItems: "center" }}>
 					<Icon name="clock" size={28} color="#c0392b" />
-					<Text style={{ fontSize: 15, fontWeight: "800", color: "#c0392b", textAlign: "center" }}>
+					<Text style={{ fontSize: 15, fontFamily: "NunitoSans_800ExtraBold", color: "#c0392b", textAlign: "center" }}>
 						Daily limit reached
 					</Text>
 					<Text style={{ fontSize: 13, color: C.mutedText, textAlign: "center", lineHeight: 19 }}>
@@ -681,7 +679,7 @@ export function SmartMealIdeasScreen({ child, foodLog = [], user, isPro, onUpgra
 						<TouchableOpacity
 							onPress={onUpgradePro}
 							style={{ backgroundColor: "#2d1f5e", borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 }}>
-							<Text style={{ color: "#f5c842", fontWeight: "800", fontSize: 14 }}>Upgrade to Pro</Text>
+							<Text style={{ color: "#f5c842", fontFamily: "NunitoSans_800ExtraBold", fontSize: 14 }}>Upgrade to Pro</Text>
 						</TouchableOpacity>
 					)}
 				</View>
@@ -693,24 +691,16 @@ export function SmartMealIdeasScreen({ child, foodLog = [], user, isPro, onUpgra
 					onPress={generate}
 					disabled={loading}
 					activeOpacity={0.85}
-					style={{
-						backgroundColor: loading ? C.bgPurple : "#7c3aed",
-						borderRadius: 16,
-						paddingVertical: 16,
-						alignItems: "center",
-						flexDirection: "row",
-						justifyContent: "center",
-						gap: 10,
-					}}>
+					style={[s.btnPrimary, { flexDirection: "row", gap: 10, opacity: loading ? 0.7 : 1 }]}>
 					{loading ? (
 						<>
-							<ActivityIndicator size="small" color={C.primaryPurple} />
-							<Text style={{ fontSize: 15, fontWeight: "800", color: C.primaryPurple }}>Generating ideas…</Text>
+							<ActivityIndicator size="small" color={C.white} />
+							<Text style={s.btnPrimaryText}>Generating ideas…</Text>
 						</>
 					) : (
 						<>
 							<Icon name="sparkle" size={18} color="#fff" />
-							<Text style={{ fontSize: 15, fontWeight: "800", color: "#fff" }}>
+							<Text style={s.btnPrimaryText}>
 								{meals.length > 0 ? "Generate new ideas" : "Generate Meal Ideas"}
 							</Text>
 						</>
@@ -720,22 +710,38 @@ export function SmartMealIdeasScreen({ child, foodLog = [], user, isPro, onUpgra
 
 			{/* ── Uses remaining note ── */}
 			{!limitReached && (
-				<Text style={{ fontSize: 11, color: C.mutedText, textAlign: "center" }}>
+				<Text style={{ fontSize: 12, fontFamily: "NunitoSans_400Regular", color: C.mutedText, textAlign: "center" }}>
 					{DAILY_LIMIT - used} generation{DAILY_LIMIT - used !== 1 ? "s" : ""} remaining today · 3 recipes per generation
 				</Text>
+			)}
+
+			{/* ── Empty / intro state ── */}
+			{meals.length === 0 && !loading && (
+				<View style={{ alignItems: "center", paddingVertical: 24, gap: 12 }}>
+					<Svg width={80} height={80} viewBox="0 0 80 80">
+						<Circle cx="40" cy="40" r="38" fill={C.bgPurple} />
+						<Path stroke={C.primaryPurple} strokeWidth="2.5" strokeLinecap="round" fill="none" d="M24 40 Q24 26 40 24 Q56 22 56 36 Q56 48 44 52 L44 56" />
+						<Circle cx="44" cy="60" r="2" fill={C.primaryPurple} />
+						<Path stroke="#f9a825" strokeWidth="1.5" strokeLinecap="round" fill="none" d="M20 22 L20 17 M17 19 L23 19" />
+						<Path stroke="#7dcf9e" strokeWidth="1.5" strokeLinecap="round" fill="none" d="M62 28 L62 23 M59 25 L65 25" />
+					</Svg>
+					<Text style={{ fontSize: 13, fontFamily: "NunitoSans_400Regular", color: C.mutedText, textAlign: "center" }}>
+						Tap "Generate Meal Ideas" to get personalised suggestions
+					</Text>
+				</View>
 			)}
 
 			{/* ── Meal cards ── */}
 			{meals.length > 0 && (
 				<View style={{ gap: 14 }}>
 					<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-						<Text style={{ fontSize: 13, fontWeight: "800", color: C.textCharcoal, flex: 1 }}>
+						<Text style={{ fontSize: 13, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, flex: 1 }}>
 							Here are some ideas 👇
 						</Text>
 						{Object.keys(firestoreIds).length > 0 && (
 							<View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#f0fdf4", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
 								<Icon name="check" size={11} color="#16a34a" />
-								<Text style={{ fontSize: 11, fontWeight: "700", color: "#16a34a" }}>Saved to Smart Recipes</Text>
+								<Text style={{ fontSize: 11, fontFamily: "NunitoSans_700Bold", color: "#16a34a" }}>Saved to Smart Recipes</Text>
 							</View>
 						)}
 					</View>
@@ -758,7 +764,7 @@ export function SmartMealIdeasScreen({ child, foodLog = [], user, isPro, onUpgra
 			<View style={{ backgroundColor: "#fff8e1", borderRadius: 16, padding: 16, gap: 10, borderWidth: 1, borderColor: "#fde68a" }}>
 				<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
 					<Icon name="alert" size={16} color="#a85a1a" />
-					<Text style={{ fontSize: 13, fontWeight: "800", color: "#a85a1a" }}>Important — please read</Text>
+					<Text style={{ fontSize: 13, fontFamily: "NunitoSans_800ExtraBold", color: "#a85a1a" }}>Important — please read</Text>
 				</View>
 				<Text style={{ fontSize: 12, color: "#7a4a10", lineHeight: 19 }}>
 					{disclaimer ||
@@ -789,7 +795,7 @@ export function SmartMealIdeasScreen({ child, foodLog = [], user, isPro, onUpgra
 						<View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: "#e0d9f7", alignSelf: "center", marginBottom: 16 }} />
 						<View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}>
 							<View style={{ flex: 1 }}>
-								<Text style={{ fontSize: 18, fontWeight: "800", color: "#1e1040" }}>{shopPickerMeal?.title}</Text>
+								<Text style={{ fontSize: 18, fontFamily: "NunitoSans_800ExtraBold", color: "#1e1040" }}>{shopPickerMeal?.title}</Text>
 								<Text style={{ fontSize: 12, color: "#9c8ab8", marginTop: 2 }}>
 									Choose ingredients to add to your shopping list
 								</Text>
@@ -809,7 +815,7 @@ export function SmartMealIdeasScreen({ child, foodLog = [], user, isPro, onUpgra
 							].map(({ label, action }) => (
 								<TouchableOpacity key={label} onPress={action} activeOpacity={0.75}
 									style={{ backgroundColor: "#ede8f7", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}>
-									<Text style={{ fontSize: 12, fontWeight: "700", color: "#7c3aed" }}>{label}</Text>
+									<Text style={{ fontSize: 12, fontFamily: "NunitoSans_700Bold", color: "#7c3aed" }}>{label}</Text>
 								</TouchableOpacity>
 							))}
 						</View>
@@ -836,7 +842,7 @@ export function SmartMealIdeasScreen({ child, foodLog = [], user, isPro, onUpgra
 								}}>
 									{shopPickerChecked[i] && <Icon name="check" size={12} color="#fff" />}
 								</View>
-								<Text style={{ flex: 1, fontSize: 14, color: "#1e1040", fontWeight: "500" }}>{ing}</Text>
+								<Text style={{ flex: 1, fontSize: 14, color: "#1e1040", fontFamily: "NunitoSans_400Regular" }}>{ing}</Text>
 							</TouchableOpacity>
 						))}
 						<View style={{ height: 20 }} />
@@ -850,7 +856,7 @@ export function SmartMealIdeasScreen({ child, foodLog = [], user, isPro, onUpgra
 								alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8,
 							}}>
 								<Icon name="check" size={18} color="#fff" />
-								<Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>Added to Shopping List!</Text>
+								<Text style={{ color: "#fff", fontFamily: "NunitoSans_800ExtraBold", fontSize: 15 }}>Added to Shopping List!</Text>
 							</View>
 						) : (() => {
 							const selectedCount = Object.values(shopPickerChecked).filter(Boolean).length;
@@ -869,7 +875,7 @@ export function SmartMealIdeasScreen({ child, foodLog = [], user, isPro, onUpgra
 									) : (
 										<>
 											<Icon name="cart" size={18} color="#fff" />
-											<Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>
+											<Text style={{ color: "#fff", fontFamily: "NunitoSans_800ExtraBold", fontSize: 15 }}>
 												{selectedCount > 0
 													? `Add ${selectedCount} item${selectedCount !== 1 ? "s" : ""} to Shopping List`
 													: "Select at least one ingredient"}

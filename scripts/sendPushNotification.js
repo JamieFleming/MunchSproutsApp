@@ -16,9 +16,9 @@ const https                    = require("https");
 const SERVICE_ACCOUNT_PATH = "../../migration/serviceAccountKey.json";
 
 const NOTIFICATION = {
-	title: "🌟 50% Off MunchSprouts Pro — Today Only!",
-	body:  "Unlock lifetime Pro access for just £19.99 (was £39.99)! All recipes, AI meal ideas, smart insights & more — yours forever. Tap to claim your exclusive discount 🎉",
-	data:  { type: "announcement", url: "https://apps.apple.com/redeem?ctx=offercodes&id=6763142582&code=MUNCHSPROUTS50" },
+	title: "🚀 Munch Sprouts 1.5.0 is live!",
+	body:  "Shared shopping lists, AI-powered meal planner, weekly planner, photo gallery, free PDF exports & loads more. Update now! 🎉",
+	data:  { type: "announcement", url: "https://apps.apple.com/app/id6763142582" },
 };
 
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";

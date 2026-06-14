@@ -1,7 +1,6 @@
 import React from "react";
 import Svg, {
 	Path,
-	Line,
 	Polyline,
 	Circle,
 	Rect,
@@ -26,26 +25,21 @@ export function Icon({ name, size = 18, color }) {
 	const icons = {
 		home: (
 			<Svg width={size} height={size} viewBox="0 0 24 24">
-				<Path {...p} d="M3 12L12 3l9 9" />
-				<Path {...p} d="M9 21V12h6v9" />
-				<Path {...p} d="M3 12v9h6" />
-				<Path {...p} d="M15 21v-9h6V21" />
+				<Path {...p} d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+				<Path {...p} d="M9 22V12h6v10" />
 			</Svg>
 		),
 		list: (
 			<Svg width={size} height={size} viewBox="0 0 24 24">
-				<Line {...p} x1="8" y1="6" x2="21" y2="6" />
-				<Line {...p} x1="8" y1="12" x2="21" y2="12" />
-				<Line {...p} x1="8" y1="18" x2="21" y2="18" />
-				<Circle {...p} cx="3" cy="6" r="1" fill={color} />
-				<Circle {...p} cx="3" cy="12" r="1" fill={color} />
-				<Circle {...p} cx="3" cy="18" r="1" fill={color} />
+				<Path {...p} d="M3 7h18" />
+				<Path {...p} d="M3 12h18" />
+				<Path {...p} d="M3 17h18" />
 			</Svg>
 		),
 		plus: (
 			<Svg width={size} height={size} viewBox="0 0 24 24">
-				<Line {...p} x1="12" y1="5" x2="12" y2="19" />
-				<Line {...p} x1="5" y1="12" x2="19" y2="12" />
+				<Path {...p} d="M12 5 L12 19" />
+				<Path {...p} d="M5 12 L19 12" />
 			</Svg>
 		),
 		chef: (
@@ -54,14 +48,14 @@ export function Icon({ name, size = 18, color }) {
 					{...p}
 					d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"
 				/>
-				<Line {...p} x1="6" y1="17" x2="18" y2="17" />
+				<Path {...p} d="M6 17 L18 17" />
 			</Svg>
 		),
 		more: (
 			<Svg width={size} height={size} viewBox="0 0 24 24">
-				<Line {...p} x1="3" y1="6" x2="21" y2="6" />
-				<Line {...p} x1="3" y1="12" x2="21" y2="12" />
-				<Line {...p} x1="3" y1="18" x2="21" y2="18" />
+				<Path {...p} d="M3 6 L21 6" />
+				<Path {...p} d="M3 12 L21 12" />
+				<Path {...p} d="M3 18 L21 18" />
 			</Svg>
 		),
 		settings: (
@@ -77,7 +71,7 @@ export function Icon({ name, size = 18, color }) {
 			<Svg width={size} height={size} viewBox="0 0 24 24">
 				<Path {...p} d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
 				<Polyline {...p} points="16 17 21 12 16 7" />
-				<Line {...p} x1="21" y1="12" x2="9" y2="12" />
+				<Path {...p} d="M21 12 L9 12" />
 			</Svg>
 		),
 		star: (
@@ -136,8 +130,8 @@ export function Icon({ name, size = 18, color }) {
 		),
 		close: (
 			<Svg width={size} height={size} viewBox="0 0 24 24">
-				<Line {...p} x1="18" y1="6" x2="6" y2="18" />
-				<Line {...p} x1="6" y1="6" x2="18" y2="18" />
+				<Path {...p} d="M18 6 L6 18" />
+				<Path {...p} d="M6 6 L18 18" />
 			</Svg>
 		),
 		chevDown: (
@@ -166,8 +160,8 @@ export function Icon({ name, size = 18, color }) {
 					{...p}
 					d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
 				/>
-				<Line {...p} x1="12" y1="9" x2="12" y2="13" />
-				<Line {...p} x1="12" y1="17" x2="12.01" y2="17" />
+				<Path {...p} d="M12 9 L12 13" />
+				<Path {...p} d="M12 17 L12.01 17" />
 			</Svg>
 		),
 		lock: (
@@ -185,7 +179,7 @@ export function Icon({ name, size = 18, color }) {
 		search: (
 			<Svg width={size} height={size} viewBox="0 0 24 24">
 				<Circle {...p} cx="11" cy="11" r="8" />
-				<Line {...p} x1="21" y1="21" x2="16.65" y2="16.65" />
+				<Path {...p} d="M21 21 L16.65 16.65" />
 			</Svg>
 		),
 		clock: (
@@ -206,7 +200,7 @@ export function Icon({ name, size = 18, color }) {
 				<Path {...p} d="M18.63 13A17.89 17.89 0 0 1 18 8" />
 				<Path {...p} d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14" />
 				<Path {...p} d="M18 8a6 6 0 0 0-9.33-5" />
-				<Line {...p} x1="1" y1="1" x2="23" y2="23" />
+				<Path {...p} d="M1 1 L23 23" />
 			</Svg>
 		),
 		volume: (
@@ -219,21 +213,21 @@ export function Icon({ name, size = 18, color }) {
 		volumeOff: (
 			<Svg width={size} height={size} viewBox="0 0 24 24">
 				<Polygon {...p} points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-				<Line {...p} x1="23" y1="9" x2="17" y2="15" />
-				<Line {...p} x1="17" y1="9" x2="23" y2="15" />
+				<Path {...p} d="M23 9 L17 15" />
+				<Path {...p} d="M17 9 L23 15" />
 			</Svg>
 		),
 		sun: (
 			<Svg width={size} height={size} viewBox="0 0 24 24">
 				<Circle {...p} cx="12" cy="12" r="5" />
-				<Line {...p} x1="12" y1="1" x2="12" y2="3" />
-				<Line {...p} x1="12" y1="21" x2="12" y2="23" />
-				<Line {...p} x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-				<Line {...p} x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-				<Line {...p} x1="1" y1="12" x2="3" y2="12" />
-				<Line {...p} x1="21" y1="12" x2="23" y2="12" />
-				<Line {...p} x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-				<Line {...p} x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+				<Path {...p} d="M12 1 L12 3" />
+				<Path {...p} d="M12 21 L12 23" />
+				<Path {...p} d="M4.22 4.22 L5.64 5.64" />
+				<Path {...p} d="M18.36 18.36 L19.78 19.78" />
+				<Path {...p} d="M1 12 L3 12" />
+				<Path {...p} d="M21 12 L23 12" />
+				<Path {...p} d="M4.22 19.78 L5.64 18.36" />
+				<Path {...p} d="M18.36 5.64 L19.78 4.22" />
 			</Svg>
 		),
 		moon: (
@@ -290,9 +284,9 @@ export function Icon({ name, size = 18, color }) {
 		),
 		chart: (
 			<Svg width={size} height={size} viewBox="0 0 24 24">
-				<Line {...p} x1="18" y1="20" x2="18" y2="10" />
-				<Line {...p} x1="12" y1="20" x2="12" y2="4" />
-				<Line {...p} x1="6" y1="20" x2="6" y2="14" />
+				<Path {...p} d="M18 20 L18 10" />
+				<Path {...p} d="M12 20 L12 4" />
+				<Path {...p} d="M6 20 L6 14" />
 			</Svg>
 		),
 		grid: (
@@ -321,8 +315,8 @@ export function Icon({ name, size = 18, color }) {
 		info: (
 			<Svg width={size} height={size} viewBox="0 0 24 24">
 				<Circle {...p} cx="12" cy="12" r="10" />
-				<Line {...p} x1="12" y1="16" x2="12" y2="12" />
-				<Line {...p} x1="12" y1="8" x2="12.01" y2="8" />
+				<Path {...p} d="M12 16 L12 12" />
+				<Path {...p} d="M12 8 L12.01 8" />
 			</Svg>
 		),
 		utensils: (
@@ -362,16 +356,16 @@ export function Icon({ name, size = 18, color }) {
 		calendar: (
 			<Svg width={size} height={size} viewBox="0 0 24 24">
 				<Rect {...p} x="3" y="4" width="18" height="18" rx="2" />
-				<Line {...p} x1="16" y1="2" x2="16" y2="6" />
-				<Line {...p} x1="8" y1="2" x2="8" y2="6" />
-				<Line {...p} x1="3" y1="10" x2="21" y2="10" />
+				<Path {...p} d="M16 2 L16 6" />
+				<Path {...p} d="M8 2 L8 6" />
+				<Path {...p} d="M3 10 L21 10" />
 			</Svg>
 		),
 		download: (
 			<Svg width={size} height={size} viewBox="0 0 24 24">
 				<Path {...p} d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
 				<Polyline {...p} points="7 10 12 15 17 10" />
-				<Line {...p} x1="12" y1="15" x2="12" y2="3" />
+				<Path {...p} d="M12 15 L12 3" />
 			</Svg>
 		),
 		heart: (
@@ -389,8 +383,8 @@ export function Icon({ name, size = 18, color }) {
 					d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
 				/>
 				<Polyline {...p} points="14 2 14 8 20 8" />
-				<Line {...p} x1="16" y1="13" x2="8" y2="13" />
-				<Line {...p} x1="16" y1="17" x2="8" y2="17" />
+				<Path {...p} d="M16 13 L8 13" />
+				<Path {...p} d="M16 17 L8 17" />
 				<Polyline {...p} points="10 9 9 9 8 9" />
 			</Svg>
 		),
@@ -416,8 +410,8 @@ export function Icon({ name, size = 18, color }) {
 					d="M8 6h8l1.5 4v9a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-9L8 6z"
 				/>
 				{/* Measurement lines */}
-				<Line {...p} strokeWidth={1.2} x1="9.5" y1="14" x2="12.5" y2="14" />
-				<Line {...p} strokeWidth={1.2} x1="9.5" y1="17" x2="12.5" y2="17" />
+				<Path {...p} strokeWidth={1.2} d="M9.5 14 L12.5 14" />
+				<Path {...p} strokeWidth={1.2} d="M9.5 17 L12.5 17" />
 			</Svg>
 		),
 		drop: (
@@ -455,25 +449,25 @@ export function Icon({ name, size = 18, color }) {
 		cart: (
 			<Svg width={size} height={size} viewBox="0 0 24 24">
 				<Path {...p} d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-				<Line {...p} x1="3" y1="6" x2="21" y2="6" />
+				<Path {...p} d="M3 6 L21 6" />
 				<Path {...p} d="M16 10a4 4 0 0 1-8 0" />
 			</Svg>
 		),
 		cartCheck: (
 			<Svg width={size} height={size} viewBox="0 0 24 24">
 				<Path {...p} d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-				<Line {...p} x1="3" y1="6" x2="21" y2="6" />
+				<Path {...p} d="M3 6 L21 6" />
 				<Polyline {...p} points="9 12 11 14 15 10" />
 			</Svg>
 		),
 		scale: (
 			<Svg width={size} height={size} viewBox="0 0 24 24">
 				{/* Flat base */}
-				<Line {...p} x1="4" y1="21" x2="20" y2="21" />
+				<Path {...p} d="M4 21 L20 21" />
 				{/* Stem */}
-				<Line {...p} x1="12" y1="21" x2="12" y2="6" />
+				<Path {...p} d="M12 21 L12 6" />
 				{/* Crossbar */}
-				<Line {...p} x1="5" y1="6" x2="19" y2="6" />
+				<Path {...p} d="M5 6 L19 6" />
 				{/* Left pan */}
 				<Path {...p} d="M5 6 C3 10 3 13 5 13 H9 C11 13 11 10 9 6" />
 				{/* Right pan */}
@@ -494,7 +488,7 @@ export function Icon({ name, size = 18, color }) {
 		),
 		minus: (
 			<Svg width={size} height={size} viewBox="0 0 24 24">
-				<Line {...p} x1="5" y1="12" x2="19" y2="12" />
+				<Path {...p} d="M5 12 L19 12" />
 			</Svg>
 		),
 		leaf: (
@@ -668,14 +662,12 @@ export function CategoryIcon({ category, size = 32 }) {
 		Other: (
 			<Svg width={s2} height={s2} viewBox="0 0 24 24">
 				{/* Fork */}
-				<Line
-					x1="5"
-					y1="2"
-					x2="5"
-					y2="22"
+				<Path
+					d="M5 2 L5 22"
 					stroke={cfg.color}
 					strokeWidth={2}
 					strokeLinecap="round"
+					fill="none"
 				/>
 				<Path
 					stroke={cfg.color}
@@ -737,7 +729,7 @@ export function AllergenIcon({ allergen, size = 32 }) {
 					{...p}
 					d="M9 2v2.8a4 4 0 0 1-.67 2.2L7 10.2V20a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-9.8l-1.33-3A4 4 0 0 1 15 4.8V2"
 				/>
-				<Line {...p} strokeWidth={1.5} x1="7" y1="14" x2="17" y2="14" />
+				<Path {...p} strokeWidth={1.5} d="M7 14 L17 14" />
 			</Svg>
 		),
 		// Oval egg
@@ -769,7 +761,7 @@ export function AllergenIcon({ allergen, size = 32 }) {
 			<Svg width={s2} height={s2} viewBox="0 0 24 24">
 				<Circle {...p} cx="12" cy="16" r="6" />
 				<Path {...p} d="M6 13Q6 9.5 12 9.5Q18 9.5 18 13" />
-				<Line {...p} x1="5" y1="13" x2="19" y2="13" />
+				<Path {...p} d="M5 13 L19 13" />
 				<Path {...p} d="M12 9.5Q12.5 7 15 5" />
 			</Svg>
 		),
@@ -942,14 +934,12 @@ export function ReactionFace({ reaction, size = 40 }) {
 				<Circle cx="20" cy="20" r="18" fill={bg} stroke={c} strokeWidth="1.5" />
 				<Circle cx="14" cy="17" r="2.5" fill={c} />
 				<Circle cx="26" cy="17" r="2.5" fill={c} />
-				<Line
-					x1="13"
-					y1="26"
-					x2="27"
-					y2="26"
+				<Path
+					d="M13 26 L27 26"
 					stroke={c}
 					strokeWidth="2.2"
 					strokeLinecap="round"
+					fill="none"
 				/>
 			</Svg>
 		),

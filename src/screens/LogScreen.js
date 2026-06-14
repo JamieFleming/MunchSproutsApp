@@ -3,6 +3,7 @@ import {
 	View, Text, TextInput, TouchableOpacity, ScrollView,
 	FlatList, Modal, Image, Alert, RefreshControl, Platform,
 } from "react-native";
+import Svg, { Circle, Path } from "react-native-svg";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon, CategoryIcon, AllergenIcon } from "../components/Icon";
 import { ZoomableImage } from "../components/ZoomableImage";
@@ -21,16 +22,21 @@ const SORT_OPTS = [
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-const AttemptRow = memo(function AttemptRow({ attempt: a, attemptNum, milestones, hasMultipleUsers, currentUserId, userMap, onToggleFavourite, onEdit, onDelete, setLightboxPhoto, isEven }) {
+const AttemptRow = memo(function AttemptRow({ attempt: a, attemptNum, milestones, hasMultipleUsers, currentUserId, userMap, onToggleFavourite, onEdit, onDelete, setLightboxPhoto }) {
 	const { C } = useTheme();
 	const s = useStyles();
 	return (
-		<View style={{ padding: 14, backgroundColor: isEven ? C.bgPurple : C.white, borderTopWidth: 1, borderTopColor: C.borderLight }}>
+		<View style={{ paddingHorizontal: 16, paddingVertical: 14, backgroundColor: C.white, borderTopWidth: 1, borderTopColor: C.borderLight }}>
 			<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
 				<View style={{ flex: 1 }}>
-					<Text style={[s.smallLabel, { marginBottom: 6 }]}>
-						Attempt {attemptNum} · {formatDate(a.date)}{a.time ? ` at ${a.time}` : ""}{a.favourite ? " ★" : ""}
-					</Text>
+					<View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+						<View style={{ backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
+							<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: C.primaryPurple }}>#{attemptNum}</Text>
+						</View>
+						<Text style={{ fontSize: 12, color: C.mutedText, fontFamily: "NunitoSans_600SemiBold" }}>
+							{formatDate(a.date)}{a.time ? ` · ${a.time}` : ""}{a.favourite ? "  ★" : ""}
+						</Text>
+					</View>
 
 					{/* Badges row */}
 					<View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
@@ -38,18 +44,18 @@ const AttemptRow = memo(function AttemptRow({ attempt: a, attemptNum, milestones
 							const mt = MEAL_TIMES.find((m) => m.value === a.mealTime);
 							return mt ? (
 								<View style={{ backgroundColor: mt.bg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-									<Text style={{ fontSize: 11, fontWeight: "700", color: mt.color }}>{mt.value}</Text>
+									<Text style={{ fontSize: 11, fontFamily: "NunitoSans_700Bold", color: mt.color }}>{mt.value}</Text>
 								</View>
 							) : null;
 						})()}
 						{a.form && (
 							<View style={{ backgroundColor: C.white, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 }}>
-								<Text style={{ fontSize: 11, fontWeight: "600", color: C.mutedText }}>{a.form}</Text>
+								<Text style={{ fontSize: 11, fontFamily: "NunitoSans_600SemiBold", color: C.mutedText }}>{a.form}</Text>
 							</View>
 						)}
 						{a.ml ? (
 							<View style={{ backgroundColor: C.statBlueBg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-								<Text style={{ fontSize: 11, fontWeight: "700", color: C.statBlueText }}>{a.ml}ml</Text>
+								<Text style={{ fontSize: 11, fontFamily: "NunitoSans_700Bold", color: C.statBlueText }}>{a.ml}ml</Text>
 							</View>
 						) : null}
 						<ReactionBadge reaction={a.reaction} />
@@ -64,7 +70,7 @@ const AttemptRow = memo(function AttemptRow({ attempt: a, attemptNum, milestones
 								return (
 									<View key={allergen} style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: cfg.bg, borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: cfg.color + "55" }}>
 										<AllergenIcon allergen={allergen} size={16} />
-										<Text style={{ fontSize: 10, fontWeight: "700", color: cfg.color }}>{allergen}</Text>
+										<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: cfg.color }}>{allergen}</Text>
 									</View>
 								);
 							})}
@@ -77,7 +83,7 @@ const AttemptRow = memo(function AttemptRow({ attempt: a, attemptNum, milestones
 							{milestones[a.id].map((m) => (
 								<View key={m.type} style={{ flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: m.bg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1.5, borderColor: m.color + "55" }}>
 									<Icon name={m.icon} size={12} color={m.color} />
-									<Text style={{ fontSize: 11, fontWeight: "800", color: m.color }}>{m.label}</Text>
+									<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: m.color }}>{m.label}</Text>
 								</View>
 							))}
 						</View>
@@ -139,48 +145,57 @@ const FoodCard = memo(function FoodCard({ foodKey: key, group: g, isOpen, toggle
 	const cats = g.attempts[0]?.categories?.length ? g.attempts[0].categories : g.category ? [g.category] : [];
 
 	return (
-		<View style={[s.card, { padding: 0, overflow: "hidden", borderWidth: hasAllergy ? 2 : 0, borderColor: hasAllergy ? "#e07070" : "transparent", backgroundColor: hasAllergy ? C.statRedBg : C.white }]}>
+		<View style={[s.card, { padding: 0, overflow: "hidden", backgroundColor: C.white }]}>
+			{/* Allergy left-strip */}
+			{hasAllergy && <View style={{ height: 4, backgroundColor: "#c0392b" }} />}
+
 			{/* Header */}
 			<TouchableOpacity onPress={() => toggle(key)} style={{ flexDirection: "row", alignItems: "center", padding: 16, gap: 14 }} activeOpacity={0.8}>
-				<CategoryIcon category={g.category} size={48} />
+				<CategoryIcon category={g.category} size={52} />
 				<View style={{ flex: 1 }}>
-					{/* Name + badges */}
-					<View style={{ flexDirection: "row", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
-						<Text style={{ fontWeight: "700", fontSize: 15, color: C.primaryPinkDark }}>{g.name}</Text>
-						{hasFav    && <Icon name="starFill" size={13} color="#d4a017" />}
-						{hasPhoto  && <Icon name="image"    size={13} color={C.mutedText} />}
+					{/* Name row */}
+					<View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 5 }}>
+						<Text style={{ fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 18, color: C.primaryPinkDark }}>{g.name}</Text>
+						{hasFav   && <Icon name="starFill" size={13} color="#d4a017" />}
+						{hasPhoto && <Icon name="image"    size={13} color={C.mutedText} />}
+					</View>
+
+					{/* Attempts count + date */}
+					<View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 7 }}>
+						<View style={{ backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 }}>
+							<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: C.primaryPurple }}>
+								{g.attempts.length} {g.attempts.length === 1 ? "try" : "tries"}
+							</Text>
+						</View>
 						{hasAllergy && (
-							<View style={{ backgroundColor: C.statRedBg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-								<Text style={{ fontSize: 9, fontWeight: "700", color: "#c0392b", textTransform: "uppercase" }}>Allergy</Text>
+							<View style={{ backgroundColor: "#fde8e8", borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 }}>
+								<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: "#c0392b" }}>⚠ Allergy</Text>
 							</View>
 						)}
-						<View style={{ backgroundColor: C.bgPurple, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-							<Text style={{ fontSize: 10, fontWeight: "700", color: C.primaryPurple }}>{g.attempts.length}×</Text>
-						</View>
 						{groupMilestones.length > 0 && (
-							<View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#fef6d4", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1.5, borderColor: "#c49a1055" }}>
+							<View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#fef6d4", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
 								<Icon name="star" size={10} color="#c49a10" />
-								<Text style={{ fontSize: 10, fontWeight: "800", color: "#c49a10" }}>
-									{groupMilestones.length === 1 ? "Milestone" : `${groupMilestones.length} Milestones`}
+								<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: "#c49a10" }}>
+									{groupMilestones.length === 1 ? "Milestone" : `${groupMilestones.length}×`}
 								</Text>
 							</View>
 						)}
 					</View>
 
 					{/* Latest reaction + date */}
-					<View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 }}>
+					<View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 7 }}>
 						<ReactionBadge reaction={latest.reaction} />
-						<Text style={{ fontSize: 11, color: C.mutedText }}>Latest · {formatDate(latest.date)}{latest.time ? ` at ${latest.time}` : ""}</Text>
+						<Text style={{ fontSize: 11, color: C.mutedText }}>Latest · {formatDate(latest.date)}</Text>
 					</View>
 
 					{/* Category pills */}
 					{cats.length > 0 && (
-						<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 5, marginTop: 5 }}>
+						<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 5, marginBottom: 7 }}>
 							{cats.map((cat) => {
 								const cfg = CATEGORIES.find((c) => c.value === cat) || CATEGORIES[7];
 								return (
 									<View key={cat} style={{ backgroundColor: cfg.bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
-										<Text style={{ fontSize: 10, fontWeight: "700", color: cfg.color }}>{cat}</Text>
+										<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: cfg.color }}>{cat}</Text>
 									</View>
 								);
 							})}
@@ -188,11 +203,11 @@ const FoodCard = memo(function FoodCard({ foodKey: key, group: g, isOpen, toggle
 					)}
 
 					{/* Like bar */}
-					<View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 }}>
-						<View style={{ flex: 1, backgroundColor: C.borderLight, borderRadius: 999, height: 6, overflow: "hidden", maxWidth: 100 }}>
+					<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+						<View style={{ flex: 1, backgroundColor: C.borderLight, borderRadius: 999, height: 6, overflow: "hidden" }}>
 							<View style={{ backgroundColor: C.primaryGreen, height: "100%", width: `${pct}%`, borderRadius: 999 }} />
 						</View>
-						<Text style={{ fontSize: 11, color: C.mutedText, fontWeight: "600" }}>{pct}% liked</Text>
+						<Text style={{ fontSize: 11, color: C.mutedText, fontFamily: "NunitoSans_600SemiBold" }}>{pct}%</Text>
 					</View>
 				</View>
 				<Icon name={isOpen ? "chevUp" : "chevDown"} size={16} color={C.mutedText} />
@@ -204,7 +219,6 @@ const FoodCard = memo(function FoodCard({ foodKey: key, group: g, isOpen, toggle
 					key={a.id}
 					attempt={a}
 					attemptNum={g.attempts.length - i}
-					isEven={i % 2 === 0}
 					milestones={milestones}
 					hasMultipleUsers={hasMultipleUsers}
 					currentUserId={currentUserId}
@@ -223,7 +237,7 @@ const FoodCard = memo(function FoodCard({ foodKey: key, group: g, isOpen, toggle
 					style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, padding: 14, borderTopWidth: 1, borderTopColor: C.borderLight, backgroundColor: C.bgPurple, borderBottomLeftRadius: 16, borderBottomRightRadius: 16 }}
 					activeOpacity={0.8}>
 					<Icon name="plus" size={14} color={C.primaryPurple} />
-					<Text style={{ fontSize: 13, fontWeight: "700", color: C.primaryPurple }}>Add Another Attempt</Text>
+					<Text style={{ fontSize: 13, fontFamily: "NunitoSans_700Bold", color: C.primaryPurple }}>Add Another Attempt</Text>
 				</TouchableOpacity>
 			)}
 		</View>
@@ -286,7 +300,7 @@ export function LogScreen({
 			{/* Search bar */}
 			<View style={[s.input, { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, backgroundColor: C.white }]}>
 				<Icon name="search" size={16} color={C.mutedText} />
-				<TextInput value={search} onChangeText={setSearch} placeholder="Search foods…" style={{ flex: 1, color: C.textCharcoal, fontWeight: "600", fontSize: 15 }} placeholderTextColor={C.mutedText} />
+				<TextInput value={search} onChangeText={setSearch} placeholder="Search foods…" style={{ flex: 1, color: C.textCharcoal, fontFamily: "NunitoSans_600SemiBold", fontSize: 15 }} placeholderTextColor={C.mutedText} />
 			</View>
 
 			{/* Sort chips */}
@@ -294,7 +308,7 @@ export function LogScreen({
 				{SORT_OPTS.map((opt) => (
 					<TouchableOpacity key={opt.id} onPress={() => setSortBy(opt.id)}
 						style={{ backgroundColor: sortBy === opt.id ? C.primaryPurple : C.white, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7, borderWidth: 1.5, borderColor: sortBy === opt.id ? C.primaryPurple : C.borderLight, height: 34, justifyContent: "center", alignItems: "center" }}>
-						<Text style={{ fontSize: 12, fontWeight: "700", color: sortBy === opt.id ? C.white : C.mutedText }}>{opt.label}</Text>
+						<Text style={{ fontSize: 12, fontFamily: "NunitoSans_700Bold", color: sortBy === opt.id ? C.white : C.mutedText }}>{opt.label}</Text>
 					</TouchableOpacity>
 				))}
 			</ScrollView>
@@ -306,7 +320,7 @@ export function LogScreen({
 					<View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
 						<View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: cfg?.bg || "#fff0cc", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1.5, borderColor: (cfg?.color || "#d4860a") + "55", flex: 1 }}>
 							<AllergenIcon allergen={allergenFilter} size={20} />
-							<Text style={{ fontSize: 12, fontWeight: "700", color: cfg?.color || "#a85a1a", flex: 1 }}>Filtered: {allergenFilter}</Text>
+							<Text style={{ fontSize: 12, fontFamily: "NunitoSans_700Bold", color: cfg?.color || "#a85a1a", flex: 1 }}>Filtered: {allergenFilter}</Text>
 							<TouchableOpacity onPress={() => setAllergenFilter("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
 								<Icon name="close" size={14} color={cfg?.color || "#a85a1a"} />
 							</TouchableOpacity>
@@ -322,7 +336,7 @@ export function LogScreen({
 					return (
 						<TouchableOpacity key={f.id || "all"} onPress={() => setReactionFilter(f.id)}
 							style={{ backgroundColor: active ? f.bg : C.white, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7, borderWidth: 1.5, borderColor: active ? f.color : C.borderLight, height: 34, justifyContent: "center", alignItems: "center" }}>
-							<Text style={{ fontSize: 12, fontWeight: "700", color: active ? f.color : C.mutedText }}>{f.label}</Text>
+							<Text style={{ fontSize: 12, fontFamily: "NunitoSans_700Bold", color: active ? f.color : C.mutedText }}>{f.label}</Text>
 						</TouchableOpacity>
 					);
 				})}
@@ -331,7 +345,7 @@ export function LogScreen({
 			{/* Clear filter */}
 			{reactionFilter !== "" && (
 				<TouchableOpacity onPress={() => setReactionFilter("")} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
-					<Text style={{ fontSize: 12, color: C.primaryPurple, fontWeight: "700" }}>Filtered: {reactionFilter} · Tap to clear</Text>
+					<Text style={{ fontSize: 12, color: C.primaryPurple, fontFamily: "NunitoSans_700Bold" }}>Filtered: {reactionFilter} · Tap to clear</Text>
 					<Icon name="close" size={13} color={C.primaryPurple} />
 				</TouchableOpacity>
 			)}
@@ -346,6 +360,40 @@ export function LogScreen({
 				contentContainerStyle={{ gap: 10, paddingBottom: 20 }}
 				removeClippedSubviews
 				refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primaryPurple} colors={[C.primaryPurple]} progressBackgroundColor={C.white} />}
+				ListEmptyComponent={() => {
+					const isFiltered = !!(search || reactionFilter || allergenFilter);
+					return (
+						<View style={{ alignItems: "center", paddingVertical: 48, paddingHorizontal: 24 }}>
+							{isFiltered ? (
+								<Svg width={88} height={88} viewBox="0 0 88 88">
+									<Circle cx="44" cy="44" r="42" fill={C.bgPurple} />
+									<Circle cx="38" cy="36" r="14" stroke={C.primaryPurple} strokeWidth="3" fill="none" />
+									<Path stroke={C.primaryPurple} strokeWidth="3" strokeLinecap="round" d="M48 46 L62 60" />
+									<Path stroke={C.primaryPurple + "55"} strokeWidth="2.5" strokeLinecap="round" d="M33 31 L43 41 M43 31 L33 41" />
+								</Svg>
+							) : (
+								<Svg width={88} height={88} viewBox="0 0 88 88">
+									<Circle cx="44" cy="44" r="42" fill={C.bgPurple} />
+									<Path fill={C.primaryPurple + "18"} stroke={C.primaryPurple} strokeWidth="2.5" strokeLinecap="round" d="M20 46 Q20 68 44 68 Q68 68 68 46 Z" />
+									<Path stroke={C.primaryPurple} strokeWidth="2.5" strokeLinecap="round" fill="none" d="M16 46 H72" />
+									<Circle cx="36" cy="56" r="6" fill="#7dcf9e" opacity="0.85" />
+									<Circle cx="50" cy="54" r="7" fill={C.primaryPurple + "65"} />
+									<Circle cx="42" cy="62" r="4" fill="#f9a825" opacity="0.85" />
+									<Path stroke={C.primaryPurple + "50"} strokeWidth="1.8" strokeLinecap="round" fill="none" d="M36 38 Q38 33 36 28" />
+									<Path stroke={C.primaryPurple + "50"} strokeWidth="1.8" strokeLinecap="round" fill="none" d="M44 36 Q46 31 44 26" />
+									<Path stroke="#f9a825" strokeWidth="1.5" strokeLinecap="round" fill="none" d="M22 28 L22 23 M19 25 L25 25" />
+									<Path stroke="#7dcf9e" strokeWidth="1.5" strokeLinecap="round" fill="none" d="M70 26 L70 21 M67 23 L73 23" />
+								</Svg>
+							)}
+							<Text style={{ fontFamily: "PlusJakartaSans_700Bold", fontSize: 20, color: C.primaryPinkDark, marginTop: 18, marginBottom: 8, textAlign: "center" }}>
+								{isFiltered ? "No matching foods" : "Nothing logged yet"}
+							</Text>
+							<Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 14, color: C.mutedText, textAlign: "center", lineHeight: 21 }}>
+								{isFiltered ? "Try adjusting your search or filters" : "Tap the + button to log your little one's first food"}
+							</Text>
+						</View>
+					);
+				}}
 				renderItem={({ item: key }) => (
 					<FoodCard
 						foodKey={key}
@@ -377,7 +425,7 @@ export function LogScreen({
 					<Text style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, textAlign: "center", paddingBottom: 6 }}>Pinch to zoom · Double-tap to reset</Text>
 					{lightboxPhoto?.name && (
 						<View style={{ backgroundColor: "rgba(0,0,0,0.7)", paddingHorizontal: 24, paddingVertical: 16, paddingBottom: Platform.OS === "ios" ? 36 : 16 }}>
-							<Text style={{ fontSize: 18, fontWeight: "800", color: "#fff" }}>{lightboxPhoto.name}</Text>
+							<Text style={{ fontSize: 18, fontFamily: "PlusJakartaSans_700Bold", color: "#fff" }}>{lightboxPhoto.name}</Text>
 						</View>
 					)}
 				</View>

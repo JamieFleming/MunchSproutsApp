@@ -20,6 +20,8 @@ import { useTheme } from "../ThemeContext";
 import { DateField } from "../components/DatePickerModal";
 import { pickImageAsBase64, uploadChildPhoto, isLocalUri } from "../helpers";
 import { updateUserProfile } from "../../firebaseHooks";
+import Svg, { Circle, Path } from "react-native-svg";
+import Icon from "../components/Icon";
 
 // ── Step indicator ─────────────────────────────────────────────────────────────
 
@@ -84,8 +86,17 @@ function StepName({ user, onNext }) {
 				keyboardShouldPersistTaps="handled"
 				showsVerticalScrollIndicator={false}>
 
-				{/* Emoji header */}
-				<Text style={{ fontSize: 56, textAlign: "center", marginBottom: 8 }}>👋</Text>
+				{/* SVG header illustration */}
+				<View style={{ alignItems: "center", marginBottom: 12 }}>
+					<Svg width={80} height={80} viewBox="0 0 80 80">
+						<Circle cx="40" cy="40" r="38" fill={C.bgPurple} />
+						{/* Waving hand path */}
+						<Path fill={C.primaryPurple} d="M38 52 Q34 46 30 40 Q28 36 32 34 Q35 32 37 36 L38 38 L38 26 Q38 23 41 23 Q44 23 44 26 L44 36 L44 26 Q44 23 47 23 Q50 23 50 26 L50 34 L50 26 Q50 23 53 23 Q56 23 56 26 L56 36 Q58 33 61 35 Q64 37 62 41 L56 52 Q52 58 46 58 L42 58 Q40 58 38 52 Z" opacity="0.85"/>
+						{/* Sparkles */}
+						<Path stroke="#f9a825" strokeWidth="1.5" strokeLinecap="round" fill="none" d="M18 22 L18 17 M15 19 L21 19" />
+						<Path stroke="#7dcf9e" strokeWidth="1.5" strokeLinecap="round" fill="none" d="M64 20 L64 15 M61 17 L67 17" />
+					</Svg>
+				</View>
 				<Text style={[styles.title, { color: C.primaryPinkDark }]}>Welcome to MunchSprouts!</Text>
 				<Text style={[styles.subtitle, { color: C.mutedText }]}>
 					Let's get your account set up. First, tell us a little about yourself.
@@ -97,10 +108,10 @@ function StepName({ user, onNext }) {
 						{photo ? (
 							<Image source={{ uri: photo }} style={styles.avatarImg} resizeMode="cover" />
 						) : (
-							<Text style={{ fontSize: 42 }}>🧑</Text>
+							<Icon name="baby" size={38} color={C.mutedText} />
 						)}
 					</View>
-					<Text style={{ fontSize: 13, color: C.primaryPurple, fontWeight: "700", marginTop: 8 }}>
+					<Text style={{ fontSize: 13, color: C.primaryPurple, fontFamily: "NunitoSans_700Bold", marginTop: 8 }}>
 						{photo ? "Change photo" : "Add a profile photo (optional)"}
 					</Text>
 				</TouchableOpacity>
@@ -204,7 +215,21 @@ function StepChild({ user, onFinish }) {
 				keyboardShouldPersistTaps="handled"
 				showsVerticalScrollIndicator={false}>
 
-				<Text style={{ fontSize: 56, textAlign: "center", marginBottom: 8 }}>🥦</Text>
+				<View style={{ alignItems: "center", marginBottom: 12 }}>
+					<Svg width={80} height={80} viewBox="0 0 80 80">
+						<Circle cx="40" cy="40" r="38" fill={C.bgPurple} />
+						{/* Stem */}
+						<Path stroke="#7dcf9e" strokeWidth="3" strokeLinecap="round" fill="none" d="M40 62 L40 36" />
+						{/* Left leaf */}
+						<Path stroke="#7dcf9e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="#7dcf9e40" d="M40 48 Q28 44 26 32 Q38 30 40 42 Z" />
+						{/* Right leaf */}
+						<Path stroke="#7dcf9e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="#7dcf9e40" d="M40 44 Q52 40 54 28 Q42 26 40 38 Z" />
+						{/* Soil */}
+						<Path stroke={C.primaryPurple} strokeWidth="2.5" strokeLinecap="round" fill={C.primaryPurple + "20"} d="M28 62 Q40 58 52 62 Q50 68 40 69 Q30 68 28 62 Z" />
+						<Path stroke="#f9a825" strokeWidth="1.5" strokeLinecap="round" fill="none" d="M20 30 L20 25 M17 27 L23 27" />
+						<Path stroke={C.primaryPurple} strokeWidth="1.5" strokeLinecap="round" fill="none" d="M62 36 L62 31 M59 33 L65 33" />
+					</Svg>
+				</View>
 				<Text style={[styles.title, { color: C.primaryPinkDark }]}>Add your little one</Text>
 				<Text style={[styles.subtitle, { color: C.mutedText }]}>
 					Set up your child's profile so you can start tracking their food journey straight away.
@@ -216,10 +241,10 @@ function StepChild({ user, onFinish }) {
 						{photo ? (
 							<Image source={{ uri: photo }} style={styles.avatarImg} resizeMode="cover" />
 						) : (
-							<Text style={{ fontSize: 42 }}>👶</Text>
+							<Icon name="baby" size={38} color={C.mutedText} />
 						)}
 					</View>
-					<Text style={{ fontSize: 13, color: C.primaryPurple, fontWeight: "700", marginTop: 8 }}>
+					<Text style={{ fontSize: 13, color: C.primaryPurple, fontFamily: "NunitoSans_700Bold", marginTop: 8 }}>
 						{photo ? "Change photo" : "Add a photo (optional)"}
 					</Text>
 				</TouchableOpacity>
@@ -266,13 +291,13 @@ function StepChild({ user, onFinish }) {
 					{saving ? (
 						<ActivityIndicator color="#fff" />
 					) : (
-						<Text style={styles.btnText}>Add Child & Get Started 🚀</Text>
+						<Text style={styles.btnText}>Add Child & Get Started</Text>
 					)}
 				</TouchableOpacity>
 
 				{/* Skip link */}
 				<TouchableOpacity onPress={handleSkip} style={{ alignItems: "center", marginTop: 18 }} activeOpacity={0.7}>
-					<Text style={{ color: C.mutedText, fontSize: 14, fontWeight: "600" }}>
+					<Text style={{ color: C.mutedText, fontSize: 14, fontFamily: "NunitoSans_600SemiBold" }}>
 						I'll add them later →
 					</Text>
 				</TouchableOpacity>
@@ -311,7 +336,7 @@ export function OnboardingScreen({ user }) {
 const styles = StyleSheet.create({
 	title: {
 		fontSize: 26,
-		fontWeight: "800",
+		fontFamily: "PlusJakartaSans_700Bold",
 		textAlign: "center",
 		marginBottom: 10,
 		letterSpacing: 0.2,
@@ -321,11 +346,11 @@ const styles = StyleSheet.create({
 		textAlign: "center",
 		lineHeight: 22,
 		marginBottom: 32,
-		fontWeight: "500",
+		fontFamily: "NunitoSans_400Regular",
 	},
 	label: {
 		fontSize: 12,
-		fontWeight: "700",
+		fontFamily: "NunitoSans_700Bold",
 		textTransform: "uppercase",
 		letterSpacing: 0.5,
 		marginBottom: 6,
@@ -335,7 +360,7 @@ const styles = StyleSheet.create({
 		borderRadius: 14,
 		paddingHorizontal: 16,
 		paddingVertical: 13,
-		fontWeight: "600",
+		fontFamily: "NunitoSans_600SemiBold",
 		fontSize: 15,
 		shadowColor: "#9b7fe8",
 		shadowOpacity: 0.08,
@@ -355,7 +380,7 @@ const styles = StyleSheet.create({
 	},
 	btnText: {
 		color: "#fff",
-		fontWeight: "700",
+		fontFamily: "NunitoSans_700Bold",
 		fontSize: 16,
 		letterSpacing: 0.3,
 	},

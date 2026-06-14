@@ -70,7 +70,7 @@ export function SupportModal({ visible, onClose, user }) {
 							</View>
 							<Text
 								style={{
-									fontWeight: "700",
+									fontFamily: "NunitoSans_700Bold",
 									fontSize: 18,
 									color: C.primaryPinkDark,
 									marginBottom: 8,
@@ -107,7 +107,7 @@ export function SupportModal({ visible, onClose, user }) {
 										<Text
 											style={{
 												color: supportType ? C.textCharcoal : C.mutedText,
-												fontWeight: "600",
+												fontFamily: "NunitoSans_600SemiBold",
 											}}>
 											{supportType || "Select a category…"}
 										</Text>
@@ -129,7 +129,7 @@ export function SupportModal({ visible, onClose, user }) {
 								</View>
 								<View style={{ backgroundColor: C.bgPurple, borderRadius: 12, padding: 14 }}>
 									<Text style={[s.smallLabel, { marginBottom: 4 }]}>Reply will be sent to</Text>
-									<Text style={{ fontSize: 14, fontWeight: "700", color: C.primaryPinkDark }}>
+									<Text style={{ fontSize: 14, fontFamily: "NunitoSans_700Bold", color: C.primaryPinkDark }}>
 										{user.email}
 									</Text>
 								</View>

@@ -35,7 +35,7 @@ export function PickerModal({ visible, title, options, value, onSelect, onClose 
 										s.pickerItemText,
 										value === opt && {
 											color: C.primaryPurple,
-											fontWeight: "700",
+											fontFamily: "NunitoSans_700Bold",
 										},
 									]}>
 									{opt}

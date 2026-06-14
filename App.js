@@ -1,5 +1,24 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { collection, onSnapshot, doc, deleteDoc, updateDoc } from "firebase/firestore";
+import { useFonts } from "expo-font";
+import {
+	PlusJakartaSans_400Regular,
+	PlusJakartaSans_500Medium,
+	PlusJakartaSans_600SemiBold,
+	PlusJakartaSans_700Bold,
+} from "@expo-google-fonts/plus-jakarta-sans";
+import {
+	NunitoSans_400Regular,
+	NunitoSans_600SemiBold,
+	NunitoSans_700Bold,
+	NunitoSans_800ExtraBold,
+} from "@expo-google-fonts/nunito-sans";
+import {
+	collection,
+	onSnapshot,
+	doc,
+	deleteDoc,
+	updateDoc,
+} from "firebase/firestore";
 import { db as firestoreDb } from "./firebase";
 import {
 	View,
@@ -71,7 +90,13 @@ import { BottleScreen } from "./src/screens/BottleScreen";
 import { ChildDetailScreen } from "./src/screens/ChildDetailScreen";
 import { MealsHubScreen } from "./src/screens/MealsHubScreen";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
-import { setupNotifications, onNotificationTapped, clearBadge, scheduleBottleReminders, cancelBottleReminders } from "./src/notificationService";
+import {
+	setupNotifications,
+	onNotificationTapped,
+	clearBadge,
+	scheduleBottleReminders,
+	cancelBottleReminders,
+} from "./src/notificationService";
 import { Icon } from "./src/components/Icon";
 import { FoodForm } from "./src/components/FoodForm";
 import { EditModal } from "./src/components/EditModal";
@@ -173,7 +198,7 @@ function ChildPickerModal({
 											s.pickerItemText,
 											c.id === activeChildId && {
 												color: C.primaryPurple,
-												fontWeight: "700",
+												fontFamily: "NunitoSans_700Bold",
 											},
 										]}>
 										{c.name}
@@ -247,145 +272,101 @@ function ChildPickerModal({
 	);
 }
 
-function AddMenuSheet({ visible, onClose, onFood, onBottle, onWeight, insets }) {
+function AddMenuSheet({
+	visible,
+	onClose,
+	onFood,
+	onBottle,
+	onWeight,
+	fabBottom,
+}) {
 	const { C } = useTheme();
-	const pb = (insets.bottom > 0 ? insets.bottom : 16) + 8;
+	if (!visible) return null;
 	return (
 		<Modal
-			visible={visible}
 			transparent
-			animationType="slide"
-			onRequestClose={onClose}>
-			<TouchableOpacity
-				style={{
-					flex: 1,
-					backgroundColor: "rgba(90,45,122,0.35)",
-					justifyContent: "flex-end",
-				}}
-				onPress={onClose}
-				activeOpacity={1}>
+			animationType="fade"
+			onRequestClose={onClose}
+			statusBarTranslucent>
+			<TouchableOpacity style={{ flex: 1 }} onPress={onClose} activeOpacity={1}>
 				<View
 					style={{
+						position: "absolute",
+						bottom: fabBottom + 72,
+						right: 16,
 						backgroundColor: C.white,
-						borderTopLeftRadius: 28,
-						borderTopRightRadius: 28,
-						padding: 24,
-						paddingBottom: pb,
+						borderRadius: 18,
+						minWidth: 230,
+						shadowColor: "#2e2440",
+						shadowOpacity: 0.18,
+						shadowRadius: 20,
+						shadowOffset: { width: 0, height: 6 },
+						elevation: 12,
+						borderWidth: 1,
+						borderColor: C.borderLight,
+						overflow: "hidden",
 					}}
 					onStartShouldSetResponder={() => true}>
-					<Text
-						style={{
-							fontWeight: "800",
-							fontSize: 18,
-							color: C.primaryPinkDark,
-							marginBottom: 20,
-						}}>
-						What would you like to log?
-					</Text>
 					<TouchableOpacity
 						onPress={onFood}
-						activeOpacity={0.85}
 						style={{
+							paddingHorizontal: 16,
+							paddingVertical: 14,
 							flexDirection: "row",
 							alignItems: "center",
-							gap: 16,
-							backgroundColor: C.bgPurple,
-							borderRadius: 18,
-							padding: 18,
-							marginBottom: 12,
-						}}>
-						<View
-							style={{
-								width: 48,
-								height: 48,
-								borderRadius: 14,
-								backgroundColor: C.primaryPurple,
-								alignItems: "center",
-								justifyContent: "center",
-							}}>
-							<Icon name="utensils" size={22} color="#fff" />
+							gap: 12,
+							borderBottomWidth: 1,
+							borderBottomColor: C.borderLight,
+						}}
+						activeOpacity={0.7}>
+						<View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center" }}>
+							<Icon name="utensils" size={16} color={C.primaryPurple} />
 						</View>
 						<View style={{ flex: 1 }}>
-							<Text
-								style={{
-									fontWeight: "700",
-									fontSize: 16,
-									color: C.primaryPinkDark,
-								}}>
-								Food or Drink
-							</Text>
-							<Text style={{ fontSize: 13, color: C.mutedText, marginTop: 2 }}>
-								Log a meal, snack or liquid
-							</Text>
+							<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: C.primaryPinkDark }}>Food or Drink</Text>
+							<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>Log a meal or snack</Text>
 						</View>
-						<Icon name="chevRight" size={16} color={C.mutedText} />
+						<Icon name="chevRight" size={12} color={C.mutedText} />
 					</TouchableOpacity>
 					<TouchableOpacity
 						onPress={onBottle}
-						activeOpacity={0.85}
 						style={{
+							paddingHorizontal: 16,
+							paddingVertical: 14,
 							flexDirection: "row",
 							alignItems: "center",
-							gap: 16,
-							backgroundColor: "#d4e8f5",
-							borderRadius: 18,
-							padding: 18,
-							marginBottom: 12,
-						}}>
-						<View
-							style={{
-								width: 48,
-								height: 48,
-								borderRadius: 14,
-								backgroundColor: "#2a5f8f",
-								alignItems: "center",
-								justifyContent: "center",
-							}}>
-							<Icon name="bottle" size={22} color="#fff" />
+							gap: 12,
+							borderBottomWidth: 1,
+							borderBottomColor: C.borderLight,
+						}}
+						activeOpacity={0.7}>
+						<View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#d4e8f5", alignItems: "center", justifyContent: "center" }}>
+							<Icon name="bottle" size={16} color="#2a5f8f" />
 						</View>
 						<View style={{ flex: 1 }}>
-							<Text
-								style={{ fontWeight: "700", fontSize: 16, color: "#1a3f5f" }}>
-								Bottle Feed
-							</Text>
-							<Text style={{ fontSize: 13, color: "#2a5f8f99", marginTop: 2 }}>
-								Log formula, breast or specialised milk
-							</Text>
+							<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: "#1a3f5f" }}>Bottle Feed</Text>
+							<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>Formula or breast milk</Text>
 						</View>
-						<Icon name="chevRight" size={16} color="#2a5f8f" />
+						<Icon name="chevRight" size={12} color={C.mutedText} />
 					</TouchableOpacity>
 					<TouchableOpacity
 						onPress={onWeight}
-						activeOpacity={0.85}
 						style={{
+							paddingHorizontal: 16,
+							paddingVertical: 14,
 							flexDirection: "row",
 							alignItems: "center",
-							gap: 16,
-							backgroundColor: "#e6f7ef",
-							borderRadius: 18,
-							padding: 18,
-							marginTop: 12,
-						}}>
-						<View
-							style={{
-								width: 48,
-								height: 48,
-								borderRadius: 14,
-								backgroundColor: "#2d7a55",
-								alignItems: "center",
-								justifyContent: "center",
-							}}>
-							<Icon name="scale" size={22} color="#fff" />
+							gap: 12,
+						}}
+						activeOpacity={0.7}>
+						<View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#e6f7ef", alignItems: "center", justifyContent: "center" }}>
+							<Icon name="scale" size={16} color="#2d7a55" />
 						</View>
 						<View style={{ flex: 1 }}>
-							<Text style={{ fontWeight: "700", fontSize: 16, color: "#1a4d35" }}>
-								Weight
-							</Text>
-							<Text style={{ fontSize: 13, color: "#2d7a5599", marginTop: 2 }}>
-								Record your baby's current weight
-							</Text>
+							<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: "#1a4d35" }}>Weight</Text>
+							<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>Record baby's weight</Text>
 						</View>
-						<Icon name="chevRight" size={16} color="#2d7a55" />
+						<Icon name="chevRight" size={12} color={C.mutedText} />
 					</TouchableOpacity>
 				</View>
 			</TouchableOpacity>
@@ -397,13 +378,18 @@ function MilestoneModal({ milestones, onClose }) {
 	const { C } = useTheme();
 	const isAllergenCelebration = (milestones || []).some((m) => m.isAllergen);
 	const headerEmoji =
-		isAllergenCelebration && milestones?.length === 1 && milestones[0].allergenEmoji
+		isAllergenCelebration &&
+		milestones?.length === 1 &&
+		milestones[0].allergenEmoji
 			? milestones[0].allergenEmoji
 			: "🎉";
-	const headerBg = isAllergenCelebration && milestones?.length === 1
-		? milestones[0].bg
-		: C.bgPurple;
-	const title = isAllergenCelebration ? "New Allergen Introduced!" : "Milestone Unlocked!";
+	const headerBg =
+		isAllergenCelebration && milestones?.length === 1
+			? milestones[0].bg
+			: C.bgPurple;
+	const title = isAllergenCelebration
+		? "New Allergen Introduced!"
+		: "Milestone Unlocked!";
 	const subtitle = isAllergenCelebration
 		? "Amazing work introducing a new allergen safely!"
 		: "You're doing amazing — keep exploring new foods!";
@@ -449,7 +435,7 @@ function MilestoneModal({ milestones, onClose }) {
 					<Text
 						style={{
 							fontSize: 20,
-							fontWeight: "900",
+							fontFamily: "PlusJakartaSans_700Bold",
 							color: C.primaryPinkDark,
 							marginBottom: 6,
 							textAlign: "center",
@@ -494,7 +480,7 @@ function MilestoneModal({ milestones, onClose }) {
 								</View>
 								<Text
 									style={{
-										fontWeight: "800",
+										fontFamily: "NunitoSans_800ExtraBold",
 										fontSize: 15,
 										color: m.color,
 										flex: 1,
@@ -515,7 +501,12 @@ function MilestoneModal({ milestones, onClose }) {
 							alignItems: "center",
 						}}
 						activeOpacity={0.85}>
-						<Text style={{ color: C.white, fontWeight: "800", fontSize: 15 }}>
+						<Text
+							style={{
+								color: C.white,
+								fontFamily: "NunitoSans_800ExtraBold",
+								fontSize: 15,
+							}}>
 							Woohoo! 🌟
 						</Text>
 					</TouchableOpacity>
@@ -525,24 +516,193 @@ function MilestoneModal({ milestones, onClose }) {
 	);
 }
 
+// ── Child header dropdown ─────────────────────────────────────────────────────
+
+function ChildDropdown({
+	visible,
+	children,
+	activeChildId,
+	onSelect,
+	onSettings,
+	onManage,
+	onClose,
+	onSignOut,
+	topOffset,
+}) {
+	const { C } = useTheme();
+	if (!visible) return null;
+	return (
+		<Modal
+			transparent
+			animationType="fade"
+			onRequestClose={onClose}
+			statusBarTranslucent>
+			<TouchableOpacity style={{ flex: 1 }} onPress={onClose} activeOpacity={1}>
+				<View
+					style={{
+						position: "absolute",
+						top: topOffset,
+						right: 16,
+						backgroundColor: "#ffffff",
+						borderRadius: 18,
+						minWidth: 210,
+						shadowColor: "#2e2440",
+						shadowOpacity: 0.18,
+						shadowRadius: 20,
+						shadowOffset: { width: 0, height: 6 },
+						elevation: 12,
+						borderWidth: 1,
+						borderColor: C.borderLight,
+						overflow: "hidden",
+					}}
+					onStartShouldSetResponder={() => true}>
+					{children.map((child, i) => (
+						<TouchableOpacity
+							key={child.id}
+							onPress={() => {
+								onSelect(child.id);
+								onClose();
+							}}
+							style={{
+								paddingHorizontal: 16,
+								paddingVertical: 13,
+								flexDirection: "row",
+								alignItems: "center",
+								gap: 10,
+								backgroundColor:
+									child.id === activeChildId ? C.bgPurple : "transparent",
+								borderBottomWidth: i < children.length - 1 ? 1 : 0,
+								borderBottomColor: C.borderLight,
+							}}
+							activeOpacity={0.7}>
+							<View
+								style={{
+									width: 30,
+									height: 30,
+									borderRadius: 15,
+									backgroundColor:
+										child.id === activeChildId ? C.primaryPurple : C.bgPurple,
+									alignItems: "center",
+									justifyContent: "center",
+								}}>
+								<Icon
+									name="baby"
+									size={15}
+									color={
+										child.id === activeChildId ? "#ffffff" : C.primaryPurple
+									}
+								/>
+							</View>
+							<Text
+								style={{
+									fontFamily: "NunitoSans_600SemiBold",
+									fontSize: 14,
+									color: C.textCharcoal,
+									flex: 1,
+								}}>
+								{child.name}
+							</Text>
+							{child.id === activeChildId && (
+								<Icon name="check" size={13} color={C.primaryPurple} />
+							)}
+						</TouchableOpacity>
+					))}
+					<View style={{ height: 1, backgroundColor: C.borderLight }} />
+					<TouchableOpacity
+						onPress={() => {
+							onManage();
+							onClose();
+						}}
+						style={{
+							paddingHorizontal: 16,
+							paddingVertical: 12,
+							flexDirection: "row",
+							alignItems: "center",
+							gap: 10,
+						}}
+						activeOpacity={0.7}>
+						<Icon name="users" size={14} color={C.primaryGreen} />
+						<Text
+							style={{
+								fontFamily: "NunitoSans_600SemiBold",
+								fontSize: 13,
+								color: C.primaryGreen,
+							}}>
+							Manage children
+						</Text>
+					</TouchableOpacity>
+					<View style={{ height: 1, backgroundColor: C.borderLight }} />
+					<TouchableOpacity
+						onPress={() => {
+							onSettings();
+							onClose();
+						}}
+						style={{
+							paddingHorizontal: 16,
+							paddingVertical: 12,
+							flexDirection: "row",
+							alignItems: "center",
+							gap: 10,
+						}}
+						activeOpacity={0.7}>
+						<Icon name="settings" size={14} color={C.mutedText} />
+						<Text
+							style={{
+								fontFamily: "NunitoSans_600SemiBold",
+								fontSize: 13,
+								color: C.mutedText,
+							}}>
+							Settings
+						</Text>
+					</TouchableOpacity>
+					<View style={{ height: 1, backgroundColor: C.borderLight }} />
+					<TouchableOpacity
+						onPress={() => {
+							onClose();
+							onSignOut?.();
+						}}
+						style={{
+							paddingHorizontal: 16,
+							paddingVertical: 12,
+							flexDirection: "row",
+							alignItems: "center",
+							gap: 10,
+						}}
+						activeOpacity={0.7}>
+						<Icon name="logout" size={14} color="#c0392b" />
+						<Text
+							style={{
+								fontFamily: "NunitoSans_600SemiBold",
+								fontSize: 13,
+								color: "#c0392b",
+							}}>
+							Sign out
+						</Text>
+					</TouchableOpacity>
+				</View>
+			</TouchableOpacity>
+		</Modal>
+	);
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 
 const NAV = [
-	{ id: "dashboard", icon: "home",    label: "Home"     },
-	{ id: "log",       icon: "list",    label: "Foods"    },
-	{ id: "bottle",    icon: "bottle",  label: "Bottles"  },
-	{ id: "meals",     icon: "chef",    label: "Meals"    },
-	{ id: "allergens", icon: "shield",  label: "Allergens"},
+	{ id: "dashboard", icon: "home", label: "Home" },
+	{ id: "log", icon: "list", label: "Foods" },
+	{ id: "bottle", icon: "bottle", label: "Bottles" },
+	{ id: "meals", icon: "chef", label: "Meals" },
+	{ id: "allergens", icon: "shield", label: "Allergens" },
 ];
 
 const PAGE_TITLES = {
 	dashboard: "Dashboard",
-	log:       "Food Log",
-	add:       "Log Food",
-	bottle:    "Bottle Log",
-	meals:     "Meals",
+	log: "Food Log",
+	add: "Log Food",
+	bottle: "Bottle Log",
+	meals: "Meals",
 	allergens: "Allergens",
-	children:  "Children",
+	children: "Children",
 };
 
 function MainApp({ user, userDoc, isPro: isPropPro }) {
@@ -567,18 +727,31 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 			AsyncStorage.getItem(`bottleRemindersEnabled_${user.uid}`),
 			AsyncStorage.getItem(`bottleReminderTimes_${user.uid}`),
 		])
-			.then(([savedMilkDash, savedAllergenDash, savedWeightUnit, savedBottleRemindersEnabled, savedBottleReminderTimes]) => {
-				if (!alive) return;
-				if (savedMilkDash === "false") setShowMilkOnDashboard(false);
-				if (savedAllergenDash === "false") setShowAllergenOnDashboard(false);
-				if (savedWeightUnit === "kg" || savedWeightUnit === "lbs") {
-					setWeightPreference(savedWeightUnit);
-				}
-				if (savedBottleRemindersEnabled === "true") setBottleRemindersEnabled(true);
-				if (savedBottleReminderTimes) {
-					try { setBottleReminderTimes(JSON.parse(savedBottleReminderTimes)); } catch { /* silent */ }
-				}
-			})
+			.then(
+				([
+					savedMilkDash,
+					savedAllergenDash,
+					savedWeightUnit,
+					savedBottleRemindersEnabled,
+					savedBottleReminderTimes,
+				]) => {
+					if (!alive) return;
+					if (savedMilkDash === "false") setShowMilkOnDashboard(false);
+					if (savedAllergenDash === "false") setShowAllergenOnDashboard(false);
+					if (savedWeightUnit === "kg" || savedWeightUnit === "lbs") {
+						setWeightPreference(savedWeightUnit);
+					}
+					if (savedBottleRemindersEnabled === "true")
+						setBottleRemindersEnabled(true);
+					if (savedBottleReminderTimes) {
+						try {
+							setBottleReminderTimes(JSON.parse(savedBottleReminderTimes));
+						} catch {
+							/* silent */
+						}
+					}
+				},
+			)
 			.catch(() => {});
 		return () => {
 			alive = false;
@@ -605,6 +778,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 	const [userMap, setUserMap] = useState({});
 	const [showAddMenu, setShowAddMenu] = useState(false);
 	const [showMoreModal, setShowMoreModal] = useState(false);
+	const [showChildDropdown, setShowChildDropdown] = useState(false);
 	const [bottleQuickAdd, setBottleQuickAdd] = useState(false);
 	const [milestoneAlert, setMilestoneAlert] = useState(null);
 	const [recipes, setRecipes] = useState([]);
@@ -622,17 +796,17 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 	const saveDefaultChild = (id) =>
 		AsyncStorage.setItem(STORAGE_KEY, id).catch(() => {});
 
-	useEffect(() => {
-		if (!user) return;
-		Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-		Purchases.configure({
-			apiKey:
-				Platform.OS === "ios"
-					? "appl_xNGjmEgufsXuWySnKebRetuKCGj"
-					: "goog_rcHUTFIPkKdXdEAQHcexulBdpOj",
-			appUserID: user.uid,
-		});
-	}, [user]);
+	// useEffect(() => {
+	// 	if (!user) return;
+	// 	Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+	// 	Purchases.configure({
+	// 		apiKey:
+	// 			Platform.OS === "ios"
+	// 				? "appl_xNGjmEgufsXuWySnKebRetuKCGj"
+	// 				: "goog_rcHUTFIPkKdXdEAQHcexulBdpOj",
+	// 		appUserID: user.uid,
+	// 	});
+	// }, [user]);
 
 	// ── Push notifications ──────────────────────────────────────────────────────
 	useEffect(() => {
@@ -658,15 +832,16 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 	}, [user?.uid]);
 
 	const loadData = useCallback(async () => {
-		const [log, kids, recs, favIds, bottles, weights, savedId] = await Promise.all([
-			fetchFoodLog(user.uid),
-			fetchChildren(user.uid),
-			fetchRecipes(),
-			fetchFavouriteRecipes(user.uid),
-			fetchBottleLog(user.uid),
-			fetchWeightLog(user.uid).catch(() => []),
-			AsyncStorage.getItem(STORAGE_KEY).catch(() => null),
-		]);
+		const [log, kids, recs, favIds, bottles, weights, savedId] =
+			await Promise.all([
+				fetchFoodLog(user.uid),
+				fetchChildren(user.uid),
+				fetchRecipes(),
+				fetchFavouriteRecipes(user.uid),
+				fetchBottleLog(user.uid),
+				fetchWeightLog(user.uid).catch(() => []),
+				AsyncStorage.getItem(STORAGE_KEY).catch(() => null),
+			]);
 		setFoodLog(log);
 		setChildren(kids);
 		setRecipes(applyWeeklyFeaturedRotation(recs));
@@ -727,7 +902,9 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 
 	const handleRateSmartRecipe = async (id, rating) => {
 		try {
-			await updateDoc(doc(firestoreDb, "users", user.uid, "smartRecipes", id), { rating });
+			await updateDoc(doc(firestoreDb, "users", user.uid, "smartRecipes", id), {
+				rating,
+			});
 		} catch (e) {
 			console.warn("[smartRecipes] rate error:", e.message);
 		}
@@ -747,11 +924,17 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 		[children, activeChildId],
 	);
 	const childLog = useMemo(
-		() => (activeChild ? foodLog.filter((f) => f.childId === activeChild.id) : foodLog),
+		() =>
+			activeChild
+				? foodLog.filter((f) => f.childId === activeChild.id)
+				: foodLog,
 		[activeChild, foodLog],
 	);
 	const childBottleLog = useMemo(
-		() => (activeChild ? bottleLog.filter((b) => b.childId === activeChild.id) : bottleLog),
+		() =>
+			activeChild
+				? bottleLog.filter((b) => b.childId === activeChild.id)
+				: bottleLog,
 		[activeChild, bottleLog],
 	);
 	const childWeightLog = useMemo(
@@ -1009,13 +1192,22 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 
 	const addChild = async (child) => {
 		try {
-			const { initialWeight, initialWeightOz, initialWeightUnit, ...childData } = child;
+			const {
+				initialWeight,
+				initialWeightOz,
+				initialWeightUnit,
+				...childData
+			} = child;
 
 			// Upload photo to Firebase Storage before saving to Firestore
 			if (childData.photoUri && isLocalUri(childData.photoUri)) {
 				try {
 					const tempName = `${user.uid}_${Date.now()}`;
-					childData.photoUri = await uploadChildPhoto(childData.photoUri, user.uid, tempName);
+					childData.photoUri = await uploadChildPhoto(
+						childData.photoUri,
+						user.uid,
+						tempName,
+					);
 				} catch (uploadErr) {
 					console.warn("[addChild] photo upload failed:", uploadErr.message);
 					childData.photoUri = ""; // never store a local URI in Firestore
@@ -1032,18 +1224,25 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 			// Save initial weight entry if provided — always store in canonical kg format
 			const lbVal = parseFloat(initialWeight) || 0;
 			const ozVal = parseFloat(initialWeightOz) || 0;
-			const hasWeight = initialWeightUnit === "lbs" ? (lbVal > 0 || ozVal > 0) : lbVal > 0;
+			const hasWeight =
+				initialWeightUnit === "lbs" ? lbVal > 0 || ozVal > 0 : lbVal > 0;
 			if (hasWeight) {
 				const today = new Date().toISOString().split("T")[0];
-				const value_kg = Math.round(
-					(initialWeightUnit === "lbs" ? (lbVal + ozVal / 16) / 2.20462 : lbVal) * 1000,
-				) / 1000;
+				const value_kg =
+					Math.round(
+						(initialWeightUnit === "lbs"
+							? (lbVal + ozVal / 16) / 2.20462
+							: lbVal) * 1000,
+					) / 1000;
 				const wId = await fbAddWeightEntry(user.uid, {
 					childId: newId,
 					value_kg,
 					date: today,
 				});
-				setWeightLog((p) => [...p, { id: wId, childId: newId, value_kg, date: today, userId: user.uid }]);
+				setWeightLog((p) => [
+					...p,
+					{ id: wId, childId: newId, value_kg, date: today, userId: user.uid },
+				]);
 			}
 			toast(`${child.name} added`);
 		} catch {
@@ -1058,12 +1257,18 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 			// Upload photo to Firebase Storage before saving to Firestore
 			if (toSave.photoUri && isLocalUri(toSave.photoUri)) {
 				try {
-					toSave.photoUri = await uploadChildPhoto(toSave.photoUri, user.uid, toSave.id);
+					toSave.photoUri = await uploadChildPhoto(
+						toSave.photoUri,
+						user.uid,
+						toSave.id,
+					);
 				} catch (uploadErr) {
 					console.warn("[editChild] photo upload failed:", uploadErr.message);
 					// Fall back to the existing saved URL (don't store local URI)
 					const existing = children.find((c) => c.id === toSave.id);
-					toSave.photoUri = isLocalUri(existing?.photoUri) ? "" : (existing?.photoUri || "");
+					toSave.photoUri = isLocalUri(existing?.photoUri)
+						? ""
+						: existing?.photoUri || "";
 				}
 			}
 
@@ -1171,7 +1376,9 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 	const updateWeightEntry = async (id, fields) => {
 		try {
 			await fbUpdateWeightEntry(id, fields);
-			setWeightLog((p) => p.map((w) => (w.id === id ? { ...w, ...fields } : w)));
+			setWeightLog((p) =>
+				p.map((w) => (w.id === id ? { ...w, ...fields } : w)),
+			);
 		} catch {
 			Alert.alert("Error", "Could not update weight entry.");
 		}
@@ -1211,9 +1418,15 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 
 	const handleToggleBottleReminders = (enabled) => {
 		setBottleRemindersEnabled(enabled);
-		AsyncStorage.setItem(`bottleRemindersEnabled_${user.uid}`, String(enabled)).catch(() => {});
+		AsyncStorage.setItem(
+			`bottleRemindersEnabled_${user.uid}`,
+			String(enabled),
+		).catch(() => {});
 		if (enabled && bottleReminderTimes.length > 0) {
-			scheduleBottleReminders(bottleReminderTimes, activeChild?.name || "your baby").catch(() => {});
+			scheduleBottleReminders(
+				bottleReminderTimes,
+				activeChild?.name || "your baby",
+			).catch(() => {});
 		} else {
 			cancelBottleReminders().catch(() => {});
 		}
@@ -1224,19 +1437,30 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 			(a, b) => a.hour * 60 + a.minute - (b.hour * 60 + b.minute),
 		);
 		setBottleReminderTimes(newTimes);
-		AsyncStorage.setItem(`bottleReminderTimes_${user.uid}`, JSON.stringify(newTimes)).catch(() => {});
+		AsyncStorage.setItem(
+			`bottleReminderTimes_${user.uid}`,
+			JSON.stringify(newTimes),
+		).catch(() => {});
 		if (bottleRemindersEnabled) {
-			scheduleBottleReminders(newTimes, activeChild?.name || "your baby").catch(() => {});
+			scheduleBottleReminders(newTimes, activeChild?.name || "your baby").catch(
+				() => {},
+			);
 		}
 	};
 
 	const handleRemoveBottleReminderTime = (index) => {
 		const newTimes = bottleReminderTimes.filter((_, i) => i !== index);
 		setBottleReminderTimes(newTimes);
-		AsyncStorage.setItem(`bottleReminderTimes_${user.uid}`, JSON.stringify(newTimes)).catch(() => {});
+		AsyncStorage.setItem(
+			`bottleReminderTimes_${user.uid}`,
+			JSON.stringify(newTimes),
+		).catch(() => {});
 		if (bottleRemindersEnabled) {
 			if (newTimes.length > 0) {
-				scheduleBottleReminders(newTimes, activeChild?.name || "your baby").catch(() => {});
+				scheduleBottleReminders(
+					newTimes,
+					activeChild?.name || "your baby",
+				).catch(() => {});
 			} else {
 				cancelBottleReminders().catch(() => {});
 			}
@@ -1283,7 +1507,10 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 					"For security, account deletion requires a recent sign-in. You have been signed out — please sign back in and try again.",
 				);
 			} else {
-				Alert.alert("Error", e.message || "Could not delete account. Please try again.");
+				Alert.alert(
+					"Error",
+					e.message || "Could not delete account. Please try again.",
+				);
 			}
 		}
 	};
@@ -1370,7 +1597,10 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 					"Pro subscriptions are being reviewed by Apple and will be available very soon. Check back shortly!",
 				);
 			} else {
-				Alert.alert("Purchase failed", msg || "Something went wrong. Please try again.");
+				Alert.alert(
+					"Purchase failed",
+					msg || "Something went wrong. Please try again.",
+				);
 			}
 		}
 	};
@@ -1421,9 +1651,10 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 			const { db: firedb } = await import("./firebase");
 
 			if (isRemove) {
-				const child    = children.find((c) => c.id === childId);
+				const child = children.find((c) => c.id === childId);
 				const uidIndex = (child?.sharedWith || []).indexOf(emailOrUid);
-				const matchEmail = uidIndex !== -1 ? (child?.sharedWithEmails || [])[uidIndex] : null;
+				const matchEmail =
+					uidIndex !== -1 ? (child?.sharedWithEmails || [])[uidIndex] : null;
 				const update = {
 					sharedWith: arrayRemove(emailOrUid),
 					[`sharedWithRoles.${emailOrUid}`]: deleteField(),
@@ -1477,7 +1708,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 			}
 			const theirEmail = emailOrUid.toLowerCase().trim();
 			await updateDoc(doc(firedb, "children", childId), {
-				sharedWith:       arrayUnion(theirUid),
+				sharedWith: arrayUnion(theirUid),
 				sharedWithEmails: arrayUnion(theirEmail),
 				[`sharedWithRoles.${theirUid}`]: role,
 			});
@@ -1487,9 +1718,12 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						? c
 						: {
 								...c,
-								sharedWith:       [...(c.sharedWith || []), theirUid],
+								sharedWith: [...(c.sharedWith || []), theirUid],
 								sharedWithEmails: [...(c.sharedWithEmails || []), theirEmail],
-								sharedWithRoles:  { ...(c.sharedWithRoles || {}), [theirUid]: role },
+								sharedWithRoles: {
+									...(c.sharedWithRoles || {}),
+									[theirUid]: role,
+								},
 							},
 				),
 			);
@@ -1511,7 +1745,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 	const handleGenerateInviteCode = async (childId, role = "caregiver") => {
 		const { httpsCallable } = await import("firebase/functions");
 		const { functions: fns } = await import("./firebase");
-		const fn     = httpsCallable(fns, "generateInviteCode");
+		const fn = httpsCallable(fns, "generateInviteCode");
 		const result = await fn({ childId, role });
 		return result.data.code;
 	};
@@ -1519,7 +1753,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 	const handleJoinViaCode = async (code) => {
 		const { httpsCallable } = await import("firebase/functions");
 		const { functions: fns } = await import("./firebase");
-		const fn     = httpsCallable(fns, "joinViaInviteCode");
+		const fn = httpsCallable(fns, "joinViaInviteCode");
 		const result = await fn({ code });
 		return result.data; // { childName }
 	};
@@ -1539,10 +1773,10 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 
 			{/* Header */}
 			<View style={s.header}>
-				<View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+				<View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
 					<Image
 						source={require("./assets/logo.png")}
-						style={{ width: 36, height: 36, borderRadius: 10 }}
+						style={{ width: 34, height: 34, borderRadius: 8 }}
 						resizeMode="contain"
 					/>
 					<View>
@@ -1552,62 +1786,55 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						</Text>
 					</View>
 				</View>
-				<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-					<TouchableOpacity
-						onPress={() => setShowChildPicker(true)}
+				<TouchableOpacity
+					onPress={() => setShowChildDropdown(true)}
+					style={{
+						backgroundColor: C.primaryPurple,
+						borderRadius: 999,
+						paddingHorizontal: 14,
+						paddingVertical: 8,
+						flexDirection: "row",
+						alignItems: "center",
+						gap: 6,
+						shadowColor: C.primaryPurple,
+						shadowOpacity: 0.3,
+						shadowRadius: 8,
+						shadowOffset: { width: 0, height: 3 },
+						elevation: 4,
+					}}
+					activeOpacity={0.85}>
+					<Icon name="baby" size={14} color="#ffffff" />
+					<Text
 						style={{
-							backgroundColor: C.bgPurple,
-							borderRadius: 999,
-							paddingHorizontal: 14,
-							paddingVertical: 7,
-							flexDirection: "row",
-							alignItems: "center",
-							gap: 6,
-						}}>
-						<Svg width={16} height={16} viewBox="0 0 32 32">
-							<Circle
-								cx="16"
-								cy="13"
-								r="7"
-								fill={C.primaryPurple}
-								opacity="0.8"
-							/>
-							<Circle cx="11" cy="12" r="1.5" fill={C.white} />
-							<Circle cx="21" cy="12" r="1.5" fill={C.white} />
-							<Path
-								d="M11 16.5 Q16 19.5 21 16.5"
-								stroke={C.white}
-								strokeWidth="1.5"
-								strokeLinecap="round"
-								fill="none"
-							/>
-						</Svg>
-						<Text
-							style={{
-								fontSize: 13,
-								fontWeight: "700",
-								color: C.primaryPurple,
-							}}
-							numberOfLines={1}>
-							{activeChild ? activeChild.name : "Add Baby"}
-						</Text>
-						<Icon name="chevDown" size={12} color={C.primaryPurple} />
-					</TouchableOpacity>
-					<TouchableOpacity
-						onPress={() => setShowMoreModal(true)}
-						style={{
-							width: 36,
-							height: 36,
-							borderRadius: 18,
-							backgroundColor: C.bgPurple,
-							alignItems: "center",
-							justifyContent: "center",
+							fontFamily: "NunitoSans_700Bold",
+							fontSize: 13,
+							color: "#ffffff",
 						}}
-						activeOpacity={0.75}>
-						<Icon name="more" size={20} color={C.primaryPurple} />
-					</TouchableOpacity>
-				</View>
+						numberOfLines={1}>
+						{activeChild ? activeChild.name : "Add Baby"}
+					</Text>
+					<Icon
+						name={showChildDropdown ? "chevUp" : "chevDown"}
+						size={11}
+						color="#ffffff"
+					/>
+				</TouchableOpacity>
 			</View>
+
+			<ChildDropdown
+				visible={showChildDropdown}
+				children={children}
+				activeChildId={activeChildId}
+				onSelect={(id) => {
+					setActiveChildId(id);
+					saveDefaultChild(id);
+				}}
+				onSettings={() => setShowMoreModal(true)}
+				onManage={() => setPage("children")}
+				onClose={() => setShowChildDropdown(false)}
+				onSignOut={() => logOut()}
+				topOffset={insets.top + 66}
+			/>
 
 			{/* Page content */}
 			<View
@@ -1618,7 +1845,8 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 					backgroundColor: C.screen,
 				}}>
 				{/* ── Main tabs: kept mounted, just shown/hidden — avoids mount/unmount jitter on Android ── */}
-				<View style={{ flex: 1, display: page === "dashboard" ? "flex" : "none" }}>
+				<View
+					style={{ flex: 1, display: page === "dashboard" ? "flex" : "none" }}>
 					<DashboardScreen
 						child={activeChild}
 						foodLog={childLog}
@@ -1724,7 +1952,8 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						onUpgradePro={handleUpgradePro}
 					/>
 				</View>
-				<View style={{ flex: 1, display: page === "allergens" ? "flex" : "none" }}>
+				<View
+					style={{ flex: 1, display: page === "allergens" ? "flex" : "none" }}>
 					<AllergenScreen
 						foodLog={childLog}
 						onNavigate={setPage}
@@ -1790,37 +2019,39 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 							key={n.id}
 							onPress={() => {
 								if (n.id === "meals" && page === "meals") {
-									// Already on Meals — reset hub to top level
 									setMealsResetKey((k) => k + 1);
 								}
 								setPage(n.id);
 							}}
 							style={s.navItem}
-							activeOpacity={0.8}>
+							activeOpacity={0.75}>
 							<View
 								style={{
-									width: 28,
-									height: 28,
-									borderRadius: 10,
-									backgroundColor: active
-										? C.primaryPurple + "18"
-										: "transparent",
 									alignItems: "center",
 									justifyContent: "center",
+									gap: 3,
+									paddingHorizontal: active ? 16 : 0,
+									paddingVertical: 6,
+									borderRadius: 20,
+									backgroundColor: active ? C.bgPurple : "transparent",
+									width: active ? undefined : 44,
 								}}>
 								<Icon
 									name={n.icon}
-									size={20}
+									size={22}
 									color={active ? C.primaryPurple : C.mutedText}
 								/>
+								<Text
+									style={{
+										fontFamily: active
+											? "NunitoSans_700Bold"
+											: "NunitoSans_600SemiBold",
+										fontSize: 10,
+										color: active ? C.primaryPurple : C.mutedText,
+									}}>
+									{n.label}
+								</Text>
 							</View>
-							<Text
-								style={[
-									s.navLabel,
-									active && { color: C.primaryPurple, fontWeight: "700" },
-								]}>
-								{n.label}
-							</Text>
 						</TouchableOpacity>
 					);
 				})}
@@ -1837,20 +2068,24 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 					style={{
 						position: "absolute",
 						bottom: fabBottom,
-						right: 20,
-						width: 58,
-						height: 58,
-						borderRadius: 29,
-						backgroundColor: C.primaryPurple,
+						right: 18,
+						width: 56,
+						height: 56,
+						borderRadius: 28,
+						backgroundColor: C.primaryPurple + "55",
+						borderWidth: 2,
+						borderColor: C.primaryPurple,
 						alignItems: "center",
 						justifyContent: "center",
 						shadowColor: C.primaryPurple,
-						shadowOpacity: 0.55,
+						shadowOpacity: 0.4,
 						shadowRadius: 14,
-						shadowOffset: { width: 0, height: 6 },
-						elevation: 12,
+						shadowOffset: { width: 0, height: 5 },
+						elevation: 10,
 					}}>
-					<Icon name="plus" size={26} color="#fff" />
+					<Svg width={22} height={22} viewBox="0 0 24 24">
+						<Path stroke={C.primaryPurple} strokeWidth={2.5} strokeLinecap="round" fill="none" d="M12 5v14M5 12h14" />
+					</Svg>
 				</TouchableOpacity>
 			)}
 
@@ -1887,7 +2122,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 					if (requireChild()) return;
 					setShowWeightModal(true);
 				}}
-				insets={insets}
+				fabBottom={fabBottom}
 			/>
 
 			<Modal
@@ -1910,7 +2145,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						}}>
 						<Text
 							style={{
-								fontWeight: "800",
+								fontFamily: "PlusJakartaSans_700Bold",
 								fontSize: 18,
 								color: C.primaryPinkDark,
 							}}>
@@ -2018,7 +2253,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						<Text
 							style={{
 								color: t.type === "warning" ? C.warningStroke : C.statGreenText,
-								fontWeight: "700",
+								fontFamily: "NunitoSans_700Bold",
 								fontSize: 13,
 							}}>
 							{t.msg}
@@ -2048,6 +2283,17 @@ function Root() {
 }
 
 export default function App() {
+	const [fontsLoaded] = useFonts({
+		PlusJakartaSans_400Regular,
+		PlusJakartaSans_500Medium,
+		PlusJakartaSans_600SemiBold,
+		PlusJakartaSans_700Bold,
+		NunitoSans_400Regular,
+		NunitoSans_600SemiBold,
+		NunitoSans_700Bold,
+		NunitoSans_800ExtraBold,
+	});
+
 	const [theme, setThemeState] = useState("default");
 	const C = THEMES[theme] || THEMES.default;
 
@@ -2097,6 +2343,8 @@ export default function App() {
 			({ default: AS }) => AS.setItem("appTheme", t),
 		);
 	};
+
+	if (!fontsLoaded) return null;
 
 	return (
 		<ThemeContext.Provider value={{ theme, C, setTheme }}>

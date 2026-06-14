@@ -41,7 +41,7 @@ function RoleSelector({ value, onChange }) {
 					<TouchableOpacity key={r.id} onPress={() => onChange(r.id)} activeOpacity={0.8}
 						style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, paddingVertical: 11, borderRadius: 14, backgroundColor: active ? C.primaryPurple : C.white, borderWidth: 2, borderColor: active ? C.primaryPurple : C.borderLight }}>
 						<Text style={{ fontSize: 16 }}>{r.emoji}</Text>
-						<Text style={{ fontSize: 14, fontWeight: "700", color: active ? "#fff" : C.mutedText }}>{r.label}</Text>
+						<Text style={{ fontSize: 14, fontFamily: "NunitoSans_700Bold", color: active ? "#fff" : C.mutedText }}>{r.label}</Text>
 					</TouchableOpacity>
 				);
 			})}
@@ -78,16 +78,16 @@ function MemberCard({ email, isYou, role, onRemove }) {
 				borderWidth: 2.5, borderColor: color + "33",
 				alignItems: "center", justifyContent: "center",
 			}}>
-				<Text style={{ fontSize: 22, fontWeight: "900", color }}>{initial(email)}</Text>
+				<Text style={{ fontSize: 22, fontFamily: "PlusJakartaSans_700Bold", color }}>{initial(email)}</Text>
 			</View>
 
 			{/* Name + role */}
 			<View style={{ flex: 1 }}>
-				<Text style={{ fontSize: 16, fontWeight: "800", color: C.textCharcoal, marginBottom: 2 }}>{name}</Text>
+				<Text style={{ fontSize: 16, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, marginBottom: 2 }}>{name}</Text>
 				{!isYou && <Text style={{ fontSize: 12, color: C.mutedText }}>{email}</Text>}
 				<View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 5 }}>
 					<View style={{ borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3, backgroundColor: roleStyle.bg }}>
-						<Text style={{ fontSize: 11, fontWeight: "700", color: roleStyle.color }}>{roleStyle.label}</Text>
+						<Text style={{ fontSize: 11, fontFamily: "NunitoSans_700Bold", color: roleStyle.color }}>{roleStyle.label}</Text>
 					</View>
 				</View>
 			</View>
@@ -96,13 +96,13 @@ function MemberCard({ email, isYou, role, onRemove }) {
 			<View style={{ alignItems: "flex-end", gap: 8 }}>
 				<View style={{ backgroundColor: "#dcfce7", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexDirection: "row", alignItems: "center", gap: 4 }}>
 					<View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#16a34a" }} />
-					<Text style={{ fontSize: 11, fontWeight: "700", color: "#16a34a" }}>Active</Text>
+					<Text style={{ fontSize: 11, fontFamily: "NunitoSans_700Bold", color: "#16a34a" }}>Active</Text>
 				</View>
 				{!!onRemove && (
 					<TouchableOpacity
 						onPress={onRemove}
 						style={{ borderWidth: 1.5, borderColor: "#e0758a", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 }}>
-						<Text style={{ fontSize: 11, fontWeight: "700", color: "#c0392b" }}>Remove</Text>
+						<Text style={{ fontSize: 11, fontFamily: "NunitoSans_700Bold", color: "#c0392b" }}>Remove</Text>
 					</TouchableOpacity>
 				)}
 			</View>
@@ -147,7 +147,7 @@ function CodeInput({ value, onChange, disabled }) {
 						editable={!disabled}
 						style={{
 							width: 44, height: 52, borderRadius: 12, textAlign: "center",
-							fontSize: 20, fontWeight: "800",
+							fontSize: 20, fontFamily: "NunitoSans_800ExtraBold",
 							color: filled ? C.primaryPurple : C.mutedText,
 							backgroundColor: filled ? "#ede8f7" : C.bgPurple,
 							borderWidth: 2,
@@ -247,7 +247,7 @@ export function FamilySharingModal({
 				{/* Header */}
 				<View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 18, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
 					<View style={{ flex: 1 }}>
-						<Text style={{ fontSize: 20, fontWeight: "900", color: C.textCharcoal }}>Parents & Caregivers</Text>
+						<Text style={{ fontSize: 20, fontFamily: "PlusJakartaSans_700Bold", color: C.textCharcoal }}>Parents & Caregivers</Text>
 						<Text style={{ fontSize: 13, color: C.mutedText, marginTop: 2 }}>Manage who has access to your child's data</Text>
 					</View>
 					<TouchableOpacity onPress={handleClose} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center" }}>
@@ -261,7 +261,7 @@ export function FamilySharingModal({
 						{/* Child selector — show all children including shared ones */}
 						{ownedChildren.length > 1 && (
 							<View style={{ gap: 10 }}>
-								<Text style={{ fontSize: 13, fontWeight: "800", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.5 }}>Child</Text>
+								<Text style={{ fontSize: 13, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.5 }}>Child</Text>
 								<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
 									{ownedChildren.map((c) => {
 										const sel       = (selectedChildId || defaultChildId) === c.id;
@@ -270,10 +270,10 @@ export function FamilySharingModal({
 											<TouchableOpacity key={c.id} onPress={() => { setSelectedChildId(c.id); setGeneratedCode(null); }}
 												style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 999, backgroundColor: sel ? C.primaryPurple : C.white, borderWidth: 2, borderColor: sel ? C.primaryPurple : C.borderLight }}>
 												<Icon name="baby" size={14} color={sel ? C.white : C.mutedText} />
-												<Text style={{ fontSize: 13, fontWeight: "700", color: sel ? C.white : C.textCharcoal }}>{c.name}</Text>
+												<Text style={{ fontSize: 13, fontFamily: "NunitoSans_700Bold", color: sel ? C.white : C.textCharcoal }}>{c.name}</Text>
 												{!childOwned && (
 													<View style={{ backgroundColor: sel ? "rgba(255,255,255,0.25)" : C.bgPurple, borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 }}>
-														<Text style={{ fontSize: 9, fontWeight: "800", color: sel ? C.white : C.mutedText }}>SHARED</Text>
+														<Text style={{ fontSize: 9, fontFamily: "NunitoSans_800ExtraBold", color: sel ? C.white : C.mutedText }}>SHARED</Text>
 													</View>
 												)}
 											</TouchableOpacity>
@@ -287,7 +287,7 @@ export function FamilySharingModal({
 						{targetChild && (
 							<View style={{ gap: 12 }}>
 								<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-									<Text style={{ fontSize: 13, fontWeight: "800", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.5 }}>Active users</Text>
+									<Text style={{ fontSize: 13, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.5 }}>Active users</Text>
 									<Text style={{ fontSize: 12, color: C.mutedText }}>{1 + sharedWith.length} member{sharedWith.length !== 0 ? "s" : ""}</Text>
 								</View>
 
@@ -332,7 +332,7 @@ export function FamilySharingModal({
 								{isOwner && sharedWith.length === 0 && (
 									<View style={{ backgroundColor: C.bgPurple, borderRadius: 14, padding: 16, alignItems: "center", gap: 6 }}>
 										<Icon name="users" size={24} color={C.mutedText} />
-										<Text style={{ fontSize: 13, color: C.mutedText, fontWeight: "600", textAlign: "center" }}>No caregivers yet — invite someone below</Text>
+										<Text style={{ fontSize: 13, color: C.mutedText, fontFamily: "NunitoSans_600SemiBold", textAlign: "center" }}>No caregivers yet — invite someone below</Text>
 									</View>
 								)}
 							</View>
@@ -343,14 +343,14 @@ export function FamilySharingModal({
 							<>
 								{/* Role selector */}
 								<View style={{ gap: 10 }}>
-									<Text style={{ fontSize: 13, fontWeight: "800", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.5 }}>Their role</Text>
+									<Text style={{ fontSize: 13, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.5 }}>Their role</Text>
 									<RoleSelector value={inviteRole} onChange={setInviteRole} />
 								</View>
 
 								{/* Invite by email */}
 								<View style={{ gap: 12 }}>
 									<View style={{ gap: 4 }}>
-										<Text style={{ fontSize: 13, fontWeight: "800", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.5 }}>Invite by email</Text>
+										<Text style={{ fontSize: 13, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.5 }}>Invite by email</Text>
 										<Text style={{ fontSize: 12, color: C.mutedText }}>They must already have a Munch Sprouts account</Text>
 									</View>
 									<View style={{ flexDirection: "row", gap: 10 }}>
@@ -371,7 +371,7 @@ export function FamilySharingModal({
 											style={{ backgroundColor: shareEmail.trim() ? C.primaryPurple : C.borderLight, borderRadius: 14, paddingHorizontal: 16, alignItems: "center", justifyContent: "center", opacity: emailLoading ? 0.7 : 1 }}>
 											{emailLoading
 												? <ActivityIndicator color="#fff" size="small" />
-												: <Text style={{ fontWeight: "700", fontSize: 14, color: "#fff" }}>Invite</Text>}
+												: <Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: "#fff" }}>Invite</Text>}
 										</TouchableOpacity>
 									</View>
 								</View>
@@ -379,21 +379,21 @@ export function FamilySharingModal({
 								{/* Divider */}
 								<View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
 									<View style={{ flex: 1, height: 1, backgroundColor: C.borderLight }} />
-									<Text style={{ fontSize: 12, color: C.mutedText, fontWeight: "600" }}>or share an invite code</Text>
+									<Text style={{ fontSize: 12, color: C.mutedText, fontFamily: "NunitoSans_600SemiBold" }}>or share an invite code</Text>
 									<View style={{ flex: 1, height: 1, backgroundColor: C.borderLight }} />
 								</View>
 
 								{/* Generate invite code */}
 								<View style={{ gap: 12 }}>
 									<View style={{ gap: 4 }}>
-										<Text style={{ fontSize: 13, fontWeight: "800", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.5 }}>Invite code</Text>
+										<Text style={{ fontSize: 13, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.5 }}>Invite code</Text>
 										<Text style={{ fontSize: 12, color: C.mutedText }}>Generate a code to share — no account needed to join</Text>
 									</View>
 
 									{generatedCode ? (
 										<View style={{ backgroundColor: "#f5f3ff", borderRadius: 18, padding: 20, alignItems: "center", gap: 14, borderWidth: 2, borderColor: "#ede8f7" }}>
-											<Text style={{ fontSize: 11, fontWeight: "800", color: C.primaryPurple, textTransform: "uppercase", letterSpacing: 1.5 }}>Your Invite Code</Text>
-											<Text style={{ fontSize: 40, fontWeight: "900", color: C.primaryPurple, letterSpacing: 10 }}>{generatedCode}</Text>
+											<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: C.primaryPurple, textTransform: "uppercase", letterSpacing: 1.5 }}>Your Invite Code</Text>
+											<Text style={{ fontSize: 40, fontFamily: "PlusJakartaSans_700Bold", color: C.primaryPurple, letterSpacing: 10 }}>{generatedCode}</Text>
 											<Text style={{ fontSize: 12, color: C.mutedText, textAlign: "center" }}>Expires in 24 hours · Single use</Text>
 											<View style={{ flexDirection: "row", gap: 10, width: "100%" }}>
 												<TouchableOpacity
@@ -401,14 +401,14 @@ export function FamilySharingModal({
 													activeOpacity={0.85}
 													style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: C.primaryPurple, borderRadius: 14, paddingVertical: 13 }}>
 													<Icon name="share" size={16} color="#fff" />
-													<Text style={{ fontWeight: "700", fontSize: 14, color: "#fff" }}>Share Code</Text>
+													<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: "#fff" }}>Share Code</Text>
 												</TouchableOpacity>
 												<TouchableOpacity
 													onPress={() => setGeneratedCode(null)}
 													activeOpacity={0.85}
 													style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: C.bgPurple, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 16 }}>
 													<Icon name="refresh" size={16} color={C.mutedText} />
-													<Text style={{ fontWeight: "700", fontSize: 14, color: C.mutedText }}>New</Text>
+													<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: C.mutedText }}>New</Text>
 												</TouchableOpacity>
 											</View>
 										</View>
@@ -425,7 +425,7 @@ export function FamilySharingModal({
 														<Icon name="qr" size={18} color={C.primaryPurple} />
 													</View>
 													<View>
-														<Text style={{ fontWeight: "700", fontSize: 15, color: C.primaryPurple }}>Generate Invite Code</Text>
+														<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 15, color: C.primaryPurple }}>Generate Invite Code</Text>
 														<Text style={{ fontSize: 12, color: C.mutedText }}>Creates a 6-character code, valid 24 hrs</Text>
 													</View>
 												</>}
@@ -438,7 +438,7 @@ export function FamilySharingModal({
 						{/* ── Enter invite code (anyone can join another child) ── */}
 						<View style={{ gap: 12 }}>
 							<View style={{ gap: 4 }}>
-								<Text style={{ fontSize: 13, fontWeight: "800", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.5 }}>Enter invite code</Text>
+								<Text style={{ fontSize: 13, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.5 }}>Enter invite code</Text>
 								<Text style={{ fontSize: 12, color: C.mutedText }}>Have a code? Enter it below to join as a caregiver</Text>
 							</View>
 
@@ -454,7 +454,7 @@ export function FamilySharingModal({
 										? <ActivityIndicator color="#fff" />
 										: <>
 											<Icon name="users" size={17} color="#fff" />
-											<Text style={{ fontWeight: "700", fontSize: 15, color: "#fff" }}>Join as Caregiver</Text>
+											<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 15, color: "#fff" }}>Join as Caregiver</Text>
 										</>}
 								</TouchableOpacity>
 							</View>

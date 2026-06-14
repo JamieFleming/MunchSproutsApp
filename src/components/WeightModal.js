@@ -107,7 +107,7 @@ export function WeightModal({ visible, activeChild, defaultUnit = "lbs", onSave,
 
 								<Text style={{ fontSize: 13, color: C.mutedText }}>
 									Recording weight for{" "}
-									<Text style={{ fontWeight: "700", color: C.primaryPinkDark }}>
+									<Text style={{ fontFamily: "NunitoSans_700Bold", color: C.primaryPinkDark }}>
 										{activeChild.name}
 									</Text>
 								</Text>
@@ -131,7 +131,7 @@ export function WeightModal({ visible, activeChild, defaultUnit = "lbs", onSave,
 												key={u}
 												onPress={() => handleUnitChange(u)}
 												style={{ flex: 1, paddingVertical: 10, alignItems: "center", backgroundColor: unit === u ? C.primaryPurple : "transparent" }}>
-												<Text style={{ fontWeight: "700", fontSize: 13, color: unit === u ? C.white : C.mutedText }}>
+												<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 13, color: unit === u ? C.white : C.mutedText }}>
 													{u}
 												</Text>
 											</TouchableOpacity>
@@ -190,7 +190,7 @@ export function WeightModal({ visible, activeChild, defaultUnit = "lbs", onSave,
 										<Text style={{ fontSize: 12, color: C.mutedText, marginBottom: 4 }}>
 											Will be saved as
 										</Text>
-										<Text style={{ fontWeight: "800", fontSize: 16, color: C.primaryPurple }}>
+										<Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 16, color: C.primaryPurple }}>
 											{formatWeight(previewKg, "lbs")}  ·  {formatWeight(previewKg, "kg")}
 										</Text>
 									</View>

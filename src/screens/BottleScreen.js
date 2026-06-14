@@ -3,6 +3,7 @@ import {
 	View, Text, TextInput, TouchableOpacity, ScrollView, FlatList,
 	Modal, KeyboardAvoidingView, Platform, Alert,
 } from "react-native";
+import Svg, { Circle, Path } from "react-native-svg";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon } from "../components/Icon";
 import { PickerModal } from "../components/PickerModal";
@@ -96,7 +97,7 @@ const SymptomRow = memo(function SymptomRow({ sym, selected, onPress, isFirst })
 			<View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: selected ? sym.color + "22" : C.bgPurple, alignItems: "center", justifyContent: "center" }}>
 				<Icon name={sym.icon} size={20} color={selected ? sym.color : C.mutedText} />
 			</View>
-			<Text style={{ flex: 1, fontSize: 15, fontWeight: selected ? "700" : "500", color: selected ? sym.color : C.textCharcoal }}>{sym.label}</Text>
+			<Text style={{ flex: 1, fontSize: 15, fontFamily: selected ? "NunitoSans_700Bold" : "NunitoSans_400Regular", color: selected ? sym.color : C.textCharcoal }}>{sym.label}</Text>
 			<View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: selected ? sym.color : C.borderLight, backgroundColor: selected ? sym.color : "transparent", alignItems: "center", justifyContent: "center" }}>
 				{selected && <Icon name="check" size={12} color="#ffffff" />}
 			</View>
@@ -111,44 +112,44 @@ const BreastSideBtn = memo(function BreastSideBtn({ side, selected, onPress }) {
 		<TouchableOpacity
 			onPress={onPress}
 			activeOpacity={0.8}
-			style={{ width: "47%", alignItems: "center", paddingVertical: 14, borderRadius: 14, backgroundColor: selected ? "#f5d4f0" : C.bgPurple, borderWidth: 2, borderColor: selected ? "#7a2d6a" : "transparent", gap: 6 }}>
+			style={{ width: "47%", alignItems: "center", paddingVertical: 14, borderRadius: 14, backgroundColor: selected ? "#f5d4f0" : C.bgPurple, borderWidth: selected ? 2 : 1.5, borderColor: selected ? "#7a2d6a" : C.borderLight, gap: 6 }}>
 			{isExpressed ? (
 				<Icon name="drop" size={20} color={selected ? "#7a2d6a" : C.mutedText} />
 			) : (
 				<View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: selected ? "#7a2d6a22" : C.borderLight, alignItems: "center", justifyContent: "center" }}>
-					<Text style={{ fontSize: 11, fontWeight: "800", color: selected ? "#7a2d6a" : C.mutedText }}>{side.symbol}</Text>
+					<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: selected ? "#7a2d6a" : C.mutedText }}>{side.symbol}</Text>
 				</View>
 			)}
-			<Text style={{ fontSize: 12, fontWeight: "700", color: selected ? "#7a2d6a" : C.mutedText, textAlign: "center" }}>{side.label}</Text>
+			<Text style={{ fontSize: 12, fontFamily: "NunitoSans_700Bold", color: selected ? "#7a2d6a" : C.mutedText, textAlign: "center" }}>{side.label}</Text>
 		</TouchableOpacity>
 	);
 });
 
-const BottleEntryRow = memo(function BottleEntryRow({ entry: e, today, onEdit, onDelete }) {
+const BottleEntryRow = memo(function BottleEntryRow({ entry: e, today, onEdit, onDelete, isFirst }) {
 	const { C } = useTheme();
 	const t = typeStyle(e.type);
 	return (
-		<View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, gap: 12 }}>
+		<View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, gap: 12, borderTopWidth: isFirst ? 0 : 1, borderTopColor: C.borderLight }}>
 			{/* Time + type icon */}
 			<View style={{ alignItems: "center", minWidth: 44 }}>
 				<View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: t.bg, alignItems: "center", justifyContent: "center" }}>
 					<Icon name="bottle" size={18} color={t.color} />
 				</View>
-				<Text style={{ fontSize: 10, color: C.mutedText, fontWeight: "600", marginTop: 3 }}>{formatTime(e.time)}</Text>
+				<Text style={{ fontSize: 10, color: C.mutedText, fontFamily: "NunitoSans_600SemiBold", marginTop: 3 }}>{formatTime(e.time)}</Text>
 			</View>
 
 			{/* Details */}
 			<View style={{ flex: 1 }}>
 				<View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-					<Text style={{ fontWeight: "700", fontSize: 15, color: C.primaryPinkDark }}>{e.amount != null ? `${e.amount} ${e.unit}` : "—"}</Text>
+					<Text style={{ fontFamily: "PlusJakartaSans_600SemiBold", fontSize: 15, color: C.primaryPinkDark }}>{e.amount != null ? `${e.amount} ${e.unit}` : "—"}</Text>
 					<View style={{ backgroundColor: t.bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-						<Text style={{ fontSize: 10, fontWeight: "700", color: t.color }}>{t.label}</Text>
+						<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: t.color }}>{t.label}</Text>
 					</View>
 					{e.type === "breast" && e.breastSide && (() => {
 						const bs = BREAST_SIDES.find((s) => s.id === e.breastSide);
 						return bs ? (
 							<View style={{ backgroundColor: "#f5d4f0", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-								<Text style={{ fontSize: 10, fontWeight: "700", color: "#7a2d6a" }}>{bs.short}</Text>
+								<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: "#7a2d6a" }}>{bs.short}</Text>
 							</View>
 						) : null;
 					})()}
@@ -156,14 +157,17 @@ const BottleEntryRow = memo(function BottleEntryRow({ entry: e, today, onEdit, o
 						const label = formulaDisplayLabel(e.formulaBrand, e.formulaCustom);
 						return label ? (
 							<View style={{ backgroundColor: "#fde8cc", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-								<Text style={{ fontSize: 10, fontWeight: "700", color: "#a85a1a" }}>{label}</Text>
+								<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: "#a85a1a" }}>{label}</Text>
 							</View>
 						) : null;
 					})()}
 				</View>
 				{e.amount != null && e.unit === "oz" && <Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>≈ {toMl(e.amount, e.unit)} ml</Text>}
 				{e.type === "breast" && e.durationMins ? (
-					<Text style={{ fontSize: 11, color: "#7a2d6a", fontWeight: "600", marginTop: 2 }}>⏱ {e.durationMins} min{e.durationMins !== 1 ? "s" : ""} on breast</Text>
+					<View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
+						<Icon name="clock" size={11} color="#7a2d6a" />
+						<Text style={{ fontSize: 11, color: "#7a2d6a", fontFamily: "NunitoSans_600SemiBold" }}>{e.durationMins} min{e.durationMins !== 1 ? "s" : ""} on breast</Text>
+					</View>
 				) : null}
 				{e.notes ? <Text style={{ fontSize: 12, color: C.mutedText, marginTop: 3 }}>{e.notes}</Text> : null}
 				{Array.isArray(e.symptoms) && e.symptoms.length > 0 && (
@@ -175,7 +179,7 @@ const BottleEntryRow = memo(function BottleEntryRow({ entry: e, today, onEdit, o
 							return (
 								<View key={sid} style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: sym.bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
 									<Icon name={sym.icon} size={10} color={sym.color} />
-									<Text style={{ fontSize: 10, fontWeight: "700", color: sym.color }}>{label}</Text>
+									<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: sym.color }}>{label}</Text>
 								</View>
 							);
 						})}
@@ -301,13 +305,13 @@ export function BottleScreen({ bottleLog, childName, onAdd, onEdit, onDelete, qu
 				ListHeaderComponent={
 					<>
 						{/* Today's summary */}
-						<View style={{ backgroundColor: C.statBlueBg, borderRadius: 20, padding: 18, flexDirection: "row", alignItems: "center", gap: 16 }}>
+						<View style={[s.card, { backgroundColor: C.bgPurple, borderRadius: 20, flexDirection: "row", alignItems: "center", gap: 16 }]}>
 							<View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: "#2a5f8f22", alignItems: "center", justifyContent: "center" }}>
 								<Icon name="bottle" size={28} color="#2a5f8f" />
 							</View>
 							<View style={{ flex: 1 }}>
-								<Text style={{ fontSize: 12, fontWeight: "700", color: "#2a5f8f", textTransform: "uppercase", letterSpacing: 0.5 }}>Today{childName ? ` · ${childName}` : ""}</Text>
-								<Text style={{ fontSize: 26, fontWeight: "800", color: "#2a5f8f", marginTop: 2 }}>{todayTotalMl} ml</Text>
+								<Text style={{ fontSize: 12, fontFamily: "NunitoSans_700Bold", color: "#2a5f8f", textTransform: "uppercase", letterSpacing: 0.5 }}>Today{childName ? ` · ${childName}` : ""}</Text>
+								<Text style={{ fontSize: 26, fontFamily: "NunitoSans_800ExtraBold", color: "#2a5f8f", marginTop: 2 }}>{todayTotalMl} ml</Text>
 								<Text style={{ fontSize: 12, color: "#2a5f8f99", marginTop: 2 }}>
 									{todayEntries.length === 0 ? "No feeds logged yet" : `${todayEntries.length} feed${todayEntries.length !== 1 ? "s" : ""} today`}
 								</Text>
@@ -320,7 +324,7 @@ export function BottleScreen({ bottleLog, childName, onAdd, onEdit, onDelete, qu
 										return (
 											<View key={t.id} style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 4 }}>
 												<View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: t.color }} />
-												<Text style={{ fontSize: 11, color: "#2a5f8f", fontWeight: "600" }}>{cnt}× {t.label}</Text>
+												<Text style={{ fontSize: 11, color: "#2a5f8f", fontFamily: "NunitoSans_600SemiBold" }}>{cnt}× {t.label}</Text>
 											</View>
 										);
 									})}
@@ -333,19 +337,24 @@ export function BottleScreen({ bottleLog, childName, onAdd, onEdit, onDelete, qu
 							{MILK_TYPES.map((t) => (
 								<View key={t.id} style={{ flex: 1, backgroundColor: t.bg, borderRadius: 12, padding: 10, alignItems: "center" }}>
 									<View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: t.color, marginBottom: 4 }} />
-									<Text style={{ fontSize: 10, fontWeight: "700", color: t.color, textAlign: "center" }}>{t.label}</Text>
+									<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: t.color, textAlign: "center" }}>{t.label}</Text>
 								</View>
 							))}
 						</View>
 
 						{/* Empty state */}
 						{bottleLog.length === 0 && (
-							<View style={[s.card, { alignItems: "center", paddingVertical: 40 }]}>
-								<Icon name="bottle" size={48} color={C.secondaryPurple} />
-								<Text style={{ color: C.mutedText, fontWeight: "600", fontSize: 15, marginTop: 14, marginBottom: 12 }}>No bottles logged yet</Text>
-								<TouchableOpacity onPress={openAdd} style={[s.btnPrimary, { paddingHorizontal: 28, width: "auto" }]}>
-									<Text style={s.btnPrimaryText}>Log First Bottle</Text>
-								</TouchableOpacity>
+							<View style={[s.card, { alignItems: "center", paddingVertical: 40, paddingHorizontal: 28 }]}>
+								<Svg width={80} height={80} viewBox="0 0 80 80">
+									<Circle cx="40" cy="40" r="38" fill={C.bgPurple} />
+									<Path fill={C.primaryPurple + "30"} stroke={C.primaryPurple} strokeWidth="2.5" strokeLinecap="round" d="M30 20 Q28 16 30 14 L50 14 Q52 16 50 20 L50 56 Q50 62 40 62 Q30 62 30 56 Z" />
+									<Path fill={C.primaryPurple + "60"} d="M31 36 Q31 28 40 28 Q49 28 49 36 L49 50 Q49 58 40 58 Q31 58 31 50 Z" />
+									<Path stroke={C.primaryPurple} strokeWidth="2" strokeLinecap="round" fill="none" d="M34 20 L46 20" />
+									<Path stroke="#f9a825" strokeWidth="1.5" strokeLinecap="round" fill="none" d="M18 22 L18 17 M15 19 L21 19" />
+									<Path stroke="#7dcf9e" strokeWidth="1.5" strokeLinecap="round" fill="none" d="M62 30 L62 25 M59 27 L65 27" />
+								</Svg>
+								<Text style={{ fontFamily: "PlusJakartaSans_700Bold", fontSize: 20, color: C.primaryPinkDark, marginTop: 18, marginBottom: 8 }}>No feeds logged yet</Text>
+								<Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 14, color: C.mutedText, textAlign: "center", lineHeight: 21 }}>Tap the button below to log your baby's first feed</Text>
 							</View>
 						)}
 					</>
@@ -354,14 +363,12 @@ export function BottleScreen({ bottleLog, childName, onAdd, onEdit, onDelete, qu
 					<View style={s.card}>
 						<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
 							<Text style={s.sectionTitle}>{date === today ? "Today" : formatDate(date)}</Text>
-							<Text style={{ fontSize: 13, color: C.primaryPurple, fontWeight: "700" }}>
+							<Text style={{ fontSize: 13, color: C.primaryPurple, fontFamily: "NunitoSans_700Bold" }}>
 								{entries.reduce((sum, e) => sum + (e.amount != null ? toMl(e.amount, e.unit) : 0), 0)} ml total
 							</Text>
 						</View>
 						{entries.map((e, i) => (
-							<View key={e.id} style={{ borderBottomWidth: i < entries.length - 1 ? 1 : 0, borderBottomColor: C.borderLight }}>
-								<BottleEntryRow entry={e} today={today} onEdit={openEdit} onDelete={onDelete} />
-							</View>
+							<BottleEntryRow key={e.id} entry={e} today={today} onEdit={openEdit} onDelete={onDelete} isFirst={i === 0} />
 						))}
 					</View>
 				)}
@@ -388,14 +395,14 @@ export function BottleScreen({ bottleLog, childName, onAdd, onEdit, onDelete, qu
 									<Text style={s.label}>Time</Text>
 									<View style={{ flexDirection: "row", gap: 10 }}>
 										<TouchableOpacity onPress={() => setShowHourPicker(true)} style={[s.input, { flex: 1, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}>
-											<Text style={{ color: C.textCharcoal, fontWeight: "600" }}>{form.hour}</Text>
+											<Text style={{ color: C.textCharcoal, fontFamily: "NunitoSans_600SemiBold" }}>{form.hour}</Text>
 											<Icon name="chevDown" size={14} color={C.mutedText} />
 										</TouchableOpacity>
 										<View style={{ justifyContent: "center" }}>
-											<Text style={{ fontWeight: "700", color: C.mutedText, fontSize: 18 }}>:</Text>
+											<Text style={{ fontFamily: "NunitoSans_700Bold", color: C.mutedText, fontSize: 18 }}>:</Text>
 										</View>
 										<TouchableOpacity onPress={() => setShowMinutePicker(true)} style={[s.input, { flex: 1, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}>
-											<Text style={{ color: C.textCharcoal, fontWeight: "600" }}>{form.minute}</Text>
+											<Text style={{ color: C.textCharcoal, fontFamily: "NunitoSans_600SemiBold" }}>{form.minute}</Text>
 											<Icon name="chevDown" size={14} color={C.mutedText} />
 										</TouchableOpacity>
 									</View>
@@ -411,10 +418,10 @@ export function BottleScreen({ bottleLog, childName, onAdd, onEdit, onDelete, qu
 												<TouchableOpacity
 													key={t.id}
 													onPress={() => set("type", t.id)}
-													style={{ flex: 1, alignItems: "center", paddingVertical: 12, borderRadius: 14, backgroundColor: sel ? t.bg : C.bgPurple, borderWidth: 2, borderColor: sel ? t.color : "transparent" }}
+													style={{ flex: 1, alignItems: "center", paddingVertical: 12, borderRadius: 14, backgroundColor: sel ? t.bg : C.white, borderWidth: sel ? 2 : 1.5, borderColor: sel ? t.color : C.borderLight }}
 													activeOpacity={0.8}>
 													<Icon name="drop" size={18} color={sel ? t.color : C.mutedText} />
-													<Text style={{ fontSize: 10, fontWeight: "700", color: sel ? t.color : C.mutedText, marginTop: 4, textAlign: "center" }}>{t.label}</Text>
+													<Text style={{ fontSize: 13, fontFamily: "NunitoSans_700Bold", color: sel ? t.color : C.mutedText, marginTop: 4, textAlign: "center" }}>{t.label}</Text>
 												</TouchableOpacity>
 											);
 										})}
@@ -429,7 +436,7 @@ export function BottleScreen({ bottleLog, childName, onAdd, onEdit, onDelete, qu
 											onPress={() => setShowFormulaPicker(true)}
 											activeOpacity={0.8}
 											style={[s.input, { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: C.white, borderWidth: form.formulaBrand ? 1.5 : 1, borderColor: form.formulaBrand ? "#a85a1a" : C.borderLight }]}>
-											<Text style={{ fontWeight: form.formulaBrand ? "700" : "400", color: form.formulaBrand ? "#a85a1a" : C.mutedText, fontSize: 15 }}>
+											<Text style={{ fontFamily: form.formulaBrand ? "NunitoSans_700Bold" : "NunitoSans_400Regular", color: form.formulaBrand ? "#a85a1a" : C.mutedText, fontSize: 15 }}>
 												{form.formulaBrand ? formulaDisplayLabel(form.formulaBrand, form.formulaCustom) || "Select formula…" : "Select formula…"}
 											</Text>
 											<Icon name="chevDown" size={14} color={form.formulaBrand ? "#a85a1a" : C.mutedText} />
@@ -462,7 +469,7 @@ export function BottleScreen({ bottleLog, childName, onAdd, onEdit, onDelete, qu
 												return (
 													<TouchableOpacity key={chip} onPress={() => set("durationMins", sel ? "" : chip)} activeOpacity={0.75}
 														style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: sel ? "#7a2d6a" : "#f5d4f0", borderWidth: 1.5, borderColor: sel ? "#7a2d6a" : "#e0b8d8" }}>
-														<Text style={{ fontSize: 13, fontWeight: "700", color: sel ? "#ffffff" : "#7a2d6a" }}>{chip} mins</Text>
+														<Text style={{ fontSize: 13, fontFamily: "NunitoSans_700Bold", color: sel ? "#ffffff" : "#7a2d6a" }}>{chip} mins</Text>
 													</TouchableOpacity>
 												);
 											})}
@@ -477,7 +484,7 @@ export function BottleScreen({ bottleLog, childName, onAdd, onEdit, onDelete, qu
 												placeholderTextColor={C.mutedText}
 											/>
 											<View style={{ backgroundColor: "#f5d4f0", borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12 }}>
-												<Text style={{ fontWeight: "700", color: "#7a2d6a", fontSize: 14 }}>mins</Text>
+												<Text style={{ fontFamily: "NunitoSans_700Bold", color: "#7a2d6a", fontSize: 14 }}>mins</Text>
 											</View>
 										</View>
 									</View>
@@ -488,10 +495,10 @@ export function BottleScreen({ bottleLog, childName, onAdd, onEdit, onDelete, qu
 									<Text style={s.label}>Amount</Text>
 									<View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
 										<TextInput value={form.amount} onChangeText={(v) => set("amount", v)} placeholder="e.g. 150" keyboardType="decimal-pad" style={[s.input, { flex: 1, backgroundColor: C.white }]} placeholderTextColor={C.mutedText} />
-										<View style={{ flexDirection: "row", borderRadius: 12, overflow: "hidden", borderWidth: 1.5, borderColor: C.borderLight }}>
+										<View style={{ flexDirection: "row", borderRadius: 12, overflow: "hidden", borderWidth: 1.5, borderColor: C.borderLight, backgroundColor: C.bgPurple }}>
 											{["ml", "oz"].map((u) => (
-												<TouchableOpacity key={u} onPress={() => set("unit", u)} style={{ paddingHorizontal: 18, paddingVertical: 12, backgroundColor: form.unit === u ? C.primaryPurple : C.white }}>
-													<Text style={{ fontWeight: "700", fontSize: 14, color: form.unit === u ? C.white : C.mutedText }}>{u}</Text>
+												<TouchableOpacity key={u} onPress={() => set("unit", u)} style={{ paddingHorizontal: 18, paddingVertical: 12, backgroundColor: form.unit === u ? C.primaryPurple : "transparent" }}>
+													<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: form.unit === u ? C.white : C.mutedText }}>{u}</Text>
 												</TouchableOpacity>
 											))}
 										</View>
@@ -511,7 +518,7 @@ export function BottleScreen({ bottleLog, childName, onAdd, onEdit, onDelete, qu
 										<Text style={s.label}>Symptoms after feeding</Text>
 										{!isPro && (
 											<View style={{ backgroundColor: "#e8a020", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-												<Text style={{ fontSize: 10, fontWeight: "800", color: "#fff" }}>PRO</Text>
+												<Text style={{ fontSize: 10, fontFamily: "NunitoSans_800ExtraBold", color: "#fff" }}>PRO</Text>
 											</View>
 										)}
 									</View>
@@ -542,7 +549,7 @@ export function BottleScreen({ bottleLog, childName, onAdd, onEdit, onDelete, qu
 												<Icon name="lock" size={20} color="#9b7fe8" />
 											</View>
 											<View style={{ flex: 1 }}>
-												<Text style={{ fontWeight: "800", fontSize: 14, color: "#ffffff", marginBottom: 3 }}>Symptom Tracking · Pro</Text>
+												<Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 14, color: "#ffffff", marginBottom: 3 }}>Symptom Tracking · Pro</Text>
 												<Text style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", lineHeight: 17 }}>Track reflux, wind, fussiness and more after each feed. Upgrade to unlock.</Text>
 											</View>
 											<Icon name="chevRight" size={16} color="#9b7fe8" />
@@ -565,13 +572,13 @@ export function BottleScreen({ bottleLog, childName, onAdd, onEdit, onDelete, qu
 										{SPECIALISED_FORMULAS.map((group) => (
 											<View key={group.group}>
 												<View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6 }}>
-													<Text style={{ fontSize: 11, fontWeight: "800", color: "#a85a1a", textTransform: "uppercase", letterSpacing: 0.6 }}>{group.group}</Text>
+													<Text style={{ fontSize: 11, fontFamily: "NunitoSans_800ExtraBold", color: "#a85a1a", textTransform: "uppercase", letterSpacing: 0.6 }}>{group.group}</Text>
 												</View>
 												{group.options.map((opt) => {
 													const sel = form.formulaBrand === opt.id;
 													return (
 														<TouchableOpacity key={opt.id} onPress={() => { set("formulaBrand", opt.id); if (opt.id !== "other") set("formulaCustom", ""); setShowFormulaPicker(false); }} style={[s.pickerItem, sel && { backgroundColor: "#fde8cc" }]}>
-															<Text style={[s.pickerItemText, sel && { color: "#a85a1a", fontWeight: "700" }]}>{opt.label}</Text>
+															<Text style={[s.pickerItemText, sel && { color: "#a85a1a", fontFamily: "NunitoSans_700Bold" }]}>{opt.label}</Text>
 															{sel && <Icon name="check" size={15} color="#a85a1a" />}
 														</TouchableOpacity>
 													);
