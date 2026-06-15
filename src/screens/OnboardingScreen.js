@@ -21,7 +21,7 @@ import { DateField } from "../components/DatePickerModal";
 import { pickImageAsBase64, uploadChildPhoto, isLocalUri } from "../helpers";
 import { updateUserProfile } from "../firebaseHooks";
 import Svg, { Circle, Path } from "react-native-svg";
-import Icon from "../components/Icon";
+import { Icon } from "../components/Icon";
 
 // ── Step indicator ─────────────────────────────────────────────────────────────
 
@@ -313,7 +313,7 @@ export function OnboardingScreen({ user }) {
 	const [step, setStep] = useState(0);
 
 	return (
-		<SafeAreaView style={{ flex: 1, backgroundColor: C.screen }}>
+		<SafeAreaView style={{ flex: 1, backgroundColor: C.bgMain }}>
 			{/* Progress dots — shown above each step */}
 			<View style={{ paddingTop: 20 }}>
 				<StepDots step={step} />
