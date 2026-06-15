@@ -210,7 +210,7 @@ export function RemindersModal({ visible, onClose, prefs: initialPrefs, onSave }
 							}}>
 							<Icon name="bell" size={18} color={C.primaryPurple} />
 						</View>
-						<Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 20, color: C.primaryPinkDark }}>
+						<Text style={{ fontFamily: "PlusJakartaSans_700Bold", fontSize: 20, color: C.primaryPinkDark }}>
 							Reminders
 						</Text>
 					</View>

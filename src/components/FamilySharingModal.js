@@ -84,7 +84,7 @@ function MemberCard({ email, isYou, role, onRemove }) {
 			{/* Name + role */}
 			<View style={{ flex: 1 }}>
 				<Text style={{ fontSize: 16, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, marginBottom: 2 }}>{name}</Text>
-				{!isYou && <Text style={{ fontSize: 12, color: C.mutedText }}>{email}</Text>}
+				{!isYou && <Text style={{ fontSize: 12, fontFamily: "NunitoSans_400Regular", color: C.mutedText }}>{email}</Text>}
 				<View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 5 }}>
 					<View style={{ borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3, backgroundColor: roleStyle.bg }}>
 						<Text style={{ fontSize: 11, fontFamily: "NunitoSans_700Bold", color: roleStyle.color }}>{roleStyle.label}</Text>
@@ -242,13 +242,13 @@ export function FamilySharingModal({
 
 	return (
 		<Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={handleClose}>
-			<View style={{ flex: 1, backgroundColor: C.screen }}>
+			<View style={{ flex: 1, backgroundColor: C.bgMain }}>
 
 				{/* Header */}
 				<View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 18, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
 					<View style={{ flex: 1 }}>
 						<Text style={{ fontSize: 20, fontFamily: "PlusJakartaSans_700Bold", color: C.textCharcoal }}>Parents & Caregivers</Text>
-						<Text style={{ fontSize: 13, color: C.mutedText, marginTop: 2 }}>Manage who has access to your child's data</Text>
+						<Text style={{ fontSize: 13, fontFamily: "NunitoSans_400Regular", color: C.mutedText, marginTop: 2 }}>Manage who has access to your child's data</Text>
 					</View>
 					<TouchableOpacity onPress={handleClose} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center" }}>
 						<Icon name="close" size={16} color={C.mutedText} />
@@ -288,7 +288,7 @@ export function FamilySharingModal({
 							<View style={{ gap: 12 }}>
 								<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
 									<Text style={{ fontSize: 13, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.5 }}>Active users</Text>
-									<Text style={{ fontSize: 12, color: C.mutedText }}>{1 + sharedWith.length} member{sharedWith.length !== 0 ? "s" : ""}</Text>
+									<Text style={{ fontSize: 12, fontFamily: "NunitoSans_400Regular", color: C.mutedText }}>{1 + sharedWith.length} member{sharedWith.length !== 0 ? "s" : ""}</Text>
 								</View>
 
 								{/* Your card */}
@@ -351,7 +351,7 @@ export function FamilySharingModal({
 								<View style={{ gap: 12 }}>
 									<View style={{ gap: 4 }}>
 										<Text style={{ fontSize: 13, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.5 }}>Invite by email</Text>
-										<Text style={{ fontSize: 12, color: C.mutedText }}>They must already have a Munch Sprouts account</Text>
+										<Text style={{ fontSize: 12, fontFamily: "NunitoSans_400Regular", color: C.mutedText }}>They must already have a Munch Sprouts account</Text>
 									</View>
 									<View style={{ flexDirection: "row", gap: 10 }}>
 										<TextInput
@@ -387,7 +387,7 @@ export function FamilySharingModal({
 								<View style={{ gap: 12 }}>
 									<View style={{ gap: 4 }}>
 										<Text style={{ fontSize: 13, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.5 }}>Invite code</Text>
-										<Text style={{ fontSize: 12, color: C.mutedText }}>Generate a code to share — no account needed to join</Text>
+										<Text style={{ fontSize: 12, fontFamily: "NunitoSans_400Regular", color: C.mutedText }}>Generate a code to share — no account needed to join</Text>
 									</View>
 
 									{generatedCode ? (
@@ -426,7 +426,7 @@ export function FamilySharingModal({
 													</View>
 													<View>
 														<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 15, color: C.primaryPurple }}>Generate Invite Code</Text>
-														<Text style={{ fontSize: 12, color: C.mutedText }}>Creates a 6-character code, valid 24 hrs</Text>
+														<Text style={{ fontSize: 12, fontFamily: "NunitoSans_400Regular", color: C.mutedText }}>Creates a 6-character code, valid 24 hrs</Text>
 													</View>
 												</>}
 										</TouchableOpacity>
@@ -439,7 +439,7 @@ export function FamilySharingModal({
 						<View style={{ gap: 12 }}>
 							<View style={{ gap: 4 }}>
 								<Text style={{ fontSize: 13, fontFamily: "NunitoSans_800ExtraBold", color: C.textCharcoal, textTransform: "uppercase", letterSpacing: 0.5 }}>Enter invite code</Text>
-								<Text style={{ fontSize: 12, color: C.mutedText }}>Have a code? Enter it below to join as a caregiver</Text>
+								<Text style={{ fontSize: 12, fontFamily: "NunitoSans_400Regular", color: C.mutedText }}>Have a code? Enter it below to join as a caregiver</Text>
 							</View>
 
 							<View style={{ backgroundColor: C.white, borderRadius: 18, padding: 20, gap: 16, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>

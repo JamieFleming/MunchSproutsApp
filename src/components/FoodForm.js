@@ -220,7 +220,7 @@ export function FoodForm({
 						/>
 						<Text style={{ fontSize: 14, fontFamily: "NunitoSans_700Bold", color: C.mutedText }}>ml</Text>
 					</View>
-					<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 6 }}>
+					<Text style={{ fontSize: 11, fontFamily: "NunitoSans_400Regular", color: C.mutedText, marginTop: 6 }}>
 						Record how much your baby drank
 					</Text>
 				</View>
@@ -285,7 +285,7 @@ export function FoodForm({
 			{/* ── Allergens ── */}
 			<View>
 				<Text style={s.label}>Contains Allergens (optional)</Text>
-				<Text style={{ fontSize: 11, color: C.mutedText, marginBottom: 8, marginTop: -4 }}>
+				<Text style={{ fontSize: 11, fontFamily: "NunitoSans_400Regular", color: C.mutedText, marginBottom: 8, marginTop: -4 }}>
 					Tap to mark which allergens this food introduces
 				</Text>
 				<View style={{ flexDirection: "row", flexWrap: "wrap" }}>
@@ -433,7 +433,7 @@ export function FoodForm({
 							<Text style={{ fontSize: 13, color: C.mutedText, fontFamily: "NunitoSans_600SemiBold" }}>
 								Photo memories — Pro only
 							</Text>
-							<Text style={{ fontSize: 11, color: C.mutedText, textAlign: "center", paddingHorizontal: 20 }}>
+							<Text style={{ fontSize: 11, fontFamily: "NunitoSans_400Regular", color: C.mutedText, textAlign: "center", paddingHorizontal: 20 }}>
 								Upgrade to Pro to attach photos to food log entries
 							</Text>
 						</View>
