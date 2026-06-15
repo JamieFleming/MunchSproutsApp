@@ -301,12 +301,11 @@ export default function AuthScreen() {
 					keyboardShouldPersistTaps="handled"
 					showsVerticalScrollIndicator={false}>
 					<View style={{ alignItems: "center", marginBottom: 32 }}>
-						<Svg width={64} height={64} viewBox="0 0 64 64">
-							<Circle cx="32" cy="32" r="30" fill={C.bgPurple} />
-							<Path stroke="#7dcf9e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" d="M32 52 L32 28" />
-							<Path stroke="#7dcf9e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="#7dcf9e30" d="M32 40 Q20 36 18 24 Q30 22 32 34 Z" />
-							<Path stroke="#7dcf9e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="#7dcf9e30" d="M32 36 Q44 32 46 20 Q34 18 32 30 Z" />
-						</Svg>
+						<Image
+							source={require("../../assets/logo.png")}
+							style={{ width: 80, height: 80, borderRadius: 20 }}
+							resizeMode="contain"
+						/>
 						<Text style={{ fontFamily: "PlusJakartaSans_700Bold", fontSize: 26, color: C.primaryPinkDark, marginTop: 12, letterSpacing: 0.3 }}>MunchSprouts</Text>
 						<Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 14, color: C.mutedText, marginTop: 4 }}>Reset Your Password</Text>
 					</View>
@@ -363,12 +362,11 @@ export default function AuthScreen() {
 				keyboardShouldPersistTaps="handled"
 				showsVerticalScrollIndicator={false}>
 				<View style={{ alignItems: "center", marginBottom: 32 }}>
-					<Svg width={64} height={64} viewBox="0 0 64 64">
-						<Circle cx="32" cy="32" r="30" fill={C.bgPurple} />
-						<Path stroke="#7dcf9e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" d="M32 52 L32 28" />
-						<Path stroke="#7dcf9e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="#7dcf9e30" d="M32 40 Q20 36 18 24 Q30 22 32 34 Z" />
-						<Path stroke="#7dcf9e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="#7dcf9e30" d="M32 36 Q44 32 46 20 Q34 18 32 30 Z" />
-					</Svg>
+					<Image
+						source={require("../../assets/logo.png")}
+						style={{ width: 80, height: 80, borderRadius: 20 }}
+						resizeMode="contain"
+					/>
 					<Text style={{ fontFamily: "PlusJakartaSans_700Bold", fontSize: 26, color: C.primaryPinkDark, marginTop: 12, letterSpacing: 0.3 }}>MunchSprouts</Text>
 					<Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 14, color: C.mutedText, marginTop: 4 }}>Your baby's food journey</Text>
 				</View>
