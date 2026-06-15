@@ -19,7 +19,7 @@ import {
 	deleteDoc,
 	updateDoc,
 } from "firebase/firestore";
-import { db as firestoreDb } from "./firebase";
+import { db as firestoreDb } from "./src/firebase";
 import {
 	View,
 	Text,
@@ -64,8 +64,8 @@ import {
 	addWeightEntry as fbAddWeightEntry,
 	updateWeightEntry as fbUpdateWeightEntry,
 	deleteWeightEntry as fbDeleteWeightEntry,
-} from "./firebaseHooks";
-import AuthScreen from "./AuthScreen";
+} from "./src/firebaseHooks";
+import AuthScreen from "./src/screens/AuthScreen";
 import Purchases, { LOG_LEVEL } from "react-native-purchases";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -1545,7 +1545,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 		const { customerInfo } = await Purchases.purchasePackage(pkg);
 		if (customerInfo.entitlements.active["pro"]) {
 			const { doc, updateDoc } = await import("firebase/firestore");
-			const { db: firedb } = await import("./firebase");
+			const { db: firedb } = await import("./src/firebase");
 			await updateDoc(doc(firedb, "users", user.uid), { plan: "pro" });
 			setIsPro(true);
 			Alert.alert(
@@ -1610,7 +1610,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 			const customerInfo = await Purchases.restorePurchases();
 			if (customerInfo.entitlements.active["pro"]) {
 				const { doc, updateDoc } = await import("firebase/firestore");
-				const { db: firedb } = await import("./firebase");
+				const { db: firedb } = await import("./src/firebase");
 				await updateDoc(doc(firedb, "users", user.uid), { plan: "pro" });
 				setIsPro(true);
 				Alert.alert("Restored ✓", "Your Pro purchase has been restored.");
@@ -1648,7 +1648,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 				where,
 				getDocs: fsGetDocs,
 			} = await import("firebase/firestore");
-			const { db: firedb } = await import("./firebase");
+			const { db: firedb } = await import("./src/firebase");
 
 			if (isRemove) {
 				const child = children.find((c) => c.id === childId);
@@ -1744,7 +1744,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 
 	const handleGenerateInviteCode = async (childId, role = "caregiver") => {
 		const { httpsCallable } = await import("firebase/functions");
-		const { functions: fns } = await import("./firebase");
+		const { functions: fns } = await import("./src/firebase");
 		const fn = httpsCallable(fns, "generateInviteCode");
 		const result = await fn({ childId, role });
 		return result.data.code;
@@ -1752,7 +1752,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 
 	const handleJoinViaCode = async (code) => {
 		const { httpsCallable } = await import("firebase/functions");
-		const { functions: fns } = await import("./firebase");
+		const { functions: fns } = await import("./src/firebase");
 		const fn = httpsCallable(fns, "joinViaInviteCode");
 		const result = await fn({ code });
 		return result.data; // { childName }

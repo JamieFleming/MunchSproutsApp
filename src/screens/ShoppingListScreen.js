@@ -28,7 +28,7 @@ function listDocSegments(userId, list) {
 export async function loadAllLists(userId, childId) {
 	try {
 		const { collection, getDocs, doc, getDoc } = await import("firebase/firestore");
-		const { db } = await import("../../firebase");
+		const { db } = await import("../firebase");
 
 		// Always include the default family shared list when a child is active.
 		// It lives at children/{childId}/lists/shopping and is always present.
@@ -87,7 +87,7 @@ export async function loadAllLists(userId, childId) {
 async function loadListItems(userId, list) {
 	try {
 		const { doc, getDoc } = await import("firebase/firestore");
-		const { db } = await import("../../firebase");
+		const { db } = await import("../firebase");
 		const snap = await getDoc(doc(db, ...listDocSegments(userId, list)));
 		return snap.exists() ? (snap.data().items || []) : [];
 	} catch { return []; }
@@ -96,7 +96,7 @@ async function loadListItems(userId, list) {
 async function persistListItems(userId, list, items) {
 	try {
 		const { doc, setDoc } = await import("firebase/firestore");
-		const { db } = await import("../../firebase");
+		const { db } = await import("../firebase");
 		await setDoc(
 			doc(db, ...listDocSegments(userId, list)),
 			{ name: list.name, items, updatedAt: new Date().toISOString() },
@@ -109,7 +109,7 @@ async function createListDoc(userId, name) {
 	try {
 		const id = genId();
 		const { doc, setDoc } = await import("firebase/firestore");
-		const { db } = await import("../../firebase");
+		const { db } = await import("../firebase");
 		await setDoc(doc(db, "users", userId, "lists", id), {
 			name,
 			items: [],
@@ -123,7 +123,7 @@ async function createListDoc(userId, name) {
 async function renameListDoc(userId, list, newName) {
 	try {
 		const { doc, setDoc } = await import("firebase/firestore");
-		const { db } = await import("../../firebase");
+		const { db } = await import("../firebase");
 		await setDoc(doc(db, ...listDocSegments(userId, list)), { name: newName }, { merge: true });
 	} catch { /* silent */ }
 }
@@ -131,7 +131,7 @@ async function renameListDoc(userId, list, newName) {
 async function deleteListDoc(userId, list) {
 	try {
 		const { doc, deleteDoc } = await import("firebase/firestore");
-		const { db } = await import("../../firebase");
+		const { db } = await import("../firebase");
 		await deleteDoc(doc(db, ...listDocSegments(userId, list)));
 	} catch { /* silent */ }
 }
@@ -139,7 +139,7 @@ async function deleteListDoc(userId, list) {
 async function moveListPath(userId, list, makeShared, childId, currentItems) {
 	try {
 		const { doc, setDoc, deleteDoc } = await import("firebase/firestore");
-		const { db } = await import("../../firebase");
+		const { db } = await import("../firebase");
 		if (makeShared) {
 			await setDoc(doc(db, "children", childId, "lists", list.id), {
 				name: list.name, items: currentItems, updatedAt: new Date().toISOString(),

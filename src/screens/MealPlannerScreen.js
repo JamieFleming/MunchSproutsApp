@@ -1774,7 +1774,7 @@ export function MealPlannerScreen({
 		(async () => {
 			try {
 				const { doc, getDoc } = await import("firebase/firestore");
-				const { db }          = await import("../../firebase");
+				const { db }          = await import("../firebase");
 				const snap = await getDoc(doc(db, "users", user.uid, "mealPlan", wId));
 				if (!alive) return;
 				if (snap.exists()) {
@@ -1801,7 +1801,7 @@ export function MealPlannerScreen({
 		(async () => {
 			try {
 				const { doc, getDoc } = await import("firebase/firestore");
-				const { db }          = await import("../../firebase");
+				const { db }          = await import("../firebase");
 				const snap = await getDoc(doc(db, "users", user.uid, "pantry", "main"));
 				if (alive && snap.exists()) setPantryItems(snap.data().items || []);
 			} catch { /* silent */ }
@@ -1816,7 +1816,7 @@ export function MealPlannerScreen({
 		(async () => {
 			try {
 				const { collection, getDocs } = await import("firebase/firestore");
-				const { db }                  = await import("../../firebase");
+				const { db }                  = await import("../firebase");
 				const snap = await getDocs(collection(db, "users", user.uid, "foodExposure"));
 				if (!alive) return;
 				const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -1832,7 +1832,7 @@ export function MealPlannerScreen({
 		if (!user?.uid) return;
 		try {
 			const { doc, setDoc } = await import("firebase/firestore");
-			const { db }          = await import("../../firebase");
+			const { db }          = await import("../firebase");
 			await setDoc(doc(db, "users", user.uid, "mealPlan", wId), {
 				weekId: wId,
 				days,
@@ -1931,7 +1931,7 @@ export function MealPlannerScreen({
 		setPantryInput("");
 		try {
 			const { doc, setDoc } = await import("firebase/firestore");
-			const { db }          = await import("../../firebase");
+			const { db }          = await import("../firebase");
 			await setDoc(doc(db, "users", user.uid, "pantry", "main"), { items: newItems });
 		} catch { /* silent */ }
 	}, [pantryInput, pantryCat, pantryItems, user?.uid]);
@@ -1941,7 +1941,7 @@ export function MealPlannerScreen({
 		setPantryItems(newItems);
 		try {
 			const { doc, setDoc } = await import("firebase/firestore");
-			const { db }          = await import("../../firebase");
+			const { db }          = await import("../firebase");
 			await setDoc(doc(db, "users", user.uid, "pantry", "main"), { items: newItems });
 		} catch { /* silent */ }
 	}, [pantryItems, user?.uid]);
@@ -1955,7 +1955,7 @@ export function MealPlannerScreen({
 		const entry   = { date: today, stage, reaction };
 		try {
 			const { doc, getDoc, setDoc } = await import("firebase/firestore");
-			const { db }                  = await import("../../firebase");
+			const { db }                  = await import("../firebase");
 			const ref  = doc(db, "users", user.uid, "foodExposure", docId);
 			const snap = await getDoc(ref);
 			let exposureDoc;
@@ -2160,7 +2160,7 @@ export function MealPlannerScreen({
 		// Log to food diary if reaction given
 		if (reaction !== null && activeChild && user?.uid) {
 			try {
-				const { addFoodEntry } = await import("../../firebaseHooks");
+				const { addFoodEntry } = await import("../firebaseHooks");
 				const existingCount = (childFoodLog || []).filter(
 					(f) => f.name?.toLowerCase() === meal.title.toLowerCase() && f.childId === activeChild.id,
 				).length;

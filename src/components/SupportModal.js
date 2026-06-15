@@ -149,7 +149,7 @@ export function SupportModal({ visible, onClose, user }) {
 												collection: col,
 												serverTimestamp: sts,
 											} = await import("firebase/firestore");
-											const { db: firedb } = await import("../../firebase");
+											const { db: firedb } = await import("../firebase");
 											await addDoc(col(firedb, "supportRequests"), {
 												userId: user.uid,
 												userEmail: user.email,

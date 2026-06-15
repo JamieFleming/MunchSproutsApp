@@ -2,7 +2,7 @@ import { Alert, Platform } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "../firebase";
+import { storage } from "./firebase";
 import { REACTIONS, MONTHS, ALLERGENS } from "./constants";
 import { CATEGORY_THRESHOLDS, TOTAL_FOOD_MILESTONES, ALLERGEN_MILESTONES } from "./milestones";
 

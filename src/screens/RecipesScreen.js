@@ -4,7 +4,7 @@ import {
 	Modal, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Image, Linking,
 } from "react-native";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "../../firebase";
+import { db } from "../firebase";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon, CategoryIcon } from "../components/Icon";
 

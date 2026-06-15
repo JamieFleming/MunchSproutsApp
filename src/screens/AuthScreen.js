@@ -17,10 +17,10 @@ import Svg, { Path, Circle } from "react-native-svg";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import Constants from "expo-constants";
-import { signIn, signUp, sendPasswordReset, signInWithGoogle, signInWithApple } from "./firebaseHooks";
+import { signIn, signUp, sendPasswordReset, signInWithGoogle, signInWithApple } from "../firebaseHooks";
 // expo-apple-authentication and expo-crypto are loaded dynamically so the app
 // doesn't crash on binaries that don't have the native modules compiled in yet.
-import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID, GOOGLE_ANDROID_CLIENT_ID } from "./firebase";
+import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID, GOOGLE_ANDROID_CLIENT_ID } from "../firebase";
 
 WebBrowser.maybeCompleteAuthSession();
 

@@ -580,10 +580,10 @@ export function MoreScreen({
 		setProfileSaving(true);
 		try {
 			const { updateProfile, updateEmail } = await import("firebase/auth");
-			const { updateUserProfile }          = await import("../../firebaseHooks");
-			const { auth }                       = await import("../../firebase");
+			const { updateUserProfile }          = await import("../firebaseHooks");
+			const { auth }                       = await import("../firebase");
 			const { doc, updateDoc }             = await import("firebase/firestore");
-			const { db }                         = await import("../../firebase");
+			const { db }                         = await import("../firebase");
 
 			const nameChanged  = editName.trim()  !== (displayName  ?? "");
 			const emailChanged = editEmail.trim() !== (displayEmail ?? "");
@@ -720,7 +720,7 @@ export function MoreScreen({
 		if (!uri) return;
 		setProfilePhoto(uri);
 		try {
-			const { updateUserProfile } = await import("../../firebaseHooks");
+			const { updateUserProfile } = await import("../firebaseHooks");
 			await updateUserProfile(user.uid, { photoURL: uri });
 		} catch {
 			Alert.alert("Error", "Could not save photo.");
@@ -730,7 +730,7 @@ export function MoreScreen({
 	const handleRemoveProfilePhoto = async () => {
 		setProfilePhoto("");
 		try {
-			const { updateUserProfile } = await import("../../firebaseHooks");
+			const { updateUserProfile } = await import("../firebaseHooks");
 			await updateUserProfile(user.uid, { photoURL: "" });
 		} catch { /* silent */ }
 	};

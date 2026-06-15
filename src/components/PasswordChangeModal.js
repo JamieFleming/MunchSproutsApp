@@ -15,7 +15,7 @@ import {
 	EmailAuthProvider,
 	reauthenticateWithCredential,
 } from "firebase/auth";
-import { auth } from "../../firebase";
+import { auth } from "../firebase";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon } from "./Icon";
 

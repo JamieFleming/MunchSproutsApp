@@ -15,7 +15,7 @@ const genId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
 async function appendToShoppingList(userId, list, recipeId, recipeTitle, ingredients, addedByName) {
 	const { doc, getDoc, setDoc } = await import("firebase/firestore");
-	const { db } = await import("../../firebase");
+	const { db } = await import("../firebase");
 	const ref = list.isShared && list.childId
 		? doc(db, "children", list.childId, "lists", list.id)
 		: doc(db, "users", userId, "lists", list.id);

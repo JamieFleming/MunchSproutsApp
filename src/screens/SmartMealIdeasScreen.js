@@ -16,7 +16,7 @@ import {
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { getApp } from "firebase/app";
 import { collection, addDoc, updateDoc, doc, getDoc, getDocs, serverTimestamp } from "firebase/firestore";
-import { db } from "../../firebase";
+import { db } from "../firebase";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon } from "../components/Icon";
 import { calcAgeMonths } from "../helpers";

@@ -89,7 +89,7 @@ export async function setupNotifications(userId) {
 
 		// Save to Firestore — merge so we don't overwrite other user fields
 		const { doc, setDoc } = await import("firebase/firestore");
-		const { db }          = await import("../firebase");
+		const { db }          = await import("./firebase");
 		await setDoc(
 			doc(db, "users", userId),
 			{ pushToken: token, pushTokenUpdatedAt: new Date().toISOString() },

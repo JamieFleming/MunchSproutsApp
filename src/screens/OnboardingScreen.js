@@ -15,11 +15,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { doc, updateDoc, addDoc, collection } from "firebase/firestore";
 import { updateProfile } from "firebase/auth";
-import { db, auth } from "../../firebase";
+import { db, auth } from "../firebase";
 import { useTheme } from "../ThemeContext";
 import { DateField } from "../components/DatePickerModal";
 import { pickImageAsBase64, uploadChildPhoto, isLocalUri } from "../helpers";
-import { updateUserProfile } from "../../firebaseHooks";
+import { updateUserProfile } from "../firebaseHooks";
 import Svg, { Circle, Path } from "react-native-svg";
 import Icon from "../components/Icon";
 
