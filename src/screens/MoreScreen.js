@@ -791,7 +791,7 @@ export function MoreScreen({
 
 			{/* ── Profile Edit Modal ───────────────────────────────────────────────── */}
 			<Modal visible={showProfileEdit} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowProfileEdit(false)}>
-				<KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: C.bgMain }}>
+				<KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: C.bgPurple }}>
 					{/* Header */}
 					<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: Platform.OS === "ios" ? 20 : 20, paddingBottom: 16, backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
 						<TouchableOpacity onPress={() => setShowProfileEdit(false)} hitSlop={8}>
@@ -1438,7 +1438,7 @@ export function MoreScreen({
 
 			{/* Photo Gallery Modal */}
 			<Modal visible={showGallery} animationType="slide" onRequestClose={() => setShowGallery(false)}>
-				<View style={{ flex: 1, backgroundColor: C.bgMain }}>
+				<View style={{ flex: 1, backgroundColor: C.bgPurple }}>
 					<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: Platform.OS === "ios" ? 56 : 20, paddingBottom: 16, backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.borderLight }}>
 						<View>
 							<Text style={{ fontFamily: "PlusJakartaSans_700Bold", fontSize: 20, color: C.primaryPinkDark }}>Photo Gallery</Text>

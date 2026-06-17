@@ -319,12 +319,29 @@ function AddMenuSheet({
 							borderBottomColor: C.borderLight,
 						}}
 						activeOpacity={0.7}>
-						<View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: C.bgPurple, alignItems: "center", justifyContent: "center" }}>
+						<View
+							style={{
+								width: 34,
+								height: 34,
+								borderRadius: 10,
+								backgroundColor: C.bgPurple,
+								alignItems: "center",
+								justifyContent: "center",
+							}}>
 							<Icon name="utensils" size={16} color={C.primaryPurple} />
 						</View>
 						<View style={{ flex: 1 }}>
-							<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: C.primaryPinkDark }}>Food or Drink</Text>
-							<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>Log a meal or snack</Text>
+							<Text
+								style={{
+									fontFamily: "NunitoSans_700Bold",
+									fontSize: 14,
+									color: C.primaryPinkDark,
+								}}>
+								Food or Drink
+							</Text>
+							<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>
+								Log a meal or snack
+							</Text>
 						</View>
 						<Icon name="chevRight" size={12} color={C.mutedText} />
 					</TouchableOpacity>
@@ -340,12 +357,29 @@ function AddMenuSheet({
 							borderBottomColor: C.borderLight,
 						}}
 						activeOpacity={0.7}>
-						<View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#d4e8f5", alignItems: "center", justifyContent: "center" }}>
+						<View
+							style={{
+								width: 34,
+								height: 34,
+								borderRadius: 10,
+								backgroundColor: "#d4e8f5",
+								alignItems: "center",
+								justifyContent: "center",
+							}}>
 							<Icon name="bottle" size={16} color="#2a5f8f" />
 						</View>
 						<View style={{ flex: 1 }}>
-							<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: "#1a3f5f" }}>Bottle Feed</Text>
-							<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>Formula or breast milk</Text>
+							<Text
+								style={{
+									fontFamily: "NunitoSans_700Bold",
+									fontSize: 14,
+									color: "#1a3f5f",
+								}}>
+								Bottle Feed
+							</Text>
+							<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>
+								Formula or breast milk
+							</Text>
 						</View>
 						<Icon name="chevRight" size={12} color={C.mutedText} />
 					</TouchableOpacity>
@@ -359,12 +393,29 @@ function AddMenuSheet({
 							gap: 12,
 						}}
 						activeOpacity={0.7}>
-						<View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#e6f7ef", alignItems: "center", justifyContent: "center" }}>
+						<View
+							style={{
+								width: 34,
+								height: 34,
+								borderRadius: 10,
+								backgroundColor: "#e6f7ef",
+								alignItems: "center",
+								justifyContent: "center",
+							}}>
 							<Icon name="scale" size={16} color="#2d7a55" />
 						</View>
 						<View style={{ flex: 1 }}>
-							<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 14, color: "#1a4d35" }}>Weight</Text>
-							<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>Record baby's weight</Text>
+							<Text
+								style={{
+									fontFamily: "NunitoSans_700Bold",
+									fontSize: 14,
+									color: "#1a4d35",
+								}}>
+								Weight
+							</Text>
+							<Text style={{ fontSize: 11, color: C.mutedText, marginTop: 1 }}>
+								Record baby's weight
+							</Text>
 						</View>
 						<Icon name="chevRight" size={12} color={C.mutedText} />
 					</TouchableOpacity>
@@ -796,17 +847,17 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 	const saveDefaultChild = (id) =>
 		AsyncStorage.setItem(STORAGE_KEY, id).catch(() => {});
 
-	// useEffect(() => {
-	// 	if (!user) return;
-	// 	Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-	// 	Purchases.configure({
-	// 		apiKey:
-	// 			Platform.OS === "ios"
-	// 				? "appl_xNGjmEgufsXuWySnKebRetuKCGj"
-	// 				: "goog_rcHUTFIPkKdXdEAQHcexulBdpOj",
-	// 		appUserID: user.uid,
-	// 	});
-	// }, [user]);
+	useEffect(() => {
+		if (!user) return;
+		Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+		Purchases.configure({
+			apiKey:
+				Platform.OS === "ios"
+					? "appl_xNGjmEgufsXuWySnKebRetuKCGj"
+					: "goog_rcHUTFIPkKdXdEAQHcexulBdpOj",
+			appUserID: user.uid,
+		});
+	}, [user]);
 
 	// ── Push notifications ──────────────────────────────────────────────────────
 	useEffect(() => {
@@ -2072,7 +2123,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						width: 56,
 						height: 56,
 						borderRadius: 28,
-						backgroundColor: C.primaryPurple + "55",
+						backgroundColor: C.primaryPurple + "cc",
 						borderWidth: 2,
 						borderColor: C.primaryPurple,
 						alignItems: "center",
@@ -2084,7 +2135,13 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 						elevation: 10,
 					}}>
 					<Svg width={22} height={22} viewBox="0 0 24 24">
-						<Path stroke={C.primaryPurple} strokeWidth={2.5} strokeLinecap="round" fill="none" d="M12 5v14M5 12h14" />
+						<Path
+							stroke={C.primaryPurple}
+							strokeWidth={2.5}
+							strokeLinecap="round"
+							fill="none"
+							d="M12 5v14M5 12h14"
+						/>
 					</Svg>
 				</TouchableOpacity>
 			)}

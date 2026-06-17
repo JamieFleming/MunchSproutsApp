@@ -313,7 +313,7 @@ export function OnboardingScreen({ user }) {
 	const [step, setStep] = useState(0);
 
 	return (
-		<SafeAreaView style={{ flex: 1, backgroundColor: C.bgMain }}>
+		<SafeAreaView style={{ flex: 1, backgroundColor: C.bgPurple }}>
 			{/* Progress dots — shown above each step */}
 			<View style={{ paddingTop: 20 }}>
 				<StepDots step={step} />
