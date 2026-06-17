@@ -2136,7 +2136,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 					}}>
 					<Svg width={22} height={22} viewBox="0 0 24 24">
 						<Path
-							stroke={C.primaryPurple}
+							stroke="#ffffff"
 							strokeWidth={2.5}
 							strokeLinecap="round"
 							fill="none"

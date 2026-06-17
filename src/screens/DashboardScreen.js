@@ -272,7 +272,7 @@ export function DashboardScreen({
 				<TouchableOpacity
 					onPress={() => onNavigate("childDetail")}
 					activeOpacity={0.88}
-					style={{ backgroundColor: C.bgPurple, borderRadius: 24, padding: 22, overflow: "hidden", borderWidth: 1.5, borderColor: C.primaryPurple + "25" }}>
+					style={{ backgroundColor: "#d0c8f8", borderRadius: 24, padding: 22, overflow: "hidden", borderWidth: 1.5, borderColor: C.primaryPurple + "40" }}>
 
 					{/* Decorative blobs */}
 					<View style={{ position: "absolute", top: -55, right: -45, width: 210, height: 210, borderRadius: 105, backgroundColor: C.primaryPurple + "10" }} />
@@ -366,7 +366,7 @@ export function DashboardScreen({
 
 			{/* ── Stats row 1 ── */}
 			<View style={{ flexDirection: "row", gap: 10 }}>
-				<TouchableOpacity onPress={() => onNavigateFiltered("log", "")}        style={[s.statCard, { backgroundColor: C.bgPurple,       flex: 1 }]} activeOpacity={0.8}>
+				<TouchableOpacity onPress={() => onNavigateFiltered("log", "")}        style={[s.statCard, { backgroundColor: "#e4ddf8",         flex: 1 }]} activeOpacity={0.8}>
 					<Icon name="grid" size={22} color={C.primaryPurple} />
 					<Text style={[s.statValue, { color: C.primaryPurple, fontSize: 26 }]}>{unique}</Text>
 					<Text style={[s.statLabel, { color: C.primaryPurple, fontSize: 11 }]}>Tried</Text>
@@ -475,7 +475,7 @@ export function DashboardScreen({
 					{todayBottles.length > 0 ? (
 						<MilkGraph entries={todayBottles} />
 					) : (
-						<View style={{ alignItems: "center", paddingVertical: 16, backgroundColor: C.bgPurple, borderRadius: 14 }}>
+						<View style={{ alignItems: "center", paddingVertical: 16, backgroundColor: C.statBlueBg, borderRadius: 14 }}>
 							<Icon name="bottle" size={28} color={C.secondaryPurple} />
 							<Text style={{ fontFamily: "NunitoSans_600SemiBold", fontSize: 13, color: C.mutedText, marginTop: 6 }}>No bottles logged today</Text>
 						</View>
