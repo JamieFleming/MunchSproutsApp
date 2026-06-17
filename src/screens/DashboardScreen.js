@@ -279,7 +279,7 @@ export function DashboardScreen({
 					<View style={{ position: "absolute", bottom: -50, right: 30, width: 130, height: 130, borderRadius: 65, backgroundColor: C.primaryPurple + "08" }} />
 
 					{/* Greeting */}
-					<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 11, color: C.primaryPurple + "99", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 6 }}>
+					<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 11, color: C.primaryPinkDark + "aa", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 6 }}>
 						{getGreeting()}
 					</Text>
 
@@ -296,19 +296,19 @@ export function DashboardScreen({
 
 							{weeks !== null && (
 								<View style={{ flexDirection: "row", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-									<View style={{ backgroundColor: C.primaryPurple + "18", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 }}>
-										<Text style={{ fontFamily: "NunitoSans_600SemiBold", fontSize: 12, color: C.primaryPurple }}>{weeks} weeks</Text>
+									<View style={{ backgroundColor: "rgba(255,255,255,0.5)", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 }}>
+										<Text style={{ fontFamily: "NunitoSans_600SemiBold", fontSize: 12, color: C.primaryPinkDark }}>{weeks} weeks</Text>
 									</View>
 									{latestWeight && (
-										<View style={{ backgroundColor: C.primaryPurple + "18", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 }}>
-											<Text style={{ fontFamily: "NunitoSans_600SemiBold", fontSize: 12, color: C.primaryPurple }}>
+										<View style={{ backgroundColor: "rgba(255,255,255,0.5)", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 }}>
+											<Text style={{ fontFamily: "NunitoSans_600SemiBold", fontSize: 12, color: C.primaryPinkDark }}>
 												{formatWeight(latestWeight.value_kg, weightPreference)}
 											</Text>
 										</View>
 									)}
 									{child.weaningStart && (
-										<View style={{ backgroundColor: C.primaryPurple + "18", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 }}>
-											<Text style={{ fontFamily: "NunitoSans_600SemiBold", fontSize: 12, color: C.primaryPurple }}>
+										<View style={{ backgroundColor: "rgba(255,255,255,0.5)", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 }}>
+											<Text style={{ fontFamily: "NunitoSans_600SemiBold", fontSize: 12, color: C.primaryPinkDark }}>
 												{`Weaning · wk ${Math.max(1, Math.ceil((Date.now() - new Date(child.weaningStart)) / 604800000))}`}
 											</Text>
 										</View>
@@ -340,7 +340,7 @@ export function DashboardScreen({
 
 					{/* View profile link */}
 					<View style={{ flexDirection: "row", alignItems: "center", justifyContent: "flex-end", marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.primaryPurple + "20", gap: 4 }}>
-						<Text style={{ fontFamily: "NunitoSans_600SemiBold", fontSize: 12, color: C.primaryPurple }}>View full profile</Text>
+						<Text style={{ fontFamily: "NunitoSans_600SemiBold", fontSize: 12, color: C.primaryPinkDark }}>View full profile</Text>
 						<Icon name="chevRight" size={12} color={C.primaryPurple} />
 					</View>
 				</TouchableOpacity>

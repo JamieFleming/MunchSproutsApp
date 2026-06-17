@@ -1,7 +1,7 @@
 export const THEMES = {
 	default: {
 		bgMain: "#fbf7ef",
-		bgPurple: "#f0ecfc",
+		bgPurple: "#ddd6f8",
 		bgGreen: "#e8f5ee",
 		bgWarning: "#fdf0e4",
 		primaryPurple: "#9b7fe8",

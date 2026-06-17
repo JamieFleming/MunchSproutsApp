@@ -305,7 +305,7 @@ export function BottleScreen({ bottleLog, childName, onAdd, onEdit, onDelete, qu
 				ListHeaderComponent={
 					<>
 						{/* Today's summary */}
-						<View style={[s.card, { backgroundColor: C.bgPurple, borderRadius: 20, flexDirection: "row", alignItems: "center", gap: 16 }]}>
+						<View style={[s.card, { borderRadius: 20, flexDirection: "row", alignItems: "center", gap: 16 }]}>
 							<View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: "#2a5f8f22", alignItems: "center", justifyContent: "center" }}>
 								<Icon name="bottle" size={28} color="#2a5f8f" />
 							</View>
