@@ -498,7 +498,7 @@ export function DashboardScreen({
 
 			{/* ── Featured recipe ── */}
 			{featuredRecipe && (
-				<TouchableOpacity onPress={() => onNavigateToRecipe?.(featuredRecipe.id)} activeOpacity={0.88} style={{ borderRadius: 20, overflow: "hidden", backgroundColor: C.white, shadowColor: "#9b7fe8", shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 }}>
+				<TouchableOpacity onPress={() => onNavigateToRecipe?.(featuredRecipe.id)} activeOpacity={0.88} style={{ borderRadius: 20, overflow: "hidden", backgroundColor: C.white, borderWidth: 1.5, borderColor: C.primaryPurple + "50", shadowColor: C.primaryPurple, shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 }}>
 					{featuredRecipe.imageUrl ? (
 						<Image source={{ uri: featuredRecipe.imageUrl }} style={{ width: "100%", height: 160 }} resizeMode="cover" />
 					) : (

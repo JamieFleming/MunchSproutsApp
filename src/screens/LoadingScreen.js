@@ -5,7 +5,7 @@ import { useTheme } from "../ThemeContext";
 export function LoadingScreen() {
 	const { C } = useTheme();
 	return (
-		<View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: C.bgPurple }}>
+		<View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: C.white }}>
 			<ActivityIndicator size="large" color={C.primaryPurple} />
 			<Text style={{ color: C.primaryPurple, fontFamily: "NunitoSans_700Bold", marginTop: 12, letterSpacing: 0.5 }}>
 				Loading…

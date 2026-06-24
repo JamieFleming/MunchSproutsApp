@@ -20,7 +20,6 @@ import { useTheme } from "../ThemeContext";
 import { DateField } from "../components/DatePickerModal";
 import { pickImageAsBase64, uploadChildPhoto, isLocalUri } from "../helpers";
 import { updateUserProfile } from "../firebaseHooks";
-import Svg, { Circle, Path } from "react-native-svg";
 import { Icon } from "../components/Icon";
 
 // ── Step indicator ─────────────────────────────────────────────────────────────
@@ -86,16 +85,8 @@ function StepName({ user, onNext }) {
 				keyboardShouldPersistTaps="handled"
 				showsVerticalScrollIndicator={false}>
 
-				{/* SVG header illustration */}
-				<View style={{ alignItems: "center", marginBottom: 12 }}>
-					<Svg width={80} height={80} viewBox="0 0 80 80">
-						<Circle cx="40" cy="40" r="38" fill={C.bgPurple} />
-						{/* Waving hand path */}
-						<Path fill={C.primaryPurple} d="M38 52 Q34 46 30 40 Q28 36 32 34 Q35 32 37 36 L38 38 L38 26 Q38 23 41 23 Q44 23 44 26 L44 36 L44 26 Q44 23 47 23 Q50 23 50 26 L50 34 L50 26 Q50 23 53 23 Q56 23 56 26 L56 36 Q58 33 61 35 Q64 37 62 41 L56 52 Q52 58 46 58 L42 58 Q40 58 38 52 Z" opacity="0.85"/>
-						{/* Sparkles */}
-						<Path stroke="#f9a825" strokeWidth="1.5" strokeLinecap="round" fill="none" d="M18 22 L18 17 M15 19 L21 19" />
-						<Path stroke="#7dcf9e" strokeWidth="1.5" strokeLinecap="round" fill="none" d="M64 20 L64 15 M61 17 L67 17" />
-					</Svg>
+						<View style={{ alignItems: "center", marginBottom: 12 }}>
+					<Image source={require("../../assets/logo.png")} style={{ width: 80, height: 80, borderRadius: 20 }} resizeMode="contain" />
 				</View>
 				<Text style={[styles.title, { color: C.primaryPinkDark }]}>Welcome to MunchSprouts!</Text>
 				<Text style={[styles.subtitle, { color: C.mutedText }]}>
@@ -216,19 +207,7 @@ function StepChild({ user, onFinish }) {
 				showsVerticalScrollIndicator={false}>
 
 				<View style={{ alignItems: "center", marginBottom: 12 }}>
-					<Svg width={80} height={80} viewBox="0 0 80 80">
-						<Circle cx="40" cy="40" r="38" fill={C.bgPurple} />
-						{/* Stem */}
-						<Path stroke="#7dcf9e" strokeWidth="3" strokeLinecap="round" fill="none" d="M40 62 L40 36" />
-						{/* Left leaf */}
-						<Path stroke="#7dcf9e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="#7dcf9e40" d="M40 48 Q28 44 26 32 Q38 30 40 42 Z" />
-						{/* Right leaf */}
-						<Path stroke="#7dcf9e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="#7dcf9e40" d="M40 44 Q52 40 54 28 Q42 26 40 38 Z" />
-						{/* Soil */}
-						<Path stroke={C.primaryPurple} strokeWidth="2.5" strokeLinecap="round" fill={C.primaryPurple + "20"} d="M28 62 Q40 58 52 62 Q50 68 40 69 Q30 68 28 62 Z" />
-						<Path stroke="#f9a825" strokeWidth="1.5" strokeLinecap="round" fill="none" d="M20 30 L20 25 M17 27 L23 27" />
-						<Path stroke={C.primaryPurple} strokeWidth="1.5" strokeLinecap="round" fill="none" d="M62 36 L62 31 M59 33 L65 33" />
-					</Svg>
+					<Image source={require("../../assets/logo.png")} style={{ width: 80, height: 80, borderRadius: 20 }} resizeMode="contain" />
 				</View>
 				<Text style={[styles.title, { color: C.primaryPinkDark }]}>Add your little one</Text>
 				<Text style={[styles.subtitle, { color: C.mutedText }]}>
@@ -313,7 +292,7 @@ export function OnboardingScreen({ user }) {
 	const [step, setStep] = useState(0);
 
 	return (
-		<SafeAreaView style={{ flex: 1, backgroundColor: C.bgPurple }}>
+		<SafeAreaView style={{ flex: 1, backgroundColor: C.white }}>
 			{/* Progress dots — shown above each step */}
 			<View style={{ paddingTop: 20 }}>
 				<StepDots step={step} />

@@ -599,7 +599,7 @@ export default function AuthScreen() {
 }
 
 const styles = StyleSheet.create({
-	container: { flex: 1, backgroundColor: C.bgPurple },
+	container: { flex: 1, backgroundColor: C.white },
 	scroll: {
 		flexGrow: 1,
 		justifyContent: "center",
@@ -621,9 +621,9 @@ const styles = StyleSheet.create({
 		backgroundColor: C.white,
 		borderRadius: 20,
 		padding: 24,
-		borderWidth: 2,
-		borderColor: C.borderLight,
-		shadowColor: "#9b7fe8",
+		borderWidth: 1.5,
+		borderColor: C.primaryPurple + "50",
+		shadowColor: C.primaryPurple,
 		shadowOpacity: 0.1,
 		shadowRadius: 12,
 		shadowOffset: { width: 0, height: 4 },

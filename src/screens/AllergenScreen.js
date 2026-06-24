@@ -20,24 +20,28 @@ const STATUS_CFG = {
 		color: "#2d7a55",
 		bg: "#d4f0e0",
 		border: "#a8dcc0",
+		rowBg: "#f0faf5",
 	},
 	"In Progress": {
 		label: "In Progress",
 		color: "#a85a1a",
 		bg: "#fde8d4",
 		border: "#ddc8a8",
+		rowBg: "#fffaf4",
 	},
 	Reaction: {
 		label: "Had Reaction",
 		color: "#c0392b",
 		bg: "#fde8e8",
 		border: "#e07070",
+		rowBg: "#fff5f5",
 	},
 	"Not Tried": {
 		label: "Not Tried",
 		color: "#8a7aaa",
 		bg: "#f0ecfc",
 		border: "#c4b0f0",
+		rowBg: "transparent",
 	},
 };
 
@@ -187,7 +191,7 @@ function AllergenRow({ al, index, total, onViewInLog, onAddWithPrefill }) {
 				paddingHorizontal: 16,
 				borderBottomWidth: index < total - 1 ? 1 : 0,
 				borderBottomColor: C.borderLight,
-				backgroundColor: al.status === "Reaction" ? "#fff5f5" : "transparent",
+				backgroundColor: cfg.rowBg,
 			}}>
 			<View style={{ marginRight: 12 }}>
 				<AllergenIcon allergen={al.value} size={42} />

@@ -16,9 +16,9 @@ const https                    = require("https");
 const SERVICE_ACCOUNT_PATH = "../../migration/serviceAccountKey.json";
 
 const NOTIFICATION = {
-	title: "🚀 Munch Sprouts 1.5.0 is live!",
-	body:  "Shared shopping lists, AI-powered meal planner, weekly planner, photo gallery, free PDF exports & loads more. Update now! 🎉",
-	data:  { type: "announcement", url: "https://apps.apple.com/app/id6763142582" },
+	title: "Lots of updates just dropped! 🌱",
+	body:  "If you have any issues, feedback, or feature ideas, email jamie@festudios.co.uk or through a support request in settings — we'd love to hear from you. Thanks for your support, and please share MunchSprouts with other parents! 💜",
+	data:  { type: "announcement" },
 };
 
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";

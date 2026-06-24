@@ -28,7 +28,7 @@ export const THEMES = {
 		statNeutralBg: "#fde8cc",
 		statNeutralText: "#7a5a1a",
 		card: "#ffffff",
-		screen: "#f0ecfc",
+		screen: "#ffffff",
 		navBg: "#ffffff",
 	},
 	dark: {
