@@ -97,6 +97,7 @@ import {
 	onNotificationTapped,
 	clearBadge,
 	scheduleBottleReminders,
+	requestBottleReminderPermission,
 	cancelBottleReminders,
 } from "./src/notificationService";
 import { Icon } from "./src/components/Icon";
@@ -1464,7 +1465,18 @@ function MainApp({ user, userDoc }) {
 
 	// ── Bottle reminder notifications ──
 
-	const handleToggleBottleReminders = (enabled) => {
+	const handleToggleBottleReminders = async (enabled) => {
+		if (enabled) {
+			try {
+				if (!(await requestBottleReminderPermission())) {
+					Alert.alert("Notifications are off", "Allow notifications in your phone settings to receive bottle reminders.");
+					return;
+				}
+			} catch {
+				Alert.alert("Could not enable reminders", "Please try again.");
+				return;
+			}
+		}
 		setBottleRemindersEnabled(enabled);
 		AsyncStorage.setItem(
 			`bottleRemindersEnabled_${user.uid}`,

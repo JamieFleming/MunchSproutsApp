@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon } from "../components/Icon";
-import { parseIngredient } from "../helpers";
+import { parseIngredient, calcAgeMonths, getAvoidedAllergens } from "../helpers";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -2012,8 +2012,8 @@ export function MealPlannerScreen({
 			const result = await fn({
 				isPro:                 true,
 				childName:             activeChild.name || "Baby",
-				ageMonths:             activeChild.ageMonths || 6,
-				allergensAvoid:        activeChild.allergensToAvoid || [],
+				ageMonths:             calcAgeMonths(activeChild.dob) ?? activeChild.ageMonths ?? 6,
+				allergensAvoid:        getAvoidedAllergens(childFoodLog || [], activeChild),
 				likedFoods,
 				pantryItems:           pantryItems.map((i) => `${i.name} (${i.category})`),
 				daysToGenerate,

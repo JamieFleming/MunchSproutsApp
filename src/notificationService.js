@@ -2,8 +2,7 @@
  * notificationService.js
  *
  * Central place for all push-notification logic.
- * Everything is imported lazily inside functions so this file is safe
- * to import even if the native module isn't registered yet.
+ * Requires a native build containing expo-notifications.
  *
  * Typical usage in App.js:
  *
@@ -26,7 +25,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Show alert + play sound when a notification arrives while the app is open.
 Notifications.setNotificationHandler({
 	handleNotification: async () => ({
-		shouldShowAlert: true,
+		shouldShowBanner: true,
+		shouldShowList: true,
 		shouldPlaySound: true,
 		shouldSetBadge: true,
 	}),
@@ -158,8 +158,18 @@ export async function setBadge(count) {
 export async function scheduleLocalNotification({ title, body, data = {}, seconds = 5 }) {
 	await Notifications.scheduleNotificationAsync({
 		content: { title, body, data, sound: "default" },
-		trigger:  { seconds },
+		trigger:  { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds },
 	});
+}
+
+// Ask when the user explicitly enables bottle reminders, even if they skipped
+// notification permission during onboarding. No push token is needed for local reminders.
+export async function requestBottleReminderPermission() {
+  await ensureAndroidChannel();
+  const existing = await Notifications.getPermissionsAsync();
+  if (existing.granted) return true;
+  const permission = await Notifications.requestPermissionsAsync();
+  return permission.granted;
 }
 
 // ── Bottle feeding reminders ──────────────────────────────────────────────────
@@ -189,6 +199,7 @@ export async function scheduleBottleReminders(times, childName = "your baby") {
 				},
 				trigger: {
 					type: Notifications.SchedulableTriggerInputTypes.DAILY,
+					...(Platform.OS === "android" && { channelId: "default" }),
 					hour: t.hour,
 					minute: t.minute,
 				},

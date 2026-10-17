@@ -240,7 +240,8 @@ export async function signInWithApple(identityToken, nonce, fullName, appleEmail
 
 	// Build the data to write — never store null; use deleteField() to actively
 	// remove any nulls that a previous crashed sign-in may have written
-	const docData = { plan: "free" };
+	// RevenueCat owns the plan mirror; returning sign-ins must preserve it.
+	const docData = {};
 
 	if (resolvedEmail) docData.email = resolvedEmail;
 	else if (snap.exists() && snap.data().email  === null) docData.email = deleteField();
@@ -249,6 +250,7 @@ export async function signInWithApple(identityToken, nonce, fullName, appleEmail
 	else if (snap.exists() && snap.data().name   === null) docData.name  = deleteField();
 
 	if (!snap.exists()) {
+		docData.plan               = "free";
 		docData.createdAt          = serverTimestamp();
 		docData.onboardingComplete = false;
 	}

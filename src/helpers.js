@@ -1,6 +1,6 @@
 import { Alert, Platform } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system";
+import { File, Paths } from "expo-file-system";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "./firebase";
 import { REACTIONS, MONTHS, ALLERGENS } from "./constants";
@@ -462,9 +462,9 @@ export async function pickImageAsBase64(aspect = [4, 3]) {
 	// cache avoids passing a content-provider reference through the Binder IPC.
 	if (Platform.OS === "android") {
 		try {
-			const localUri = `${FileSystem.cacheDirectory}picked_${Date.now()}.jpg`;
-			await FileSystem.copyAsync({ from: asset.uri, to: localUri });
-			return localUri;
+			const cachedPhoto = new File(Paths.cache, `picked_${Date.now()}.jpg`);
+			await new File(asset.uri).copy(cachedPhoto);
+			return cachedPhoto.uri;
 		} catch (e) {
 			console.warn("[pickImage] cache copy failed, using original URI:", e?.message);
 		}
@@ -557,4 +557,16 @@ export function parseIngredient(raw) {
 	const quantity = unit ? (qty ? `${qty} ${unit}` : unit) : qty;
 
 	return { name, quantity };
+}
+
+// Combine profile allergies (including legacy profiles) with logged reactions.
+// Consumers must use this list even before a child has any food entries.
+export function getAvoidedAllergens(foodLog = [], child = {}) {
+  const values = [
+    ...(child?.knownAllergens || []),
+    ...(child?.allergensToAvoid || []),
+    ...(child?.otherAllergies ? [child.otherAllergies] : []),
+    ...foodLog.filter((entry) => entry.reaction === "Allergic").flatMap((entry) => entry.allergens || []),
+  ];
+  return [...new Set(values.filter((value) => typeof value === "string").map((value) => value.trim().toLowerCase()).filter(Boolean))];
 }

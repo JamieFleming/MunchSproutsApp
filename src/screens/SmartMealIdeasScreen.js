@@ -19,7 +19,7 @@ import { collection, addDoc, updateDoc, doc, getDoc, getDocs, serverTimestamp } 
 import { db } from "../firebase";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon } from "../components/Icon";
-import { calcAgeMonths } from "../helpers";
+import { calcAgeMonths, getAvoidedAllergens } from "../helpers";
 import Svg, { Circle, Path } from "react-native-svg";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -53,11 +53,11 @@ function textureLevelLabel(ageMonths) {
 	return "Family foods, chopped (12m+)";
 }
 
-function deriveFoodContext(foodLog) {
+export function deriveFoodContext(foodLog, child) {
 	const likedFoods     = [];
 	const dislikedFoods  = [];
 	const allergensSafe  = new Set();
-	const allergensAvoid = new Set();
+	const allergensAvoid = new Set(getAvoidedAllergens(foodLog, child));
 	const foodsTried     = new Set();
 
 	foodLog.forEach((entry) => {
@@ -441,7 +441,7 @@ export function SmartMealIdeasScreen({ child, foodLog = [], user, isPro, onUpgra
 
 	const ageMonths    = calcAgeMonths(child?.dob);
 	const textureLevel = deriveTextureLevel(ageMonths || 6);
-	const foodContext  = useMemo(() => deriveFoodContext(foodLog), [foodLog]);
+	const foodContext  = useMemo(() => deriveFoodContext(foodLog, child), [foodLog, child]);
 	const hasEnoughData = foodLog.length > 0;
 
 	// ── Fetch today's usage on mount so user can see remaining uses upfront ──
@@ -645,7 +645,7 @@ export function SmartMealIdeasScreen({ child, foodLog = [], user, isPro, onUpgra
 						{ icon: "check",  label: foodContext.likedFoods.length > 0 ? `${foodContext.likedFoods.length} liked foods` : "No liked foods logged yet" },
 						{ icon: "list",   label: `${foodContext.foodsTried.length} foods tried so far` },
 						foodContext.allergensAvoid.length > 0
-							? { icon: "alert",  label: `Avoiding (reaction): ${foodContext.allergensAvoid.join(", ")}` }
+							? { icon: "alert",  label: `Avoiding (profile or reaction): ${foodContext.allergensAvoid.join(", ")}` }
 							: foodContext.allergensNotTried.length > 0
 							? { icon: "shield", label: `Not yet tried: ${foodContext.allergensNotTried.join(", ")}` }
 							: { icon: "shield", label: "All 9 allergens introduced ✓" },

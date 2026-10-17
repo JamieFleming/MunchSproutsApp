@@ -1,21 +1,33 @@
 {
   "cli": {
-    "version": ">= 5.0.0",
+    "version": ">= 25.1.1",
     "appVersionSource": "remote"
   },
   "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      channel: "development"
+      "channel": "development",
+      "environment": "development",
+      "ios": {
+        "image": "sdk-57"
+      }
     },
     "preview": {
       "distribution": "internal",
-      channel: "preview"
+      "channel": "preview",
+      "environment": "preview",
+      "ios": {
+        "image": "sdk-57"
+      }
     },
     "production": {
       "autoIncrement": true,
-      channel: "production",
+      "channel": "production",
+      "environment": "production",
+      "ios": {
+        "image": "sdk-57"
+      }
     }
   },
   "submit": {

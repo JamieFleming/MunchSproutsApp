@@ -95,10 +95,10 @@ export async function scheduleReminders(prefs) {
 					title: msg.title,
 					body: msg.body,
 					sound: useSound ? "default" : null,
-					...(Platform.OS === "android" && { channelId: "reminders" }),
 				},
 				trigger: {
 					type: Notifications.SchedulableTriggerInputTypes.DAILY,
+					...(Platform.OS === "android" && { channelId: "reminders" }),
 					hour,
 					minute: 0,
 				},

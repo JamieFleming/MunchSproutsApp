@@ -2,16 +2,10 @@
 	"expo": {
 		"name": "Munch Sprouts Weaning Tracker",
 		"slug": "MunchSproutsNative",
-		"version": "1.5.0",
+		"version": "1.6.0",
 		"orientation": "portrait",
 		"icon": "./assets/logo.png",
 		"userInterfaceStyle": "light",
-		"newArchEnabled": true,
-		"splash": {
-			"image": "./assets/logo.png",
-			"resizeMode": "contain",
-			"backgroundColor": "#ffffff"
-		},
 		"ios": {
 			"supportsTablet": true,
 			"bundleIdentifier": "com.munchsprouts.app",
@@ -29,7 +23,6 @@
 			},
 			"package": "com.munchsprouts.app",
 			"versionCode": 2,
-			"edgeToEdgeEnabled": true,
 			"intentFilters": [
 				{
 					"action": "VIEW",
@@ -38,7 +31,10 @@
 							"scheme": "com.googleusercontent.apps.406023036087-71leqh6hjhigatatn3akjsvf3ml97eir"
 						}
 					],
-					"category": ["BROWSABLE", "DEFAULT"]
+					"category": [
+						"BROWSABLE",
+						"DEFAULT"
+					]
 				}
 			]
 		},
@@ -58,7 +54,36 @@
 					"sounds": []
 				}
 			],
-			"./plugins/withDisableActivitySaveState"
+			"./plugins/withDisableActivitySaveState",
+			"expo-font",
+			"expo-sharing",
+			"expo-status-bar",
+			[
+				"expo-splash-screen",
+				{
+					"image": "./assets/logo.png",
+					"resizeMode": "contain",
+					"backgroundColor": "#ffffff",
+					"imageWidth": 200
+				}
+			],
+			[
+				"expo-build-properties",
+				{
+					"ios": {
+						"extraPods": [
+							{
+								"name": "GoogleUtilities",
+								"modular_headers": true
+							},
+							{
+								"name": "RecaptchaInterop",
+								"modular_headers": true
+							}
+						]
+					}
+				}
+			]
 		],
 		"extra": {
 			"eas": {
@@ -67,7 +92,7 @@
 		},
 		"owner": "fleming1411",
 		"runtimeVersion": {
-			"policy": "appVersion"
+			"policy": "fingerprint"
 		},
 		"updates": {
 			"url": "https://u.expo.dev/add89f65-91f0-442e-986c-364d818892bb",
