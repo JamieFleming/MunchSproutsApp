@@ -1,447 +1,590 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, Image } from "react-native";
+import React, { useRef, useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
+import { useFoodDraft } from "../useFoodDraft";
 import { useTheme, useStyles } from "../ThemeContext";
-import { Icon, CategoryIcon, ReactionFace, AllergenIcon } from "./Icon";
-import { PrimaryBtn } from "./SharedComponents";
+import { Icon, ReactionFace } from "./Icon";
 import { PickerModal } from "./PickerModal";
 import { DateField } from "./DatePickerModal";
-import { CATEGORIES, FORMS, REACTIONS, MEAL_TIMES, ALLERGENS } from "../constants";
+import {
+  CATEGORIES,
+  FORMS,
+  REACTIONS,
+  MEAL_TIMES,
+  ALLERGENS,
+} from "../constants";
 import { pickImageAsBase64 } from "../helpers";
 
 const EMPTY_FORM = {
-	date: "",
-	name: "",
-	categories: [],
-	category: "",
-	form: "",
-	reaction: "",
-	notes: "",
-	favourite: false,
-	ml: "",
-	photoUri: "",
-	mealTime: "",
-	allergens: [],
+  name: "",
+  categories: [],
+  category: "",
+  form: "",
+  reaction: "",
+  notes: "",
+  favourite: false,
+  ml: "",
+  photoUri: "",
+  mealTime: "",
+  allergens: [],
 };
-
-function parseCategories(cat) {
-	if (!cat) return [];
-	if (Array.isArray(cat)) return cat;
-	return [cat];
+export function localFoodDate(now = new Date()) {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+export function foodCategories(entry) {
+  if (Array.isArray(entry.categories) && entry.categories.length)
+    return [...entry.categories];
+  return entry.category
+    ? Array.isArray(entry.category)
+      ? [...entry.category]
+      : [entry.category]
+    : [];
 }
 
 export function FoodForm({
-	onSubmit,
-	initial = {},
-	buttonLabel = "Add to Log",
-	isPro = false,
+  onSubmit,
+  initial = {},
+  buttonLabel = "Add to Log",
+  isPro = false,
+  recentFoods = [],
+  draftKey,
 }) {
-	const { C } = useTheme();
-	const s = useStyles();
-	const today = new Date().toISOString().split("T")[0];
-
-	const [form, setForm] = useState({
-		...EMPTY_FORM,
-		date: today,
-		...initial,
-		categories: parseCategories(initial.category || initial.categories),
-	});
-	const [showFormPicker, setShowFormPicker] = useState(false);
-	const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
-
-	const toggleCategory = (val) => {
-		setForm((p) => {
-			const cats = p.categories || [];
-			const exists = cats.includes(val);
-			const updated = exists ? cats.filter((c) => c !== val) : [...cats, val];
-			return { ...p, categories: updated, category: updated[0] || "" };
-		});
-	};
-
-	const isLiquids = (form.categories || []).includes("Liquids");
-
-	const handleSubmit = () => {
-		const cats = form.categories || [];
-		if (!form.date || !form.name || cats.length === 0) {
-			onSubmit(null, "Please fill in Date, Name and at least one Category.");
-			return;
-		}
-		const submitData = {
-			...form,
-			category: cats[0] || "",
-			categories: cats,
-			ml: isLiquids ? form.ml || "" : "",
-			allergens: form.allergens || [],
-		};
-		onSubmit(submitData);
-		if (!initial.id)
-			setForm({ ...EMPTY_FORM, date: today });
-	};
-
-	return (
-		<View style={{ gap: 18 }}>
-			<DateField
-				label="Date"
-				value={form.date}
-				onChange={(v) => set("date", v)}
-				minYear={2020}
-				maxYear={new Date().getFullYear() + 1}
-			/>
-
-			{/* ── Meal Time (Pro) ── */}
-			<View>
-				<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-					<Text style={s.label}>Meal Time</Text>
-					{!isPro && (
-						<View style={{ backgroundColor: C.warningStroke, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-							<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: "#fff" }}>PRO</Text>
-						</View>
-					)}
-				</View>
-				<View style={{ flexDirection: "row", flexWrap: "wrap", opacity: isPro ? 1 : 0.45 }}>
-					{MEAL_TIMES.map((m) => {
-						const sel = isPro && form.mealTime === m.value;
-						return (
-							<View key={m.value} style={{ width: "33.33%", padding: 3 }}>
-								<TouchableOpacity
-									onPress={() => isPro && set("mealTime", sel ? "" : m.value)}
-									activeOpacity={isPro ? 0.8 : 1}
-									style={{
-										height: 46,
-										borderRadius: 10,
-										backgroundColor: sel ? m.color : C.white,
-										borderWidth: 2,
-										borderColor: sel ? m.color : C.borderLight,
-										alignItems: "center",
-										justifyContent: "center",
-										paddingHorizontal: 6,
-									}}>
-									<Text
-										style={{
-											fontSize: 11,
-											fontFamily: "NunitoSans_700Bold",
-											color: sel ? "#fff" : C.mutedText,
-											textAlign: "center",
-										}}
-										numberOfLines={2}>
-										{m.value}
-									</Text>
-								</TouchableOpacity>
-							</View>
-						);
-					})}
-				</View>
-				{!isPro && (
-					<Text style={{ fontSize: 11, fontFamily: "NunitoSans_400Regular", color: C.mutedText, marginTop: 6, textAlign: "center" }}>
-						Upgrade to Pro to track meal times
-					</Text>
-				)}
-			</View>
-
-			<View>
-				<Text style={s.label}>Food or Drink Name</Text>
-				<TextInput
-					value={form.name}
-					onChangeText={(v) => set("name", v)}
-					placeholder="e.g. Banana, Water, Formula"
-					style={[s.input, { backgroundColor: C.white }]}
-					placeholderTextColor={C.mutedText}
-					autoComplete="off"
-					autoCorrect={false}
-				/>
-			</View>
-
-			<View>
-				<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-					<Text style={s.label}>Category</Text>
-					{(form.categories || []).length > 0 && (
-						<Text style={{ fontSize: 11, color: C.primaryPurple, fontFamily: "NunitoSans_700Bold" }}>
-							{(form.categories || []).join(" · ")}
-						</Text>
-					)}
-				</View>
-				<Text style={{ fontSize: 11, fontFamily: "NunitoSans_400Regular", color: C.mutedText, marginBottom: 10, marginTop: -4 }}>
-					Tap to select — you can pick multiple
-				</Text>
-				<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-					{CATEGORIES.map((c) => {
-						const sel = (form.categories || []).includes(c.value);
-						return (
-							<TouchableOpacity
-								key={c.value}
-								onPress={() => toggleCategory(c.value)}
-								style={{ alignItems: "center", gap: 6, width: "22%", opacity: sel ? 1 : 0.65 }}
-								activeOpacity={0.8}>
-								<View
-									style={{
-										borderWidth: 2.5,
-										borderColor: sel ? c.color : "transparent",
-										borderRadius: 16,
-										padding: 2,
-									}}>
-									<CategoryIcon category={c.value} size={48} />
-									{sel && (
-										<View
-											style={{
-												position: "absolute",
-												top: -4,
-												right: -4,
-												width: 18,
-												height: 18,
-												borderRadius: 9,
-												backgroundColor: c.color,
-												alignItems: "center",
-												justifyContent: "center",
-											}}>
-											<Icon name="check" size={11} color="#ffffff" />
-										</View>
-									)}
-								</View>
-								<Text style={{ fontSize: 9, fontFamily: "NunitoSans_700Bold", color: sel ? c.color : C.mutedText, textAlign: "center", textTransform: "uppercase" }}>
-									{c.value}
-								</Text>
-							</TouchableOpacity>
-						);
-					})}
-				</View>
-			</View>
-
-			{isLiquids && (
-				<View>
-					<Text style={s.label}>Amount (ml) — optional</Text>
-					<View style={[s.input, { flexDirection: "row", alignItems: "center", backgroundColor: C.white, gap: 8 }]}>
-						<TextInput
-							value={form.ml}
-							onChangeText={(v) => set("ml", v.replace(/[^0-9]/g, ""))}
-							placeholder="e.g. 120"
-							keyboardType="number-pad"
-							style={{ flex: 1, color: C.textCharcoal, fontFamily: "NunitoSans_600SemiBold", fontSize: 15 }}
-							placeholderTextColor={C.mutedText}
-							autoComplete="off"
-						/>
-						<Text style={{ fontSize: 14, fontFamily: "NunitoSans_700Bold", color: C.mutedText }}>ml</Text>
-					</View>
-					<Text style={{ fontSize: 11, fontFamily: "NunitoSans_400Regular", color: C.mutedText, marginTop: 6 }}>
-						Record how much your baby drank
-					</Text>
-				</View>
-			)}
-
-			<View>
-				<Text style={s.label}>Form / Texture</Text>
-				<TouchableOpacity
-					onPress={() => setShowFormPicker(true)}
-					style={[s.input, { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: C.white }]}>
-					<Text style={{ color: form.form ? C.textCharcoal : C.mutedText, fontFamily: "NunitoSans_600SemiBold" }}>
-						{form.form || "Select form…"}
-					</Text>
-					<Icon name="chevDown" size={14} color={C.mutedText} />
-				</TouchableOpacity>
-				<PickerModal
-					visible={showFormPicker}
-					title="Form / Texture"
-					options={FORMS}
-					value={form.form}
-					onSelect={(v) => set("form", v)}
-					onClose={() => setShowFormPicker(false)}
-				/>
-			</View>
-
-			<View>
-				<Text style={s.label}>Reaction</Text>
-				<View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-					{REACTIONS.map((r) => {
-						const sel = form.reaction === r.value;
-						return (
-							<TouchableOpacity
-								key={r.value}
-								onPress={() => set("reaction", r.value)}
-								style={{
-									backgroundColor: sel ? r.bg : C.white,
-									borderColor: sel ? r.border : C.borderLight,
-									borderWidth: 2,
-									borderRadius: 16,
-									paddingVertical: 10,
-									paddingHorizontal: 6,
-									flex: 1,
-									alignItems: "center",
-									gap: 6,
-									minWidth: "18%",
-									shadowColor: "#000",
-									shadowOpacity: sel ? 0 : 0.03,
-									shadowRadius: 4,
-									elevation: sel ? 0 : 1,
-								}}
-								activeOpacity={0.8}>
-								<ReactionFace reaction={r.value} size={32} />
-								<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 10, color: sel ? r.color : C.mutedText, textAlign: "center" }}>
-									{r.value}
-								</Text>
-							</TouchableOpacity>
-						);
-					})}
-				</View>
-			</View>
-
-			{/* ── Allergens ── */}
-			<View>
-				<Text style={s.label}>Contains Allergens (optional)</Text>
-				<Text style={{ fontSize: 11, fontFamily: "NunitoSans_400Regular", color: C.mutedText, marginBottom: 8, marginTop: -4 }}>
-					Tap to mark which allergens this food introduces
-				</Text>
-				<View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-					{ALLERGENS.map((al) => {
-						const sel = (form.allergens || []).includes(al.value);
-						return (
-							<View key={al.value} style={{ width: "33.33%", padding: 3 }}>
-								<TouchableOpacity
-									onPress={() =>
-										setForm((p) => {
-											const prev = p.allergens || [];
-											return {
-												...p,
-												allergens: prev.includes(al.value)
-													? prev.filter((a) => a !== al.value)
-													: [...prev, al.value],
-											};
-										})
-									}
-									activeOpacity={0.8}
-									style={{
-										height: 54,
-										borderRadius: 10,
-										backgroundColor: sel ? al.bg : C.white,
-										borderWidth: 2,
-										borderColor: sel ? al.color : C.borderLight,
-										alignItems: "center",
-										justifyContent: "center",
-										gap: 2,
-										paddingHorizontal: 4,
-									}}>
-									<AllergenIcon allergen={al.value} size={26} />
-									<Text
-										style={{
-											fontSize: 10,
-											fontFamily: "NunitoSans_700Bold",
-											color: sel ? al.color : C.mutedText,
-											textAlign: "center",
-										}}
-										numberOfLines={1}>
-										{al.value}
-									</Text>
-								</TouchableOpacity>
-							</View>
-						);
-					})}
-				</View>
-			</View>
-
-			<View>
-				<Text style={s.label}>Notes (optional)</Text>
-				<TextInput
-					value={form.notes}
-					onChangeText={(v) => set("notes", v)}
-					placeholder="Texture feedback, observations…"
-					multiline
-					numberOfLines={3}
-					style={[s.input, { height: 80, textAlignVertical: "top", backgroundColor: C.white }]}
-					placeholderTextColor={C.mutedText}
-					autoComplete="off"
-				/>
-			</View>
-
-			<TouchableOpacity
-				onPress={() => set("favourite", !form.favourite)}
-				style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
-				activeOpacity={0.8}>
-				<View
-					style={{
-						width: 24,
-						height: 24,
-						borderRadius: 8,
-						borderWidth: 2,
-						borderColor: C.primaryPurple,
-						backgroundColor: form.favourite ? C.primaryPurple : C.white,
-						alignItems: "center",
-						justifyContent: "center",
-					}}>
-					{form.favourite && <Icon name="check" size={14} color="#ffffff" />}
-				</View>
-				<Icon name="starFill" size={16} color="#d4a017" />
-				<Text style={{ fontFamily: "NunitoSans_700Bold", fontSize: 13, color: C.textCharcoal }}>
-					Mark as Favourite
-				</Text>
-			</TouchableOpacity>
-
-			<View>
-				<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-					<Text style={s.label}>Memory Photo (optional)</Text>
-					{!isPro && (
-						<View style={{ backgroundColor: C.warningStroke, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-							<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: "#ffffff" }}>PRO</Text>
-						</View>
-					)}
-				</View>
-				{isPro ? (
-					<TouchableOpacity
-						onPress={async () => {
-							const uri = await pickImageAsBase64([4, 3]);
-							if (uri) set("photoUri", uri);
-						}}
-						style={{
-							borderWidth: 2,
-							borderColor: form.photoUri ? C.primaryPurple : C.borderLight,
-							borderStyle: form.photoUri ? "solid" : "dashed",
-							borderRadius: 16,
-							overflow: "hidden",
-							minHeight: 120,
-							alignItems: "center",
-							justifyContent: "center",
-						}}
-						activeOpacity={0.8}>
-						{form.photoUri ? (
-							<>
-								<Image source={{ uri: form.photoUri }} style={{ width: "100%", height: 180, borderRadius: 14 }} resizeMode="cover" />
-								<TouchableOpacity
-									onPress={() => set("photoUri", null)}
-									style={{ position: "absolute", top: 8, right: 8, backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 999, padding: 6 }}>
-									<Icon name="close" size={14} color="#ffffff" />
-								</TouchableOpacity>
-							</>
-						) : (
-							<View style={{ alignItems: "center", gap: 8, paddingVertical: 24 }}>
-								<Icon name="image" size={32} color={C.mutedText} />
-								<Text style={{ fontSize: 13, color: C.mutedText, fontFamily: "NunitoSans_600SemiBold" }}>
-									Tap to add a photo memory
-								</Text>
-							</View>
-						)}
-					</TouchableOpacity>
-				) : (
-					<View
-						style={{
-							borderWidth: 2,
-							borderColor: C.borderLight,
-							borderStyle: "dashed",
-							borderRadius: 16,
-							minHeight: 120,
-							alignItems: "center",
-							justifyContent: "center",
-							opacity: 0.6,
-						}}>
-						<View style={{ alignItems: "center", gap: 8, paddingVertical: 24 }}>
-							<Icon name="lock" size={28} color={C.mutedText} />
-							<Text style={{ fontSize: 13, color: C.mutedText, fontFamily: "NunitoSans_600SemiBold" }}>
-								Photo memories — Pro only
-							</Text>
-							<Text style={{ fontSize: 11, fontFamily: "NunitoSans_400Regular", color: C.mutedText, textAlign: "center", paddingHorizontal: 20 }}>
-								Upgrade to Pro to attach photos to food log entries
-							</Text>
-						</View>
-					</View>
-				)}
-			</View>
-
-			<PrimaryBtn label={buttonLabel} onPress={handleSubmit} />
-		</View>
-	);
+  const { C } = useTheme();
+  const s = useStyles();
+  const [form, setForm] = useState(() => ({
+    ...EMPTY_FORM,
+    date: localFoodDate(),
+    ...initial,
+    categories: foodCategories(initial),
+  }));
+  const draft = useFoodDraft(
+    !initial.id ? draftKey : null,
+    form,
+    setForm,
+    initial,
+  );
+  const [showDate, setShowDate] = useState(false);
+  const [showTexture, setShowTexture] = useState(false);
+  const [showAllergens, setShowAllergens] = useState(
+    !!initial.allergens?.length || initial.reaction === "Allergic",
+  );
+  const [showDetails, setShowDetails] = useState(
+    !!(
+      initial.notes ||
+      initial.photoUri ||
+      initial.mealTime ||
+      initial.favourite
+    ),
+  );
+  const [busy, setBusy] = useState(false);
+  const saving = useRef(false);
+  const set = (key, value) => setForm((old) => ({ ...old, [key]: value }));
+  const toggle = (key, value) =>
+    setForm((old) => ({
+      ...old,
+      [key]: old[key].includes(value)
+        ? old[key].filter((item) => item !== value)
+        : [...old[key], value],
+    }));
+  const isLiquids = form.categories.includes("Liquids");
+  const recent = [...recentFoods]
+    .sort((a, b) =>
+      `${b.date || ""} ${b.time || ""}`.localeCompare(
+        `${a.date || ""} ${a.time || ""}`,
+      ),
+    )
+    .filter(
+      (entry, index, entries) =>
+        entry.name?.trim() &&
+        entries.findIndex(
+          (other) =>
+            other.name?.trim().toLowerCase() ===
+            entry.name.trim().toLowerCase(),
+        ) === index,
+    )
+    .filter(
+      (entry) =>
+        !form.name.trim() ||
+        entry.name.toLowerCase().includes(form.name.trim().toLowerCase()),
+    )
+    .slice(0, 5);
+  const selectRecentFood = (entry) => {
+    const categories = foodCategories(entry);
+    // Copy food details only. Today's reaction, amount and memory must be recorded afresh.
+    setForm((old) => ({
+      ...old,
+      name: entry.name,
+      categories,
+      category: categories[0] || "",
+      form: entry.form || "",
+      allergens: [...(entry.allergens || [])],
+      reaction: "",
+      ml: "",
+    }));
+    setShowAllergens(true);
+  };
+  const save = async () => {
+    if (saving.current || !draft.ready) return;
+    if (!form.name.trim() || !form.date || !form.categories.length) {
+      onSubmit(
+        null,
+        "Add a food name and choose at least one category. Check the date too.",
+      );
+      return;
+    }
+    saving.current = true;
+    setBusy(true);
+    try {
+      const result = await onSubmit({
+        ...form,
+        name: form.name.trim(),
+        category: form.categories[0],
+        ml: isLiquids ? form.ml || "" : "",
+        allergens: form.allergens || [],
+      });
+      if (result !== false && !initial.id) {
+        const cleared = await draft.clear();
+        if (!cleared)
+          Alert.alert(
+            "Entry saved",
+            "Its local draft could not be removed. If it reappears, do not save it again.",
+          );
+        setForm({ ...EMPTY_FORM, date: localFoodDate() });
+        setShowDetails(false);
+        setShowAllergens(false);
+        setShowDate(false);
+      }
+    } catch {
+      Alert.alert(
+        "Your entry is still here",
+        "We couldn't save it. Please try again.",
+      );
+    } finally {
+      saving.current = false;
+      setBusy(false);
+    }
+  };
+  const hint = {
+    color: C.mutedText,
+    fontFamily: "NunitoSans_400Regular",
+    fontSize: 12,
+    lineHeight: 18,
+  };
+  const row = {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingVertical: 12,
+  };
+  const chip = (
+    label,
+    selected,
+    onPress,
+    key = label,
+    accessibilityLabel = label,
+  ) => (
+    <TouchableOpacity
+      key={key}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={{
+        minHeight: 44,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: 14,
+        borderWidth: 1.5,
+        borderColor: selected ? C.primaryPurple : C.borderLight,
+        backgroundColor: selected ? C.bgPurple : C.white,
+        justifyContent: "center",
+      }}
+    >
+      <Text
+        style={{
+          fontFamily: "NunitoSans_700Bold",
+          color: C.textCharcoal,
+          fontSize: 13,
+        }}
+      >
+        {selected ? "✓ " : ""}
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+  return (
+    <View style={{ gap: 18 }}>
+      {!!draftKey && (
+        <Text style={hint} accessibilityLiveRegion="polite">
+          {!draft.ready
+            ? "Checking for an unfinished entry…"
+            : draft.status || "Unfinished entries are kept on this phone."}
+        </Text>
+      )}
+      <View
+        pointerEvents={busy || !draft.ready ? "none" : "auto"}
+        style={{ gap: 18 }}
+      >
+        <View>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Change food date"
+            accessibilityState={{ expanded: showDate }}
+            onPress={() => setShowDate(!showDate)}
+            style={row}
+          >
+            <Text
+              style={{
+                color: C.primaryPinkDark,
+                fontFamily: "NunitoSans_700Bold",
+              }}
+            >
+              {form.date === localFoodDate() ? "Today" : form.date}
+            </Text>
+            <Text
+              style={{
+                color: C.primaryPurple,
+                fontFamily: "NunitoSans_700Bold",
+              }}
+            >
+              {showDate ? "Done" : "Change date"}
+            </Text>
+          </TouchableOpacity>
+          {showDate && (
+            <DateField
+              label="Date"
+              value={form.date}
+              onChange={(value) => set("date", value)}
+              minYear={2020}
+              maxYear={new Date().getFullYear() + 1}
+            />
+          )}
+        </View>
+        <View>
+          <Text style={s.label}>What did they try?</Text>
+          <TextInput
+            accessibilityLabel="Food or drink name"
+            value={form.name}
+            onChangeText={(value) => set("name", value)}
+            placeholder="e.g. Banana or porridge"
+            placeholderTextColor={C.mutedText}
+            style={[s.input, { backgroundColor: C.white }]}
+            autoCorrect={false}
+            autoComplete="off"
+          />
+          {!initial.id && recent.length > 0 && (
+            <View style={{ gap: 8, marginTop: 12 }}>
+              <Text style={hint}>Log again · tap to reuse food details</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                {recent.map((entry) =>
+                  chip(
+                    entry.name,
+                    false,
+                    () => selectRecentFood(entry),
+                    entry.id || entry.name,
+                  ),
+                )}
+              </View>
+            </View>
+          )}
+        </View>
+        <View>
+          <Text style={s.label}>Food group</Text>
+          <Text style={[hint, { marginBottom: 8 }]}>
+            Choose one or more for mixed meals.
+          </Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+            {CATEGORIES.map((category) =>
+              chip(
+                category.value,
+                form.categories.includes(category.value),
+                () => toggle("categories", category.value),
+              ),
+            )}
+          </View>
+        </View>
+        {isLiquids && (
+          <View>
+            <Text style={s.label}>Amount in ml (optional)</Text>
+            <TextInput
+              accessibilityLabel="Amount in ml"
+              value={String(form.ml || "")}
+              onChangeText={(value) => set("ml", value.replace(/[^0-9]/g, ""))}
+              placeholder="e.g. 120"
+              keyboardType="number-pad"
+              placeholderTextColor={C.mutedText}
+              style={s.input}
+            />
+          </View>
+        )}
+        <View>
+          <Text style={s.label}>How did it go?</Text>
+          <Text style={[hint, { marginBottom: 8 }]}>
+            Optional — you can update this later.
+          </Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+            {REACTIONS.map((reaction) => (
+              <TouchableOpacity
+                key={reaction.value}
+                accessibilityRole="button"
+                accessibilityLabel={`Reaction: ${reaction.value}`}
+                accessibilityState={{
+                  selected: form.reaction === reaction.value,
+                }}
+                onPress={() => {
+                  set(
+                    "reaction",
+                    form.reaction === reaction.value ? "" : reaction.value,
+                  );
+                  if (reaction.value === "Allergic") setShowAllergens(true);
+                }}
+                style={{
+                  flex: 1,
+                  minWidth: 48,
+                  alignItems: "center",
+                  gap: 5,
+                  paddingVertical: 10,
+                  borderRadius: 14,
+                  borderWidth: 1.5,
+                  borderColor:
+                    form.reaction === reaction.value
+                      ? reaction.border
+                      : C.borderLight,
+                  backgroundColor:
+                    form.reaction === reaction.value ? reaction.bg : C.white,
+                }}
+              >
+                <ReactionFace reaction={reaction.value} size={28} />
+                <Text
+                  style={{
+                    fontSize: 10,
+                    fontFamily: "NunitoSans_700Bold",
+                    color:
+                      form.reaction === reaction.value
+                        ? reaction.color
+                        : C.textCharcoal,
+                  }}
+                >
+                  {reaction.value}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Choose texture"
+          onPress={() => setShowTexture(true)}
+          style={row}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={s.label}>Texture</Text>
+            <Text
+              style={{
+                color: form.form ? C.textCharcoal : C.mutedText,
+                fontFamily: form.form
+                  ? "NunitoSans_700Bold"
+                  : "NunitoSans_400Regular",
+                fontSize: 17,
+                lineHeight: 24,
+              }}
+            >
+              {form.form || "Optional · how was it served?"}
+            </Text>
+          </View>
+          <Icon name="chevDown" size={16} color={C.primaryPurple} />
+        </TouchableOpacity>
+        <PickerModal
+          visible={showTexture}
+          title="How was it served?"
+          optionFontSize={17}
+          options={["Not recorded", ...FORMS]}
+          value={form.form || "Not recorded"}
+          onSelect={(value) =>
+            set("form", value === "Not recorded" ? "" : value)
+          }
+          onClose={() => setShowTexture(false)}
+        />
+        <View
+          style={{
+            borderTopWidth: 1,
+            borderBottomWidth: 1,
+            borderColor: C.borderLight,
+          }}
+        >
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Check allergens"
+            accessibilityState={{ expanded: showAllergens }}
+            onPress={() => setShowAllergens(!showAllergens)}
+            style={row}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={s.label}>Allergens</Text>
+              <Text
+                style={{
+                  ...hint,
+                  fontSize: form.allergens.length ? 15 : 13,
+                  lineHeight: 22,
+                  color: form.allergens.length ? C.textCharcoal : C.mutedText,
+                }}
+              >
+                {form.allergens.length
+                  ? form.allergens.join(" · ")
+                  : "Add any allergens in this food"}
+              </Text>
+            </View>
+            <Text style={{ color: C.primaryPurple }}>
+              {showAllergens ? "Close" : "Check"}
+            </Text>
+          </TouchableOpacity>
+          {showAllergens && (
+            <View style={{ gap: 8, paddingBottom: 14 }}>
+              <Text style={hint}>
+                Check the ingredients each time, especially when reusing a food.
+                Leaving this blank means no allergens were recorded.
+              </Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                {ALLERGENS.map((allergen) =>
+                  chip(
+                    allergen.value,
+                    form.allergens.includes(allergen.value),
+                    () => toggle("allergens", allergen.value),
+                    allergen.value,
+                    `Allergen: ${allergen.value}`,
+                  ),
+                )}
+              </View>
+            </View>
+          )}
+        </View>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="More food details"
+          accessibilityState={{ expanded: showDetails }}
+          onPress={() => setShowDetails(!showDetails)}
+          style={row}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={s.label}>
+              {showDetails ? "Fewer details" : "More details"}
+            </Text>
+            <Text style={hint}>Notes, favourite, meal time & photo</Text>
+          </View>
+          <Icon name="chevDown" size={16} color={C.primaryPurple} />
+        </TouchableOpacity>
+        {showDetails && (
+          <View style={{ gap: 18 }}>
+            <View>
+              <Text style={s.label}>Notes (optional)</Text>
+              <TextInput
+                accessibilityLabel="Food notes"
+                value={form.notes}
+                onChangeText={(value) => set("notes", value)}
+                placeholder="Anything you'd like to remember…"
+                multiline
+                style={[s.input, { minHeight: 80, textAlignVertical: "top" }]}
+                placeholderTextColor={C.mutedText}
+              />
+            </View>
+            {chip("Favourite", form.favourite, () =>
+              set("favourite", !form.favourite),
+            )}
+            <View>
+              <Text style={s.label}>
+                Meal time {isPro ? "(optional)" : "· Pro"}
+              </Text>
+              {isPro ? (
+                <View
+                  style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}
+                >
+                  {MEAL_TIMES.map((meal) =>
+                    chip(meal.value, form.mealTime === meal.value, () =>
+                      set(
+                        "mealTime",
+                        form.mealTime === meal.value ? "" : meal.value,
+                      ),
+                    ),
+                  )}
+                </View>
+              ) : (
+                <Text style={hint}>
+                  {form.mealTime
+                    ? `${form.mealTime} · saved on this entry. `
+                    : ""}
+                  Meal-time tracking is available with Pro.
+                </Text>
+              )}
+            </View>
+            <View>
+              <Text style={s.label}>
+                Memory photo {isPro ? "(optional)" : "· Pro"}
+              </Text>
+              {!!form.photoUri && (
+                <Image
+                  source={{ uri: form.photoUri }}
+                  style={{
+                    width: "100%",
+                    height: 160,
+                    borderRadius: 14,
+                    marginBottom: 8,
+                  }}
+                />
+              )}
+              {isPro ? (
+                <View
+                  style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}
+                >
+                  {chip(
+                    form.photoUri ? "Change photo" : "Add photo",
+                    false,
+                    async () => {
+                      try {
+                        const uri = await pickImageAsBase64([4, 3]);
+                        if (uri) set("photoUri", uri);
+                      } catch {
+                        Alert.alert(
+                          "Could not open photos",
+                          "Please try again.",
+                        );
+                      }
+                    },
+                  )}
+                  {!!form.photoUri &&
+                    chip("Remove photo", false, () => set("photoUri", ""))}
+                </View>
+              ) : (
+                <Text style={hint}>Photo memories are available with Pro.</Text>
+              )}
+            </View>
+          </View>
+        )}
+      </View>
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={buttonLabel}
+        accessibilityState={{ disabled: busy || !draft.ready, busy }}
+        disabled={busy || !draft.ready}
+        onPress={save}
+        style={[s.btnPrimary, { opacity: busy ? 0.7 : 1 }]}
+      >
+        {busy ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={s.btnPrimaryText}>{buttonLabel}</Text>
+        )}
+      </TouchableOpacity>
+      <Text style={[hint, { textAlign: "center" }]}>
+        Only a name and food group are needed. Add more whenever you like.
+      </Text>
+    </View>
+  );
 }

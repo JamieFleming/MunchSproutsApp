@@ -53,11 +53,12 @@ when native dependencies/configuration change.
 
 ## Known release follow-up
 
-The premium AI Cloud Functions currently trust a client-provided `isPro` flag,
-and Firestore's plan mirror is client-writable. App-side RevenueCat checks are
-not server-side authorization. A server-verified entitlement integration and
-appropriate rules are needed before claiming premium backend access is secure.
-This review did not deploy backend changes or configure new secrets.
+The local premium AI Cloud Functions now verify RevenueCat using the authenticated
+Firebase UID. Configure the server secret and deploy the functions and rules
+before relying on this protection in production. See reliability.md.
+No backend changes or secrets were deployed during this work. See
+[release hardening](release-hardening.md) for the complete security rollout and
+compatibility requirements for older clients.
 
 Official references:
 - https://docs.expo.dev/build/internal-distribution/

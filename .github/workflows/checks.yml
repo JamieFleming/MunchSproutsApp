@@ -1,0 +1,28 @@
+name: App checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm ci --prefix functions
+      - run: npm ci --prefix tests/rules
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run audit:reviewed
+      - run: npm audit --prefix functions --audit-level=moderate
+      - run: npx --yes firebase-tools@15.18.0 emulators:exec --config firebase.emulator.json --project demo-munchsprouts --only firestore,storage "node tests/rules/verify.cjs && node tests/rules/audit.cjs && node tests/rules/server.cjs && node tests/rules/storage.cjs"
+      - run: npx expo export --platform all --source-maps --output-dir /tmp/app-export
+      - run: node scripts/checkBundleDependencies.cjs /tmp/app-export

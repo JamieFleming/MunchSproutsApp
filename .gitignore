@@ -43,3 +43,9 @@ yarn-error.*
 # Firebase / Google credentials (never commit these)
 google-services.json
 GoogleService-Info.plist
+
+# Local emulator output
+firebase-debug.log
+firestore-debug.log
+firestore-debug*.log
+storage-debug.log

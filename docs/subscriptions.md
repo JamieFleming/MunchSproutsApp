@@ -21,8 +21,9 @@ checks; it is never used to grant access in MainApp. Existing stale Pro flags
 are corrected when the updated app checks RevenueCat. This is client-side
 synchronization, not a server webhook: the database is not updated while the
 app is closed, and old installed app versions retain their old behavior.
-Release the updated app to deliver this fix. Backend authorization of premium
-Cloud Functions remains separate (the existing functions trust client flags).
+Release the updated app to deliver this fix. The local premium Cloud Functions now verify RevenueCat independently using
+the authenticated Firebase UID. This protection requires backend deployment;
+see reliability.md for secret configuration and deployment instructions.
 
 ## Validation
 

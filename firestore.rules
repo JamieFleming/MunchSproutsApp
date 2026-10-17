@@ -1,129 +1,72 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // ── User profile doc ──────────────────────────────────────────────────────
-    match /users/{userId} {
-      allow read, write: if request.auth != null
-        && request.auth.uid == userId;
-      // Allow any authenticated user to read user docs (e.g. for sharing lookup)
-      allow read: if request.auth != null;
+    function signedIn() { return request.auth != null; }
+    function active() {
+      return signedIn() && !exists(/databases/$(database)/documents/accountDeletionJobs/$(request.auth.uid));
     }
-
-    // ── ALL user subcollections (lists, favouriteRecipes, insights,
-    //    mealIdeasUsage, smartRecipes, pushTokens, etc.) ──────────────────────
-    match /users/{userId}/{subcollection}/{document=**} {
-      allow read, write: if request.auth != null
-        && request.auth.uid == userId;
+    function childAccess(id) {
+      let child = get(/databases/$(database)/documents/children/$(id)).data;
+      return active() && child.get('deleting', false) == false
+        && (child.userId == request.auth.uid || request.auth.uid in child.get('sharedWith', []));
     }
-
-    // ── Children ──────────────────────────────────────────────────────────────
-    match /children/{docId} {
-      allow read, write, delete: if request.auth != null
-        && resource.data.userId == request.auth.uid;
-      allow read, update: if request.auth != null
-        && resource.data.sharedWith != null
-        && request.auth.uid in resource.data.sharedWith;
-      allow create: if request.auth != null
-        && request.auth.uid == request.resource.data.userId;
+    function childWriteAccess(id) {
+      let child = getAfter(/databases/$(database)/documents/children/$(id)).data;
+      return active() && child.get('deleting', false) == false
+        && (child.userId == request.auth.uid || request.auth.uid in child.get('sharedWith', []));
     }
-
-    // ── Children subcollections (e.g. shared shopping list) ──────────────────
-    match /children/{childId}/lists/{listId} {
-      allow read, write: if request.auth != null
-        && (
-          get(/databases/$(database)/documents/children/$(childId)).data.userId == request.auth.uid
-          || (
-            get(/databases/$(database)/documents/children/$(childId)).data.sharedWith != null
-            && request.auth.uid in get(/databases/$(database)/documents/children/$(childId)).data.sharedWith
-          )
-        );
+    function sameIdentity() {
+      return request.resource.data.userId == resource.data.userId
+        && request.resource.data.childId == resource.data.childId;
     }
-
-    // ── Food log ──────────────────────────────────────────────────────────────
-    match /foodLog/{docId} {
-      allow read, write: if request.auth != null
-        && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null
-        && request.auth.uid == request.resource.data.userId;
-      allow read, update: if request.auth != null
-        && resource.data.childId != null
-        && exists(/databases/$(database)/documents/children/$(resource.data.childId))
-        && (
-          get(/databases/$(database)/documents/children/$(resource.data.childId)).data.userId == request.auth.uid
-          ||
-          (
-            get(/databases/$(database)/documents/children/$(resource.data.childId)).data.sharedWith != null
-            && request.auth.uid in get(/databases/$(database)/documents/children/$(resource.data.childId)).data.sharedWith
-          )
-        );
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, update: if active() && request.auth.uid == uid;
+      // Complete account removal is server-owned, including nested data.
+      allow delete: if false;
     }
-
-    // ── Bottle log ────────────────────────────────────────────────────────────
-    match /bottleLog/{docId} {
-      allow read, write: if request.auth != null
-        && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null
-        && request.auth.uid == request.resource.data.userId;
-      allow read, update: if request.auth != null
-        && resource.data.childId != null
-        && exists(/databases/$(database)/documents/children/$(resource.data.childId))
-        && (
-          get(/databases/$(database)/documents/children/$(resource.data.childId)).data.userId == request.auth.uid
-          ||
-          (
-            get(/databases/$(database)/documents/children/$(resource.data.childId)).data.sharedWith != null
-            && request.auth.uid in get(/databases/$(database)/documents/children/$(resource.data.childId)).data.sharedWith
-          )
-        );
+    match /users/{uid}/{subcollection}/{document=**} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if active() && request.auth.uid == uid
+        && !(subcollection in ['mealIdeasUsage', 'weeklyPlanUsage', 'insights']);
     }
-
-    // ── Weight log ────────────────────────────────────────────────────────────
-    match /weightLog/{docId} {
-      allow read, write: if request.auth != null
-        && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null
-        && request.auth.uid == request.resource.data.userId;
-      allow read, update: if request.auth != null
-        && resource.data.childId != null
-        && exists(/databases/$(database)/documents/children/$(resource.data.childId))
-        && (
-          get(/databases/$(database)/documents/children/$(resource.data.childId)).data.userId == request.auth.uid
-          ||
-          (
-            get(/databases/$(database)/documents/children/$(resource.data.childId)).data.sharedWith != null
-            && request.auth.uid in get(/databases/$(database)/documents/children/$(resource.data.childId)).data.sharedWith
-          )
-        );
+    match /children/{id} {
+      allow read: if signedIn() && (resource.data.userId == request.auth.uid
+        || request.auth.uid in resource.data.get('sharedWith', []));
+      allow create: if active() && request.resource.data.userId == request.auth.uid
+        && request.resource.data.get('sharedWith', []).size() == 0
+        && request.resource.data.get('sharedWithEmails', []).size() == 0
+        && request.resource.data.get('sharedWithRoles', {}).size() == 0
+        && request.resource.data.get('deleting', false) == false;
+      // Both family roles may edit the profile; only server endpoints manage access.
+      allow update: if childAccess(id)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(
+          ['userId', 'sharedWith', 'sharedWithEmails', 'sharedWithRoles', 'ownerEmail', 'deleting']);
+      allow delete: if false;
     }
-
-    // ── Invite codes (family sharing) ─────────────────────────────────────────
-    // Written by Cloud Function (generateInviteCode), read by any signed-in user.
-    match /inviteCodes/{code} {
-      allow read: if request.auth != null;
-      allow write: if false; // Cloud Function only
+    match /children/{id}/lists/{listId} {
+      allow read, write: if childAccess(id);
     }
-
-    // ── Recipes — authenticated read, admin-only write ────────────────────────
-    match /recipes/{recipeId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null
-        && request.auth.token.email == "fleming1411@yahoo.co.uk";
+    match /{collection}/{id} {
+      allow read: if collection in ['foodLog', 'bottleLog', 'weightLog'] && signedIn()
+        && (resource.data.userId == request.auth.uid || childAccess(resource.data.childId));
+      allow create: if collection in ['foodLog', 'bottleLog', 'weightLog'] && active()
+        && request.resource.data.userId == request.auth.uid && childWriteAccess(request.resource.data.childId);
+      allow update: if collection in ['foodLog', 'bottleLog', 'weightLog'] && active()
+        && sameIdentity() && childAccess(resource.data.childId);
+      allow delete: if collection in ['foodLog', 'bottleLog', 'weightLog'] && active()
+        && resource.data.userId == request.auth.uid && childAccess(resource.data.childId);
     }
-
-    // ── Recipe suggestions ────────────────────────────────────────────────────
-    match /recipeSuggestions/{docId} {
-      allow create: if request.auth != null
-        && request.auth.uid == request.resource.data.userId;
-      allow read, update, delete: if false;
+    match /inviteCodes/{code} { allow read, write: if false; }
+    match /recipes/{id} {
+      allow read: if signedIn();
+      allow write: if active() && request.auth.token.get('admin', false) == true;
     }
-
-    // ── Support requests ──────────────────────────────────────────────────────
-    match /supportRequests/{docId} {
-      allow create: if request.auth != null
-        && request.auth.uid == request.resource.data.userId;
-      allow read, update, delete: if false;
+    match /recipeSuggestions/{id} {
+      allow create: if active() && request.resource.data.userId == request.auth.uid;
     }
-
+    match /supportRequests/{id} {
+      allow create: if active() && request.resource.data.userId == request.auth.uid;
+    }
   }
 }

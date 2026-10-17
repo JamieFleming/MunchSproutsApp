@@ -1,0 +1,9 @@
+node_modules
+functions/node_modules
+android
+ios
+.expo
+dist
+package-lock.json
+functions/package-lock.json
+docs/audit

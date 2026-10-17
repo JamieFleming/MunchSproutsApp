@@ -8,18 +8,33 @@
  */
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { defineSecret }       = require("firebase-functions/params");
-const { initializeApp }      = require("firebase-admin/app");
+const { defineSecret } = require("firebase-functions/params");
+const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
-const OpenAI                 = require("openai");
+const OpenAI = require("openai");
 
 initializeApp();
 
 const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
-const MODEL          = "gpt-4o-mini";
+const REVENUECAT_SECRET_API_KEY = defineSecret("REVENUECAT_SECRET_API_KEY");
+const { requirePro } = require("./revenuecat");
+const { reserveQuota, active } = require("./access");
+async function verifyPro(uid) {
+  try {
+    await active(uid);
+    await requirePro(uid, { apiKey: REVENUECAT_SECRET_API_KEY.value() });
+  } catch (error) {
+    throw new HttpsError(error.code || "unavailable", error.message);
+  }
+}
+const MODEL = "gpt-4o-mini";
 
 function cleanJson(text) {
-	return text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/, "").trim();
+  return text
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```\s*$/, "")
+    .trim();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -29,33 +44,51 @@ function cleanJson(text) {
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 function buildInsightsPrompt(data) {
-	const { childName, ageMonths, nutrition, trends, milestones, allergenProgress, growth, milk, weightDetail } = data;
-	const ageLabel = ageMonths != null ? `${ageMonths} months old` : "age unknown";
+  const {
+    childName,
+    ageMonths,
+    nutrition,
+    trends,
+    milestones,
+    allergenProgress,
+    growth,
+    milk,
+    weightDetail,
+  } = data;
+  const ageLabel =
+    ageMonths != null ? `${ageMonths} months old` : "age unknown";
 
-	const allergenLine = allergenProgress.count > 0
-		? `Allergens introduced: ${allergenProgress.introduced.join(", ")}.${allergenProgress.missing.length ? ` Not yet tried: ${allergenProgress.missing.slice(0, 4).join(", ")}.` : " All introduced!"}`
-		: "No allergens logged yet.";
+  const allergenLine =
+    allergenProgress.count > 0
+      ? `Allergens introduced: ${allergenProgress.introduced.join(", ")}.${allergenProgress.missing.length ? ` Not yet tried: ${allergenProgress.missing.slice(0, 4).join(", ")}.` : " All introduced!"}`
+      : "No allergens logged yet.";
 
-	const trendLine = trends.thisWeekCount === 0 ? "No foods logged this week."
-		: `This week: ${trends.thisWeekCount} entries (${trends.uniqueFoodsThis} unique foods).${trends.newFoods.length ? ` New: ${trends.newFoods.join(", ")}.` : ""}`;
+  const trendLine =
+    trends.thisWeekCount === 0
+      ? "No foods logged this week."
+      : `This week: ${trends.thisWeekCount} entries (${trends.uniqueFoodsThis} unique foods).${trends.newFoods.length ? ` New: ${trends.newFoods.join(", ")}.` : ""}`;
 
-	let milkLine = "No milk feeds logged.";
-	if (milk && milk.type !== "none") {
-		if (milk.type === "breast") {
-			milkLine = `Milk: breastfeeding (${milk.avgDailyFeeds} feeds/day avg, trend: ${milk.trend}). Volume unmeasurable — guide only on frequency.`;
-		} else if (milk.type === "formula" || milk.type === "mixed") {
-			milkLine = `Milk: ${milk.type} (${milk.avgDailyMlThis}ml/day avg${milk.avgDailyMlLast ? `, was ${milk.avgDailyMlLast}ml/day last week` : ""}, trend: ${milk.trend}). NHS target for age: ${milk.nhsTargetMin}–${milk.nhsTargetMax}ml/day. Status: ${milk.status}.`;
-		}
-	}
+  let milkLine = "No milk feeds logged.";
+  if (milk && milk.type !== "none") {
+    if (milk.type === "breast") {
+      milkLine = `Milk: breastfeeding (${milk.avgDailyFeeds} feeds/day avg, trend: ${milk.trend}). Volume unmeasurable — guide only on frequency.`;
+    } else if (milk.type === "formula" || milk.type === "mixed") {
+      milkLine = `Milk: ${milk.type} (${milk.avgDailyMlThis}ml/day avg${milk.avgDailyMlLast ? `, was ${milk.avgDailyMlLast}ml/day last week` : ""}, trend: ${milk.trend}). NHS target for age: ${milk.nhsTargetMin}–${milk.nhsTargetMax}ml/day. Status: ${milk.status}.`;
+    }
+  }
 
-	let weightLine = "Weight: insufficient data logged.";
-	if (weightDetail && weightDetail.entryCount >= 2 && weightDetail.gPerDay != null) {
-		weightLine = `Weight: gaining ~${weightDetail.gPerDay}g/day (NHS expected for age: ${weightDetail.nhsMinGPerDay}–${weightDetail.nhsMaxGPerDay}g/day). Trend: ${weightDetail.trend}. Within expected range: ${weightDetail.withinRange ? "yes" : "outside range — flag gently"}.`;
-	} else if (weightDetail && weightDetail.latestKg) {
-		weightLine = `Weight: latest recorded ${weightDetail.latestKg}kg but only ${weightDetail.entryCount} entry — trend cannot be calculated yet.`;
-	}
+  let weightLine = "Weight: insufficient data logged.";
+  if (
+    weightDetail &&
+    weightDetail.entryCount >= 2 &&
+    weightDetail.gPerDay != null
+  ) {
+    weightLine = `Weight: gaining ~${weightDetail.gPerDay}g/day (NHS expected for age: ${weightDetail.nhsMinGPerDay}–${weightDetail.nhsMaxGPerDay}g/day). Trend: ${weightDetail.trend}. Within expected range: ${weightDetail.withinRange ? "yes" : "outside range — flag gently"}.`;
+  } else if (weightDetail && weightDetail.latestKg) {
+    weightLine = `Weight: latest recorded ${weightDetail.latestKg}kg but only ${weightDetail.entryCount} entry — trend cannot be calculated yet.`;
+  }
 
-	return `You are a friendly baby weaning assistant for MunchSprouts app. Write 5 short personalised insights for a parent. All insights must be warm, encouraging, and based on NHS/WHO guidance.
+  return `You are a friendly baby weaning assistant for MunchSprouts app. Write 5 short personalised insights for a parent. All insights must be warm, encouraging, and based on NHS/WHO guidance.
 
 Baby: ${childName}, ${ageLabel}
 Nutrition score: ${nutrition.score}/100
@@ -90,48 +123,60 @@ CRITICAL — applies to ALL five fields:
 }
 
 exports.generateInsights = onCall(
-	{ secrets: [OPENAI_API_KEY], region: "europe-west2" },
-	async (request) => {
-		if (!request.auth) throw new HttpsError("unauthenticated", "Must be signed in.");
+  {
+    secrets: [OPENAI_API_KEY, REVENUECAT_SECRET_API_KEY],
+    region: "europe-west2",
+  },
+  async (request) => {
+    if (!request.auth)
+      throw new HttpsError("unauthenticated", "Must be signed in.");
 
-		const uid     = request.auth.uid;
-		const payload = request.data;
-		if (!payload?.childName) throw new HttpsError("invalid-argument", "Missing payload.");
+    const uid = request.auth.uid;
+    await verifyPro(uid);
+    const payload = request.data;
+    if (!payload?.childName)
+      throw new HttpsError("invalid-argument", "Missing payload.");
 
-		const childId  = payload.childId || "default";
-		const db       = getFirestore();
-		const cacheRef = db.doc(`users/${uid}/insights/${childId}`);
+    const childId = payload.childId || "default";
+    const db = getFirestore();
+    const cacheRef = db.doc(`users/${uid}/insights/${childId}`);
 
-		const snap = await cacheRef.get();
-		if (snap.exists) {
-			const cached = snap.data();
-			const age    = Date.now() - (cached.generatedAt?.toMillis?.() || 0);
-			if (age < CACHE_TTL_MS && cached.insights) {
-				return { insights: cached.insights, cached: true };
-			}
-		}
+    const snap = await cacheRef.get();
+    if (snap.exists) {
+      const cached = snap.data();
+      const age = Date.now() - (cached.generatedAt?.toMillis?.() || 0);
+      if (age < CACHE_TTL_MS && cached.insights) {
+        return { insights: cached.insights, cached: true };
+      }
+    }
 
-		const openai   = new OpenAI({ apiKey: OPENAI_API_KEY.value() });
-		let insights;
-		try {
-			const res  = await openai.chat.completions.create({
-				model:       MODEL,
-				temperature: 0.7,
-				messages:    [{ role: "user", content: buildInsightsPrompt(payload) }],
-			});
-			insights = JSON.parse(cleanJson(res.choices[0].message.content.trim()));
-			if (!insights.nutrition || !insights.progress || !insights.nextSteps) throw new Error("Bad shape");
-			// Ensure new fields have defaults if AI omitted them
-			if (!insights.milk)   insights.milk   = buildFallbackInsights(payload).milk;
-			if (!insights.weight) insights.weight = buildFallbackInsights(payload).weight;
-		} catch (err) {
-			console.error("[insights] OpenAI error:", err.message);
-			insights = buildFallbackInsights(payload);
-		}
+    const openai = new OpenAI({ apiKey: OPENAI_API_KEY.value() });
+    let insights;
+    try {
+      const res = await openai.chat.completions.create({
+        model: MODEL,
+        temperature: 0.7,
+        messages: [{ role: "user", content: buildInsightsPrompt(payload) }],
+      });
+      insights = JSON.parse(cleanJson(res.choices[0].message.content.trim()));
+      if (!insights.nutrition || !insights.progress || !insights.nextSteps)
+        throw new Error("Bad shape");
+      // Ensure new fields have defaults if AI omitted them
+      if (!insights.milk) insights.milk = buildFallbackInsights(payload).milk;
+      if (!insights.weight)
+        insights.weight = buildFallbackInsights(payload).weight;
+    } catch (err) {
+      console.error("[insights] OpenAI error:", err.message);
+      insights = buildFallbackInsights(payload);
+    }
 
-		await cacheRef.set({ insights, generatedAt: new Date(), ageMonths: payload.ageMonths });
-		return { insights, cached: false };
-	},
+    await cacheRef.set({
+      insights,
+      generatedAt: new Date(),
+      ageMonths: payload.ageMonths,
+    });
+    return { insights, cached: false };
+  },
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -141,7 +186,7 @@ exports.generateInsights = onCall(
 const DAILY_LIMIT = 3; // Pro only — 3 calls per day, each returns 3 recipes
 
 function todayKey() {
-	return new Date().toISOString().split("T")[0];
+  return new Date().toISOString().split("T")[0];
 }
 
 const MEAL_IDEAS_SYSTEM = `You are the Smart Meal Ideas assistant for Munch Sprouts, a baby-led weaning (BLW) app. You follow NHS weaning guidelines precisely.
@@ -211,123 +256,134 @@ OUTPUT: Return ONLY valid JSON — no markdown, no explanation:
 }`;
 
 exports.generateMealIdeas = onCall(
-	{ secrets: [OPENAI_API_KEY], region: "europe-west2" },
-	async (request) => {
-		if (!request.auth) throw new HttpsError("unauthenticated", "Must be signed in.");
+  {
+    secrets: [OPENAI_API_KEY, REVENUECAT_SECRET_API_KEY],
+    region: "europe-west2",
+  },
+  async (request) => {
+    if (!request.auth)
+      throw new HttpsError("unauthenticated", "Must be signed in.");
 
-		const uid     = request.auth.uid;
-		const payload = request.data;
-		if (!payload || payload.ageMonths == null) throw new HttpsError("invalid-argument", "Missing payload.");
+    const uid = request.auth.uid;
+    await verifyPro(uid);
+    const payload = request.data;
+    if (!payload || payload.ageMonths == null)
+      throw new HttpsError("invalid-argument", "Missing payload.");
 
-		// Smart Meal Ideas is a Pro-only feature
-		if (payload.isPro !== true) {
-			throw new HttpsError("permission-denied", "Smart Meal Ideas requires a Pro subscription.");
-		}
+    const limit = DAILY_LIMIT;
+    const db = getFirestore();
 
-		const limit = DAILY_LIMIT;
-		const db    = getFirestore();
+    // Rate limit
+    const today = todayKey();
+    const usageRef = db.doc(`users/${uid}/mealIdeasUsage/${today}`);
+    // Reserve before the paid request. Attempts consume quota even on failure,
+    // preventing retry storms from issuing unlimited upstream requests.
+    const reserved = await reserveQuota(usageRef, limit);
 
-		// Rate limit
-		const today     = todayKey();
-		const usageRef  = db.doc(`users/${uid}/mealIdeasUsage/${today}`);
-		const usageSnap = await usageRef.get();
-		const used      = usageSnap.exists ? (usageSnap.data().count || 0) : 0;
+    const userMessage = JSON.stringify({
+      ageMonths: payload.ageMonths,
+      mealType: payload.mealType || "any",
+      textureLevel: payload.textureLevel || "age-appropriate",
+      childName: payload.childName || "Baby",
+      likedFoods: (payload.likedFoods || []).slice(0, 20),
+      dislikedFoods: (payload.dislikedFoods || []).slice(0, 10),
+      allergensSafe: payload.allergensSafe || [],
+      allergensAvoid: payload.allergensAvoid || [],
+      allergensNotTried: payload.allergensNotTried || [],
+      foodsTried: (payload.foodsTried || []).slice(0, 30),
+      previousTitles: (payload.previousTitles || []).slice(0, 50),
+      ratedRecipes: (payload.ratedRecipes || []).slice(0, 30),
+    });
 
-		if (used >= limit) {
-			return {
-				error:   "daily_limit_reached",
-				used,
-				limit,
-				message: `You've used all ${limit} Smart Meal Idea generation${limit !== 1 ? "s" : ""} for today. Come back tomorrow for more!`,
-			};
-		}
+    const openai = new OpenAI({ apiKey: OPENAI_API_KEY.value() });
+    let meals, disclaimer;
 
-		const userMessage = JSON.stringify({
-			ageMonths:         payload.ageMonths,
-			mealType:          payload.mealType || "any",
-			textureLevel:      payload.textureLevel || "age-appropriate",
-			childName:         payload.childName || "Baby",
-			likedFoods:        (payload.likedFoods         || []).slice(0, 20),
-			dislikedFoods:     (payload.dislikedFoods       || []).slice(0, 10),
-			allergensSafe:     payload.allergensSafe        || [],
-			allergensAvoid:    payload.allergensAvoid       || [],
-			allergensNotTried: payload.allergensNotTried    || [],
-			foodsTried:        (payload.foodsTried          || []).slice(0, 30),
-			previousTitles:    (payload.previousTitles      || []).slice(0, 50),
-			ratedRecipes:      (payload.ratedRecipes         || []).slice(0, 30),
-		});
+    try {
+      const res = await openai.chat.completions.create({
+        model: MODEL,
+        temperature: 0.8,
+        messages: [
+          { role: "system", content: MEAL_IDEAS_SYSTEM },
+          { role: "user", content: userMessage },
+        ],
+      });
+      const result = JSON.parse(
+        cleanJson(res.choices[0].message.content.trim()),
+      );
+      if (!result.meals || !Array.isArray(result.meals))
+        throw new Error("Bad shape");
+      meals = result.meals;
+      disclaimer = result.disclaimer;
+    } catch (err) {
+      console.error("[mealIdeas] OpenAI error:", err.message);
+      throw new HttpsError(
+        "internal",
+        "Could not generate meal ideas. This attempt counts toward your daily limit.",
+        { used: reserved },
+      );
+    }
 
-		const openai = new OpenAI({ apiKey: OPENAI_API_KEY.value() });
-		let meals, disclaimer;
-
-		try {
-			const res    = await openai.chat.completions.create({
-				model:       MODEL,
-				temperature: 0.8,
-				messages: [
-					{ role: "system", content: MEAL_IDEAS_SYSTEM },
-					{ role: "user",   content: userMessage },
-				],
-			});
-			const result = JSON.parse(cleanJson(res.choices[0].message.content.trim()));
-			if (!result.meals || !Array.isArray(result.meals)) throw new Error("Bad shape");
-			meals      = result.meals;
-			disclaimer = result.disclaimer;
-		} catch (err) {
-			console.error("[mealIdeas] OpenAI error:", err.message);
-			throw new HttpsError("internal", "Could not generate meal ideas. Please try again.");
-		}
-
-		await usageRef.set({ count: used + 1, date: today }, { merge: true });
-
-		return {
-			meals,
-			disclaimer: disclaimer ||
-				"Smart Meal Ideas are for inspiration only and are not medical advice. Always follow safe weaning guidance and speak to a healthcare professional regarding allergies or feeding concerns.",
-			used:  used + 1,
-			limit: DAILY_LIMIT,
-		};
-	},
+    return {
+      meals,
+      disclaimer:
+        disclaimer ||
+        "Smart Meal Ideas are for inspiration only and are not medical advice. Always follow safe weaning guidance and speak to a healthcare professional regarding allergies or feeding concerns.",
+      used: reserved,
+      limit: DAILY_LIMIT,
+    };
+  },
 );
 
 // ── Fallback insights ────────────────────────────────────────────────────────
 
 function buildFallbackInsights(data) {
-	const { childName, nutrition, milestones, trends, milk, weightDetail } = data;
+  const { childName, nutrition, milestones, trends, milk, weightDetail } = data;
 
-	let milkFallback = "Milk feeds have been logged alongside weaning — milk remains an important part of your baby's diet throughout the first year. This is general guidance only — always speak to your health visitor or GP with any concerns.";
-	if (milk && milk.type === "breast") {
-		milkFallback = `Breastfeeding is going beautifully — ${milk.avgDailyFeeds ? `around ${milk.avgDailyFeeds} feeds/day have been logged. ` : ""}Your health visitor is the best person to discuss feed frequency and your baby's individual needs. This is general guidance only.`;
-	} else if (milk && (milk.type === "formula" || milk.type === "mixed") && milk.avgDailyMlThis > 0) {
-		milkFallback = milk.status === "low"
-			? `${childName}'s logged milk intake is around ${milk.avgDailyMlThis}ml/day. The NHS reference range for this age is ${milk.nhsTargetMin}–${milk.nhsTargetMax}ml/day. Your health visitor is the right person to discuss this. This is general guidance only.`
-			: `${childName}'s logged milk intake is around ${milk.avgDailyMlThis}ml/day, within the NHS reference range. This is general guidance only — always speak to your health visitor or GP with any concerns.`;
-	}
+  let milkFallback =
+    "Milk feeds have been logged alongside weaning — milk remains an important part of your baby's diet throughout the first year. This is general guidance only — always speak to your health visitor or GP with any concerns.";
+  if (milk && milk.type === "breast") {
+    milkFallback = `Breastfeeding is going beautifully — ${milk.avgDailyFeeds ? `around ${milk.avgDailyFeeds} feeds/day have been logged. ` : ""}Your health visitor is the best person to discuss feed frequency and your baby's individual needs. This is general guidance only.`;
+  } else if (
+    milk &&
+    (milk.type === "formula" || milk.type === "mixed") &&
+    milk.avgDailyMlThis > 0
+  ) {
+    milkFallback =
+      milk.status === "low"
+        ? `${childName}'s logged milk intake is around ${milk.avgDailyMlThis}ml/day. The NHS reference range for this age is ${milk.nhsTargetMin}–${milk.nhsTargetMax}ml/day. Your health visitor is the right person to discuss this. This is general guidance only.`
+        : `${childName}'s logged milk intake is around ${milk.avgDailyMlThis}ml/day, within the NHS reference range. This is general guidance only — always speak to your health visitor or GP with any concerns.`;
+  }
 
-	let weightFallback = "Keep logging weight entries so we can track growth over time. This is general guidance only — always speak to your health visitor or GP with any concerns.";
-	if (weightDetail && weightDetail.entryCount >= 2 && weightDetail.gPerDay != null) {
-		weightFallback = weightDetail.withinRange
-			? `${childName}'s growth looks on track — gaining around ${weightDetail.gPerDay}g/day, within NHS expected ranges. This is general guidance only — always speak to your health visitor or GP with any concerns.`
-			: `${childName}'s weight gain is outside the typical NHS range — it's worth mentioning at your next health visitor appointment. This is general guidance only — always speak to your health visitor or GP with any concerns.`;
-	}
+  let weightFallback =
+    "Keep logging weight entries so we can track growth over time. This is general guidance only — always speak to your health visitor or GP with any concerns.";
+  if (
+    weightDetail &&
+    weightDetail.entryCount >= 2 &&
+    weightDetail.gPerDay != null
+  ) {
+    weightFallback = weightDetail.withinRange
+      ? `${childName}'s growth looks on track — gaining around ${weightDetail.gPerDay}g/day, within NHS expected ranges. This is general guidance only — always speak to your health visitor or GP with any concerns.`
+      : `${childName}'s weight gain is outside the typical NHS range — it's worth mentioning at your next health visitor appointment. This is general guidance only — always speak to your health visitor or GP with any concerns.`;
+  }
 
-	return {
-		nutrition: nutrition.score >= 70
-			? `${childName} is trying a great variety across ${nutrition.categoriesFound.length} food groups — keep it up!`
-			: nutrition.missingCategories.length
-			? `Try introducing some ${nutrition.missingCategories[0].toLowerCase()} this week to boost variety.`
-			: `${childName} is building a good range of foods. Keep offering new tastes regularly.`,
-		progress: milestones.achieved.length
-			? `${childName} has reached ${milestones.achieved.length} weaning milestone${milestones.achieved.length > 1 ? "s" : ""} — wonderful progress!`
-			: "You're just getting started — every new food is a milestone in itself!",
-		nextSteps: milestones.next
-			? milestones.next.tip
-			: trends.thisWeekCount === 0
-			? "Try logging some meals this week to start tracking weaning progress."
-			: "Keep offering a wide range of foods and textures — consistency is key!",
-		milk:   milkFallback,
-		weight: weightFallback,
-	};
+  return {
+    nutrition:
+      nutrition.score >= 70
+        ? `${childName} is trying a great variety across ${nutrition.categoriesFound.length} food groups — keep it up!`
+        : nutrition.missingCategories.length
+          ? `Try introducing some ${nutrition.missingCategories[0].toLowerCase()} this week to boost variety.`
+          : `${childName} is building a good range of foods. Keep offering new tastes regularly.`,
+    progress: milestones.achieved.length
+      ? `${childName} has reached ${milestones.achieved.length} weaning milestone${milestones.achieved.length > 1 ? "s" : ""} — wonderful progress!`
+      : "You're just getting started — every new food is a milestone in itself!",
+    nextSteps: milestones.next
+      ? milestones.next.tip
+      : trends.thisWeekCount === 0
+        ? "Try logging some meals this week to start tracking weaning progress."
+        : "Keep offering a wide range of foods and textures — consistency is key!",
+    milk: milkFallback,
+    weight: weightFallback,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -335,43 +391,6 @@ function buildFallbackInsights(data) {
 // Creates a unique 6-character alphanumeric invite code for a child.
 // Only the child owner can call this. Code expires after 24 hours.
 // ─────────────────────────────────────────────────────────────────────────────
-
-exports.generateInviteCode = onCall(async (request) => {
-	const uid = request.auth?.uid;
-	if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
-
-	const { childId, role = "caregiver" } = request.data || {};
-	if (!childId) throw new HttpsError("invalid-argument", "childId is required.");
-
-	const db = getFirestore();
-	const childDoc = await db.collection("children").doc(childId).get();
-	if (!childDoc.exists || childDoc.data().userId !== uid) {
-		throw new HttpsError("permission-denied", "You don't own this child.");
-	}
-
-	// Generate a unique code (retry if collision, though extremely unlikely)
-	let code, attempts = 0;
-	do {
-		code = Math.random().toString(36).slice(2, 8).toUpperCase();
-		const existing = await db.collection("inviteCodes").doc(code).get();
-		if (!existing.exists || existing.data().used) break;
-		attempts++;
-	} while (attempts < 5);
-
-	const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-	await db.collection("inviteCodes").doc(code).set({
-		childId,
-		childName: childDoc.data().name || "",
-		ownerUid: uid,
-		role: role === "parent" ? "parent" : "caregiver",
-		createdAt: FieldValue.serverTimestamp(),
-		expiresAt,
-		used: false,
-	});
-
-	return { code, expiresAt: expiresAt.toISOString() };
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // joinViaInviteCode
@@ -383,8 +402,16 @@ exports.generateInviteCode = onCall(async (request) => {
 // AI-powered 7-day meal plan generation. Pro only, 1 generation per day.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DAY_KEYS_PLAN = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
-const MEAL_KEYS_PLAN = ["breakfast","lunch","dinner","snacks"];
+const DAY_KEYS_PLAN = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
+const MEAL_KEYS_PLAN = ["breakfast", "lunch", "dinner", "snacks"];
 
 const WEEKLY_PLAN_SYSTEM = `You are MunchSprouts Weekly Meal Planner — an expert baby weaning assistant following NHS guidelines precisely.
 
@@ -436,124 +463,97 @@ Return ONLY valid JSON — no markdown fences, no extra text:
 }`;
 
 exports.generateWeeklyMealPlan = onCall(
-	{ secrets: [OPENAI_API_KEY], region: "europe-west2" },
-	async (request) => {
-		if (!request.auth) throw new HttpsError("unauthenticated", "Must be signed in.");
+  {
+    secrets: [OPENAI_API_KEY, REVENUECAT_SECRET_API_KEY],
+    region: "europe-west2",
+  },
+  async (request) => {
+    if (!request.auth)
+      throw new HttpsError("unauthenticated", "Must be signed in.");
 
-		const uid     = request.auth.uid;
-		const payload = request.data;
+    const uid = request.auth.uid;
+    await verifyPro(uid);
+    const payload = request.data;
 
-		if (payload.isPro !== true) {
-			throw new HttpsError("permission-denied", "Weekly Meal Planner requires a Pro subscription.");
-		}
-		if (!payload?.ageMonths && payload?.ageMonths !== 0) {
-			throw new HttpsError("invalid-argument", "Missing child age.");
-		}
+    if (!payload?.ageMonths && payload?.ageMonths !== 0) {
+      throw new HttpsError("invalid-argument", "Missing child age.");
+    }
 
-		// Rate limit: 1 generation per day
-		const db       = getFirestore();
-		const today    = todayKey();
-		const usageRef = db.doc(`users/${uid}/weeklyPlanUsage/${today}`);
-		const usageSnap = await usageRef.get();
-		if (usageSnap.exists && (usageSnap.data().count || 0) >= 1) {
-			throw new HttpsError("resource-exhausted", "daily_limit — You've already generated a meal plan today. Come back tomorrow!");
-		}
+    // Rate limit: 1 generation per day
+    const db = getFirestore();
+    const today = todayKey();
+    const usageRef = db.doc(`users/${uid}/weeklyPlanUsage/${today}`);
+    await reserveQuota(usageRef, 1);
 
-		const userMessage = JSON.stringify({
-			ageMonths:             payload.ageMonths,
-			childName:             payload.childName || "Baby",
-			allergensAvoid:        payload.allergensAvoid || [],
-			likedFoods:            (payload.likedFoods            || []).slice(0, 20),
-			pantryItems:           (payload.pantryItems           || []).slice(0, 30),
-			daysToGenerate:        payload.daysToGenerate         || DAY_KEYS_PLAN,
-			additionalPreferences: payload.additionalPreferences  || "",
-			dislikedFoods:         (payload.dislikedFoods         || []).slice(0, 20),
-		});
+    const userMessage = JSON.stringify({
+      ageMonths: payload.ageMonths,
+      childName: payload.childName || "Baby",
+      allergensAvoid: payload.allergensAvoid || [],
+      likedFoods: (payload.likedFoods || []).slice(0, 20),
+      pantryItems: (payload.pantryItems || []).slice(0, 30),
+      daysToGenerate: payload.daysToGenerate || DAY_KEYS_PLAN,
+      additionalPreferences: payload.additionalPreferences || "",
+      dislikedFoods: (payload.dislikedFoods || []).slice(0, 20),
+    });
 
-		const openai = new OpenAI({ apiKey: OPENAI_API_KEY.value() });
-		let plan, leftoverSummary, disclaimer;
+    const openai = new OpenAI({ apiKey: OPENAI_API_KEY.value() });
+    let plan, leftoverSummary, disclaimer;
 
-		try {
-			const res    = await openai.chat.completions.create({
-				model:       MODEL,
-				temperature: 0.75,
-				messages: [
-					{ role: "system", content: WEEKLY_PLAN_SYSTEM },
-					{ role: "user",   content: userMessage },
-				],
-			});
-			const result = JSON.parse(cleanJson(res.choices[0].message.content.trim()));
-			if (!result.plan || !result.plan.monday) throw new Error("Bad shape");
+    try {
+      const res = await openai.chat.completions.create({
+        model: MODEL,
+        temperature: 0.75,
+        messages: [
+          { role: "system", content: WEEKLY_PLAN_SYSTEM },
+          { role: "user", content: userMessage },
+        ],
+      });
+      const result = JSON.parse(
+        cleanJson(res.choices[0].message.content.trim()),
+      );
+      if (!result.plan || !result.plan.monday) throw new Error("Bad shape");
 
-			// Validate all 7 days and 4 meal slots exist
-			const validatedPlan = {};
-			DAY_KEYS_PLAN.forEach((day) => {
-				validatedPlan[day] = {};
-				MEAL_KEYS_PLAN.forEach((meal) => {
-					validatedPlan[day][meal] = Array.isArray(result.plan[day]?.[meal])
-						? result.plan[day][meal]
-						: [];
-				});
-			});
+      // Validate all 7 days and 4 meal slots exist
+      const validatedPlan = {};
+      DAY_KEYS_PLAN.forEach((day) => {
+        validatedPlan[day] = {};
+        MEAL_KEYS_PLAN.forEach((meal) => {
+          validatedPlan[day][meal] = Array.isArray(result.plan[day]?.[meal])
+            ? result.plan[day][meal]
+            : [];
+        });
+      });
 
-			plan           = validatedPlan;
-			leftoverSummary = result.leftoverSummary || "";
-			disclaimer     = result.disclaimer || "Meal plans are AI-generated suggestions for inspiration only.";
-		} catch (err) {
-			console.error("[weeklyPlan] OpenAI error:", err.message);
-			throw new HttpsError("internal", "Could not generate meal plan. Please try again.");
-		}
+      plan = validatedPlan;
+      leftoverSummary = result.leftoverSummary || "";
+      disclaimer =
+        result.disclaimer ||
+        "Meal plans are AI-generated suggestions for inspiration only.";
+    } catch (err) {
+      console.error("[weeklyPlan] OpenAI error:", err.message);
+      throw new HttpsError(
+        "internal",
+        "Could not generate meal plan. This attempt counts toward your daily limit.",
+        { used: 1 },
+      );
+    }
 
-		await usageRef.set({ count: 1, date: today }, { merge: true });
-
-		return { plan, leftoverSummary, disclaimer };
-	},
+    return { plan, leftoverSummary, disclaimer };
+  },
 );
 
-exports.joinViaInviteCode = onCall(async (request) => {
-	const uid   = request.auth?.uid;
-	const email = request.auth?.token?.email || "";
-	if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
-
-	const { code } = request.data || {};
-	if (!code) throw new HttpsError("invalid-argument", "Code is required.");
-
-	const db      = getFirestore();
-	const codeRef = db.collection("inviteCodes").doc(code.trim().toUpperCase());
-	const codeDoc = await codeRef.get();
-
-	if (!codeDoc.exists) {
-		throw new HttpsError("not-found", "Invalid invite code. Please check and try again.");
-	}
-
-	const { childId, childName, ownerUid, expiresAt, used, role = "caregiver" } = codeDoc.data();
-
-	if (used) {
-		throw new HttpsError("already-exists", "This invite code has already been used.");
-	}
-	if (expiresAt.toDate() < new Date()) {
-		throw new HttpsError("deadline-exceeded", "This invite code has expired. Ask the owner to generate a new one.");
-	}
-	if (ownerUid === uid) {
-		throw new HttpsError("invalid-argument", "You can't use your own invite code.");
-	}
-
-	const childRef = db.collection("children").doc(childId);
-	const childDoc = await childRef.get();
-	if (!childDoc.exists) throw new HttpsError("not-found", "Child not found.");
-
-	if ((childDoc.data().sharedWith || []).includes(uid)) {
-		throw new HttpsError("already-exists", `You already have access to ${childName}.`);
-	}
-
-	await Promise.all([
-		codeRef.update({ used: true, usedByUid: uid, usedByEmail: email }),
-		childRef.update({
-			sharedWith:                    FieldValue.arrayUnion(uid),
-			sharedWithEmails:              FieldValue.arrayUnion(email),
-			[`sharedWithRoles.${uid}`]:    role,
-		}),
-	]);
-
-	return { childName };
-});
+// Access and deletion are kept separate from AI generation for review and tests.
+const access = require("./access");
+const deletion = require("./deletion");
+exports.generateInviteCode = onCall(access.generateInviteCode);
+exports.joinViaInviteCode = onCall(access.joinViaInviteCode);
+exports.manageSharing = onCall(access.manageSharing);
+exports.familyOwnerDetails = onCall(access.familyOwnerDetails);
+exports.deleteChildData = onCall(
+  { timeoutSeconds: 540 },
+  deletion.deleteChildData,
+);
+exports.deleteAccountData = onCall(
+  { timeoutSeconds: 540 },
+  deletion.deleteAccountData,
+);
