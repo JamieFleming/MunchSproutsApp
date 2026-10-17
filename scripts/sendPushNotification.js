@@ -16,8 +16,8 @@ const https                    = require("https");
 const SERVICE_ACCOUNT_PATH = "../../migration/serviceAccountKey.json";
 
 const NOTIFICATION = {
-	title: "Lots of updates just dropped! 🌱",
-	body:  "If you have any issues, feedback, or feature ideas, email jamie@festudios.co.uk or through a support request in settings — we'd love to hear from you. Thanks for your support, and please share MunchSprouts with other parents! 💜",
+	title: "50% off MunchSprouts Pro for life! 🌱",
+	body:  "Unlock AI meal ideas, every recipe, smart insights and more for just £19.99. Use code SPROUTSLIFE before 12 August.",
 	data:  { type: "announcement" },
 };
 

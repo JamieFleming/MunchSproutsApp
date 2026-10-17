@@ -1,379 +1,180 @@
-import React, { useState } from "react";
-import {
-	View,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	ScrollView,
-	KeyboardAvoidingView,
-	Platform,
-	Image,
-	Alert,
-	ActivityIndicator,
-	StyleSheet,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { doc, updateDoc, addDoc, collection } from "firebase/firestore";
-import { updateProfile } from "firebase/auth";
-import { db, auth } from "../firebase";
-import { useTheme } from "../ThemeContext";
-import { DateField } from "../components/DatePickerModal";
-import { pickImageAsBase64, uploadChildPhoto, isLocalUri } from "../helpers";
-import { updateUserProfile } from "../firebaseHooks";
-import { Icon } from "../components/Icon";
+import React, { useRef, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Keyboard, Platform, Image, Alert, ActivityIndicator, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { doc, collection, updateDoc, writeBatch, deleteField, serverTimestamp } from 'firebase/firestore';
+import { updateProfile } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
+import { db } from '../firebase';
+import { useTheme } from '../ThemeContext';
+import { DateField } from '../components/DatePickerModal';
+import { pickImageAsBase64 } from '../helpers';
+import { uploadPhotoIfBase64 } from '../firebaseHooks';
+import { getExpoPushToken } from '../notificationService';
+import { Choice, FieldHeading, FeedingJourneyFields, PriorityChoices } from '../components/FeedingJourneyFields';
+import { OnboardingCompleteScreen } from './OnboardingCompleteScreen';
+import { validateChildProfile, dashboardPreferences } from '../onboardingModel';
 
-// ── Step indicator ─────────────────────────────────────────────────────────────
+const TITLES = ['Welcome to\nMunchSprouts', 'A little about you', 'Tell us about your\nlittle sprout', 'Every little sprout\ngrows differently', 'What matters\nmost to you?'];
+const SUBTITLES = [
+  "From first tastes to family favourites, we're here to make your little one's food journey easier.",
+  "Let's start with the person cheering them on. What should we call you?",
+  'A few little details help us make this space their own.',
+  "Let's tailor MunchSprouts to your little one's feeding journey. There's no one-size-fits-all.",
+  "We'll help you get started with your favourite feature. Everything else will still be here to explore.",
+];
+const LABELS = ['Welcome', 'About you', 'Your sprout', 'Feeding journey', 'Your priorities'];
 
-function StepDots({ step }) {
-	const { C } = useTheme();
-	return (
-		<View style={{ flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", marginBottom: 28 }}>
-			{[0, 1].map((i) => (
-				<View
-					key={i}
-					style={{
-						width: i === step ? 24 : 8,
-						height: 8,
-						borderRadius: 4,
-						backgroundColor: i === step ? C.primaryPurple : C.borderLight,
-					}}
-				/>
-			))}
-		</View>
-	);
+export function OnboardingScreen({ user, userDoc = {}, preview = false, onPreviewFinish }) {
+  const { C } = useTheme();
+  const draft = preview ? {} : userDoc.onboardingDraft || {};
+  const [step, setStep] = useState(Math.min(4, Math.max(0, draft.step || 0)));
+  const [data, setData] = useState(() => ({
+    parentName: userDoc.name || user.displayName || '', parentPhoto: userDoc.photoURL || user.photoURL || '',
+    name: '', dob: '', weaningStart: '', photoUri: '', weaningStage: '', feedingApproach: 'unsure',
+    trackMilk: null, allergyStatus: '', knownAllergens: [], otherAllergies: '', priority: '', notifications: 'later',
+    ...draft.data,
+  }));
+  const [childId] = useState(() => draft.childId || doc(collection(db, 'children')).id);
+  const [busy, setBusy] = useState(false);
+  const [previewComplete, setPreviewComplete] = useState(false);
+  const saving = useRef(false);
+  const scroll = useRef(null);
+  const set = (key, value) => setData((old) => ({ ...old, [key]: value }));
+  const move = (next) => { Keyboard.dismiss(); setStep(next); scroll.current?.scrollTo({ y: 0, animated: false }); };
+  const photo = async (key) => {
+    try { const uri = await pickImageAsBase64([1, 1]); if (uri) set(key, uri); }
+    catch { Alert.alert('Photo unavailable', 'Please try another photo. You can also add one later.'); }
+  };
+  const enableNotifications = async () => {
+    if (preview) { set("notifications", "enabled"); return; }
+    if (saving.current) return;
+    saving.current = true; setBusy(true);
+    try {
+      const token = await getExpoPushToken();
+      const permission = await Notifications.getPermissionsAsync();
+      setData((old) => ({ ...old, notifications: permission.granted ? 'enabled' : 'denied', pushToken: token || '' }));
+      if (!permission.granted) Alert.alert('No problem', 'You can enable notifications later in your phone settings.');
+    } catch { Alert.alert('Notifications unavailable', 'You can set these up later in More.'); }
+    finally { saving.current = false; setBusy(false); }
+  };
+  const next = async () => {
+    if (saving.current) return;
+    if (step === 1 && !data.parentName.trim()) return Alert.alert('Your name', 'Please enter your name to continue.');
+    if (step === 2) { const error = validateChildProfile(data); if (error) return Alert.alert('Check these details', error); }
+    if (step === 3 && (!data.weaningStage || data.trackMilk === null || !data.allergyStatus)) return Alert.alert('A little more about your journey', 'Please choose a feeding stage, milk tracking preference and allergy answer.');
+    if (step === 3 && data.allergyStatus === 'yes' && !data.knownAllergens.length && !data.otherAllergies.trim()) return Alert.alert('Known allergies', 'Select an allergen or add details in the other allergies box.');
+    if (step === 4 && !data.priority) return Alert.alert('Choose your starting point', 'Pick the feature you would like to start with. You can change it later.');
+    if (preview) {
+      if (step < 4) move(step + 1);
+      else setPreviewComplete(true);
+      return;
+    }
+    saving.current = true; setBusy(true);
+    try {
+      const saved = { ...data };
+      if (step >= 1) saved.parentPhoto = await uploadPhotoIfBase64(data.parentPhoto, `profilePhotos/${user.uid}/profile.jpg`);
+      if (step >= 2) saved.photoUri = await uploadPhotoIfBase64(data.photoUri, `childPhotos/${user.uid}/${childId}.jpg`);
+      setData(saved);
+      const userRef = doc(db, 'users', user.uid);
+      if (step < 4) {
+        await updateDoc(userRef, { onboardingDraft: { step: step + 1, childId, data: saved } });
+        move(step + 1);
+      } else {
+        const error = validateChildProfile(saved); if (error) throw new Error(error);
+        const preferences = dashboardPreferences(saved);
+        // One batch creates the child and completes onboarding. Retrying uses the
+        // same child ID, so a failed save cannot create duplicate child profiles.
+        const batch = writeBatch(db);
+        batch.set(doc(db, 'children', childId), {
+          userId: user.uid, name: saved.name.trim(), dob: saved.dob, weaningStart: saved.weaningStart,
+          photoUri: saved.photoUri, weaningStage: saved.weaningStage, feedingApproach: saved.feedingApproach,
+          allergyStatus: saved.allergyStatus, knownAllergens: saved.allergyStatus === 'yes' ? saved.knownAllergens : [],
+          otherAllergies: saved.allergyStatus === 'yes' ? saved.otherAllergies.trim() : '',
+        }, { merge: true });
+        batch.update(userRef, {
+          name: saved.parentName.trim(), photoURL: saved.parentPhoto,
+          dashboardPreferences: preferences, onboardingPriority: saved.priority,
+          notificationPreference: saved.notifications,
+          pushToken: saved.notifications === 'enabled' && saved.pushToken ? saved.pushToken : deleteField(),
+          defaultChildId: childId, onboardingComplete: true, onboardingVersion: 2,
+          onboardingCompletedAt: serverTimestamp(), onboardingDraft: deleteField(),
+          onboardingWelcome: { childName: saved.name.trim(), priority: saved.priority },
+        });
+        // Local preferences are a best-effort cache; Firestore is authoritative.
+        await AsyncStorage.multiSet([
+          [`showMilkDash_${user.uid}`, String(preferences.showMilk)],
+          [`showAllergenDash_${user.uid}`, String(preferences.showAllergens)],
+          [`defaultChildId_${user.uid}`, childId],
+        ]).catch(() => {});
+        await updateProfile(user, { displayName: saved.parentName.trim() }).catch(() => {});
+        await batch.commit(); // Root shows the saved completion screen before entering the dashboard.
+      }
+    } catch (error) {
+      Alert.alert('Your progress is still here', error.message || 'We could not save just yet. Check your connection and try again.');
+    } finally { saving.current = false; setBusy(false); }
+  };
+  const avatar = (key, label) => <View style={{ alignItems: 'center', marginVertical: 14 }}>
+    <TouchableOpacity accessibilityRole="button" accessibilityLabel={label} onPress={() => photo(key)} style={{ alignItems: 'center' }}>
+      {data[key] ? <Image source={{ uri: data[key] }} style={styles.avatar} /> : <View style={[styles.avatar, { backgroundColor: C.bgPurple, alignItems: 'center', justifyContent: 'center' }]}><Text style={{ fontSize: 36 }}>{key === 'parentPhoto' ? '📷' : '🌱'}</Text></View>}
+      <Text style={{ color: C.primaryPurple, fontFamily: 'NunitoSans_700Bold', marginTop: 9 }}>{data[key] ? 'Change photo' : label}</Text>
+    </TouchableOpacity>
+    {!!data[key] && <TouchableOpacity accessibilityRole="button" onPress={() => set(key, '')} style={{ padding: 10 }}><Text style={{ color: C.mutedText }}>Remove photo</Text></TouchableOpacity>}
+  </View>;
+  const input = (key, label, placeholder) => <View style={{ marginBottom: 18 }}>
+    <FieldHeading>{label}</FieldHeading><TextInput accessibilityLabel={label} value={data[key]} onChangeText={(v) => set(key, v)} placeholder={placeholder} placeholderTextColor={C.mutedText} autoCapitalize="words" autoCorrect={false} maxLength={80} style={[styles.input, { color: C.textCharcoal, backgroundColor: C.white, borderColor: C.borderLight }]} />
+  </View>;
+  if (previewComplete) return <OnboardingCompleteScreen priority={data.priority} childName={data.name} onPreviewFinish={onPreviewFinish} />;
+  return <SafeAreaView style={{ flex: 1, backgroundColor: C.screen || C.white }}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <View style={{ paddingHorizontal: 24, paddingTop: 10, paddingBottom: 14 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Previous step" disabled={step === 0 || busy} onPress={() => move(step - 1)} style={{ paddingVertical: 10, minWidth: 60 }}><Text style={{ color: step ? C.primaryPurple : 'transparent', fontFamily: 'NunitoSans_700Bold' }}>← Back</Text></TouchableOpacity>
+          <Text style={{ color: C.mutedText, fontFamily: 'NunitoSans_700Bold', fontSize: 12 }}>{step + 1} OF 5 · {LABELS[step].toUpperCase()}</Text>
+        </View>
+        <View accessibilityLabel={`Step ${step + 1} of 5`} style={{ flexDirection: 'row', gap: 6 }}>{LABELS.map((_, i) => <View key={i} style={{ flex: 1, height: 4, borderRadius: 3, backgroundColor: i <= step ? C.primaryPurple : C.borderLight }} />)}</View>
+      </View>
+      <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}>
+        <View pointerEvents={busy ? 'none' : 'auto'}>
+          <View style={{ alignItems: 'center', marginTop: 8, marginBottom: 20 }}>
+            {step === 0 ? <Image source={require('../../assets/logo.png')} style={{ width: 112, height: 112 }} resizeMode="contain" /> : <View style={{ backgroundColor: C.bgPurple, width: 62, height: 62, borderRadius: 22, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 30 }}>{['🌱', '👋', '🌱', '🥦', '✨'][step]}</Text></View>}
+          </View>
+          <Text accessibilityRole="header" style={[styles.title, { color: C.primaryPinkDark }]}>{TITLES[step]}</Text>
+          <Text style={[styles.subtitle, { color: C.mutedText }]}>{SUBTITLES[step]}</Text>
+          {step === 0 && <View style={{ padding: 18, borderRadius: 24, backgroundColor: C.white, borderWidth: 1, borderColor: C.borderLight }}>
+            {[
+              ['🥑', 'Little tastes. Lovely memories.', 'Keep foods, favourites and reactions together.'],
+              ['🍼', 'Less remembering. More enjoying.', 'Track milk feeds alongside your food journey.'],
+              ['🛡️', 'A clearer picture.', 'Record allergen introductions at your own pace.'],
+              ['🍽️', 'Fresh ideas for little appetites.', 'Find inspiration for what to try next.'],
+            ].map(([emoji, title, detail]) => <View key={title} style={{ flexDirection: 'row', gap: 13, marginVertical: 12 }}><Text style={{ fontSize: 26 }}>{emoji}</Text><View style={{ flex: 1 }}><Text style={{ color: C.primaryPinkDark, fontFamily: 'NunitoSans_800ExtraBold', fontSize: 15 }}>{title}</Text><Text style={{ color: C.mutedText, fontFamily: 'NunitoSans_400Regular', lineHeight: 20, marginTop: 4 }}>{detail}</Text></View></View>)}
+          </View>}
+          {step === 1 && <>{input('parentName', 'Your name', 'e.g. Jamie')}{avatar('parentPhoto', 'Add a profile photo (optional)')}</>}
+          {step === 2 && <>{input('name', "Your little one's name", 'e.g. Eleia')}<DateField label="Date of birth" value={data.dob} onChange={(v) => set('dob', v)} minYear={2000} maxYear={new Date().getFullYear()} />
+            {avatar('photoUri', 'Add their photo (optional)')}<DateField label="Weaning start date (optional)" value={data.weaningStart} onChange={(v) => set('weaningStart', v)} minYear={2000} maxYear={new Date().getFullYear() + 1} />
+            {!!data.weaningStart && <TouchableOpacity onPress={() => set('weaningStart', '')} style={{ paddingVertical: 12 }}><Text style={{ color: C.primaryPurple }}>Clear start date</Text></TouchableOpacity>}
+            <Text style={{ color: C.mutedText, fontSize: 12, lineHeight: 18, marginTop: 12 }}>Not sure when you'll start? Leave this blank and add it later.</Text></>}
+          {step === 3 && <FeedingJourneyFields value={data} onChange={setData} />}
+          {step === 4 && <><FieldHeading>Choose your starting point</FieldHeading><PriorityChoices value={data.priority} onChange={(v) => set('priority', v)} />
+            <FieldHeading detail="Allow helpful reminders and updates. You can manage these later in More.">A little nudge?</FieldHeading>
+            <Choice label={data.notifications === 'enabled' ? 'Notifications allowed' : 'Enable notifications'} emoji="🔔" selected={data.notifications === 'enabled'} onPress={enableNotifications} />
+            <Choice label="Not now" selected={data.notifications !== 'enabled'} onPress={() => { set('notifications', 'later'); }} />
+            <Text style={{ color: C.mutedText, fontSize: 12, lineHeight: 18, marginTop: 12 }}>Your profile lives in More, your child's details in their profile, and your dashboard preferences in More → Dashboard.</Text>
+          </>}
+        </View>
+      </ScrollView>
+      <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 12, borderTopWidth: 1, borderColor: C.borderLight, backgroundColor: C.white }}>
+        <TouchableOpacity accessibilityRole="button" disabled={busy} onPress={next} style={{ backgroundColor: C.primaryPurple, borderRadius: 18, minHeight: 54, alignItems: 'center', justifyContent: 'center', opacity: busy ? 0.7 : 1, padding: 14 }}>
+          {busy ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontFamily: 'NunitoSans_800ExtraBold', fontSize: 16 }}>{step === 0 ? "Let's grow together →" : step === 4 ? 'Make it mine →' : 'Continue →'}</Text>}
+        </TouchableOpacity>
+        <Text style={{ textAlign: 'center', color: C.mutedText, fontSize: 11, marginTop: 8 }}>{preview ? 'Preview only · no account changes are saved' : step === 0 ? 'Five little steps. A space made for you.' : 'Progress saved when you continue. Change choices later.'}</Text>
+      </View>
+    </KeyboardAvoidingView>
+  </SafeAreaView>;
 }
-
-// ── Step 1: Name + profile photo ───────────────────────────────────────────────
-
-function StepName({ user, onNext }) {
-	const { C } = useTheme();
-	const [name, setName]   = useState(user?.displayName || "");
-	const [photo, setPhoto] = useState(user?.photoURL   || "");
-	const [saving, setSaving] = useState(false);
-
-	const handlePhoto = async () => {
-		const uri = await pickImageAsBase64([1, 1]);
-		if (uri) setPhoto(uri);
-	};
-
-	const handleContinue = async () => {
-		const trimmed = name.trim();
-		if (!trimmed) {
-			Alert.alert("Name required", "Please enter your name to continue.");
-			return;
-		}
-		setSaving(true);
-		try {
-			const profileData = { name: trimmed };
-			if (photo) profileData.photoURL = photo;
-			await updateUserProfile(user.uid, profileData);
-			// Also update Firebase Auth display name immediately
-			try { await updateProfile(auth.currentUser, { displayName: trimmed }); } catch { /* non-fatal */ }
-			onNext({ name: trimmed, photo });
-		} catch (e) {
-			Alert.alert("Error", "Could not save your name. Please try again.");
-			console.error(e);
-		} finally {
-			setSaving(false);
-		}
-	};
-
-	return (
-		<KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-			<ScrollView
-				contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 28, paddingBottom: 40 }}
-				keyboardShouldPersistTaps="handled"
-				showsVerticalScrollIndicator={false}>
-
-						<View style={{ alignItems: "center", marginBottom: 12 }}>
-					<Image source={require("../../assets/logo.png")} style={{ width: 80, height: 80, borderRadius: 20 }} resizeMode="contain" />
-				</View>
-				<Text style={[styles.title, { color: C.primaryPinkDark }]}>Welcome to MunchSprouts!</Text>
-				<Text style={[styles.subtitle, { color: C.mutedText }]}>
-					Let's get your account set up. First, tell us a little about yourself.
-				</Text>
-
-				{/* Profile photo picker */}
-				<TouchableOpacity onPress={handlePhoto} activeOpacity={0.8} style={{ alignItems: "center", marginBottom: 28 }}>
-					<View style={[styles.avatar, { backgroundColor: C.bgPurple, borderColor: photo ? C.primaryPurple : C.borderLight }]}>
-						{photo ? (
-							<Image source={{ uri: photo }} style={styles.avatarImg} resizeMode="cover" />
-						) : (
-							<Icon name="baby" size={38} color={C.mutedText} />
-						)}
-					</View>
-					<Text style={{ fontSize: 13, color: C.primaryPurple, fontFamily: "NunitoSans_700Bold", marginTop: 8 }}>
-						{photo ? "Change photo" : "Add a profile photo (optional)"}
-					</Text>
-				</TouchableOpacity>
-
-				{/* Name input */}
-				<Text style={[styles.label, { color: C.mutedText }]}>Your name</Text>
-				<TextInput
-					value={name}
-					onChangeText={(v) => setName(v ? v.charAt(0).toUpperCase() + v.slice(1) : v)}
-					placeholder="e.g. Jamie"
-					placeholderTextColor={C.mutedText}
-					style={[styles.input, { borderColor: C.borderLight, backgroundColor: C.white, color: C.textCharcoal }]}
-					autoComplete="name"
-					autoCorrect={false}
-					returnKeyType="done"
-				/>
-
-				{/* CTA */}
-				<TouchableOpacity
-					onPress={handleContinue}
-					disabled={saving}
-					style={[styles.btn, { backgroundColor: C.primaryPurple, shadowColor: C.primaryPurple, marginTop: 12 }]}
-					activeOpacity={0.85}>
-					{saving ? (
-						<ActivityIndicator color="#fff" />
-					) : (
-						<Text style={styles.btnText}>Continue →</Text>
-					)}
-				</TouchableOpacity>
-			</ScrollView>
-		</KeyboardAvoidingView>
-	);
-}
-
-// ── Step 2: Add first child ────────────────────────────────────────────────────
-
-function StepChild({ user, onFinish }) {
-	const { C } = useTheme();
-	const [name, setName]       = useState("");
-	const [dob, setDob]         = useState("");
-	const [weanStart, setWean]  = useState("");
-	const [photo, setPhoto]     = useState("");
-	const [saving, setSaving]   = useState(false);
-
-	const handlePhoto = async () => {
-		const uri = await pickImageAsBase64([1, 1]);
-		if (uri) setPhoto(uri);
-	};
-
-	const handleAdd = async () => {
-		if (!name.trim()) {
-			Alert.alert("Name required", "Please enter your child's name.");
-			return;
-		}
-		if (!dob) {
-			Alert.alert("Date of birth required", "Please select your child's date of birth.");
-			return;
-		}
-		setSaving(true);
-		try {
-			const childData = {
-				userId: user.uid,
-				name:   name.trim(),
-				dob,
-			};
-			if (weanStart) childData.weaningStart = weanStart;
-			// Don't store local URI — upload to Storage first
-			const docRef = await addDoc(collection(db, "children"), childData);
-			if (photo && isLocalUri(photo)) {
-				try {
-					const url = await uploadChildPhoto(photo, user.uid, docRef.id);
-					await updateDoc(docRef, { photoUri: url });
-				} catch (uploadErr) {
-					console.warn("[onboarding] photo upload failed:", uploadErr.message);
-					// Photo is skipped — child is saved without it
-				}
-			} else if (photo) {
-				await updateDoc(docRef, { photoUri: photo });
-			}
-			await updateDoc(doc(db, "users", user.uid), { onboardingComplete: true });
-			onFinish();
-		} catch (e) {
-			Alert.alert("Error", "Could not add your child. Please try again.");
-			console.error(e);
-		} finally {
-			setSaving(false);
-		}
-	};
-
-	const handleSkip = async () => {
-		try {
-			await updateDoc(doc(db, "users", user.uid), { onboardingComplete: true });
-		} catch { /* non-fatal — Root will re-check onSnapshot */ }
-		onFinish();
-	};
-
-	return (
-		<KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-			<ScrollView
-				contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 28, paddingBottom: 40 }}
-				keyboardShouldPersistTaps="handled"
-				showsVerticalScrollIndicator={false}>
-
-				<View style={{ alignItems: "center", marginBottom: 12 }}>
-					<Image source={require("../../assets/logo.png")} style={{ width: 80, height: 80, borderRadius: 20 }} resizeMode="contain" />
-				</View>
-				<Text style={[styles.title, { color: C.primaryPinkDark }]}>Add your little one</Text>
-				<Text style={[styles.subtitle, { color: C.mutedText }]}>
-					Set up your child's profile so you can start tracking their food journey straight away.
-				</Text>
-
-				{/* Child photo picker */}
-				<TouchableOpacity onPress={handlePhoto} activeOpacity={0.8} style={{ alignItems: "center", marginBottom: 24 }}>
-					<View style={[styles.avatar, { backgroundColor: C.bgPurple, borderColor: photo ? C.primaryPurple : C.borderLight }]}>
-						{photo ? (
-							<Image source={{ uri: photo }} style={styles.avatarImg} resizeMode="cover" />
-						) : (
-							<Icon name="baby" size={38} color={C.mutedText} />
-						)}
-					</View>
-					<Text style={{ fontSize: 13, color: C.primaryPurple, fontFamily: "NunitoSans_700Bold", marginTop: 8 }}>
-						{photo ? "Change photo" : "Add a photo (optional)"}
-					</Text>
-				</TouchableOpacity>
-
-				{/* Child name */}
-				<Text style={[styles.label, { color: C.mutedText }]}>Child's name</Text>
-				<TextInput
-					value={name}
-					onChangeText={(v) => setName(v ? v.charAt(0).toUpperCase() + v.slice(1) : v)}
-					placeholder="e.g. Eleia"
-					placeholderTextColor={C.mutedText}
-					style={[styles.input, { borderColor: C.borderLight, backgroundColor: C.white, color: C.textCharcoal, marginBottom: 16 }]}
-					autoComplete="off"
-					autoCorrect={false}
-					returnKeyType="done"
-				/>
-
-				{/* Date of birth */}
-				<DateField
-					label="Date of birth"
-					value={dob}
-					onChange={setDob}
-					minYear={2018}
-					maxYear={new Date().getFullYear()}
-				/>
-
-				{/* Weaning start date */}
-				<View style={{ marginTop: 16 }}>
-					<DateField
-						label="Weaning start date (optional)"
-						value={weanStart}
-						onChange={setWean}
-						minYear={2018}
-						maxYear={new Date().getFullYear() + 1}
-					/>
-				</View>
-
-				{/* Add child CTA */}
-				<TouchableOpacity
-					onPress={handleAdd}
-					disabled={saving}
-					style={[styles.btn, { backgroundColor: C.primaryPurple, shadowColor: C.primaryPurple, marginTop: 24 }]}
-					activeOpacity={0.85}>
-					{saving ? (
-						<ActivityIndicator color="#fff" />
-					) : (
-						<Text style={styles.btnText}>Add Child & Get Started</Text>
-					)}
-				</TouchableOpacity>
-
-				{/* Skip link */}
-				<TouchableOpacity onPress={handleSkip} style={{ alignItems: "center", marginTop: 18 }} activeOpacity={0.7}>
-					<Text style={{ color: C.mutedText, fontSize: 14, fontFamily: "NunitoSans_600SemiBold" }}>
-						I'll add them later →
-					</Text>
-				</TouchableOpacity>
-			</ScrollView>
-		</KeyboardAvoidingView>
-	);
-}
-
-// ── Main OnboardingScreen ──────────────────────────────────────────────────────
-
-export function OnboardingScreen({ user }) {
-	const { C } = useTheme();
-	const [step, setStep] = useState(0);
-
-	return (
-		<SafeAreaView style={{ flex: 1, backgroundColor: C.white }}>
-			{/* Progress dots — shown above each step */}
-			<View style={{ paddingTop: 20 }}>
-				<StepDots step={step} />
-			</View>
-
-			{step === 0 ? (
-				<StepName user={user} onNext={() => setStep(1)} />
-			) : (
-				<StepChild user={user} onFinish={() => {
-					// onSnapshot in useAuth will pick up onboardingComplete: true
-					// and Root will automatically re-render to MainApp
-				}} />
-			)}
-		</SafeAreaView>
-	);
-}
-
-// ── Styles ─────────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
-	title: {
-		fontSize: 26,
-		fontFamily: "PlusJakartaSans_700Bold",
-		textAlign: "center",
-		marginBottom: 10,
-		letterSpacing: 0.2,
-	},
-	subtitle: {
-		fontSize: 15,
-		textAlign: "center",
-		lineHeight: 22,
-		marginBottom: 32,
-		fontFamily: "NunitoSans_400Regular",
-	},
-	label: {
-		fontSize: 12,
-		fontFamily: "NunitoSans_700Bold",
-		textTransform: "uppercase",
-		letterSpacing: 0.5,
-		marginBottom: 6,
-	},
-	input: {
-		borderWidth: 1.5,
-		borderRadius: 14,
-		paddingHorizontal: 16,
-		paddingVertical: 13,
-		fontFamily: "NunitoSans_600SemiBold",
-		fontSize: 15,
-		shadowColor: "#9b7fe8",
-		shadowOpacity: 0.08,
-		shadowRadius: 6,
-		shadowOffset: { width: 0, height: 2 },
-		elevation: 2,
-	},
-	btn: {
-		borderRadius: 16,
-		paddingVertical: 16,
-		alignItems: "center",
-		justifyContent: "center",
-		shadowOpacity: 0.35,
-		shadowRadius: 12,
-		shadowOffset: { width: 0, height: 6 },
-		elevation: 6,
-	},
-	btnText: {
-		color: "#fff",
-		fontFamily: "NunitoSans_700Bold",
-		fontSize: 16,
-		letterSpacing: 0.3,
-	},
-	avatar: {
-		width: 100,
-		height: 100,
-		borderRadius: 50,
-		alignItems: "center",
-		justifyContent: "center",
-		overflow: "hidden",
-		borderWidth: 2.5,
-	},
-	avatarImg: {
-		width: 100,
-		height: 100,
-	},
+  title: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 28, lineHeight: 36, textAlign: 'center', marginBottom: 12 },
+  subtitle: { fontFamily: 'NunitoSans_400Regular', fontSize: 15, lineHeight: 23, textAlign: 'center', marginBottom: 20 },
+  input: { borderWidth: 1.5, borderRadius: 14, padding: 16, fontFamily: 'NunitoSans_600SemiBold', fontSize: 16 },
+  avatar: { width: 88, height: 88, borderRadius: 44 },
 });

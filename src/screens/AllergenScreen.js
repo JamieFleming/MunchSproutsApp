@@ -15,6 +15,7 @@ import { computeAllergenStatus, formatDate } from "../helpers";
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_CFG = {
+	"Known Allergy": { label: "Known allergy", color: "#c0392b", bg: "#fde8e8", border: "#e07070", rowBg: "#fff5f5" },
 	Safe: {
 		label: "Safely Tried",
 		color: "#2d7a55",
@@ -166,6 +167,7 @@ function AllergenRow({ al, index, total, onViewInLog, onAddWithPrefill }) {
 	const canTap = !isNotTried && onViewInLog;
 
 	const handlePress = () => {
+		if (al.isKnownAllergy) { Alert.alert("Known allergy", `${al.value} is recorded on your child’s profile. You can update this in Edit Child.`); return; }
 		if (isNotTried && onAddWithPrefill) {
 			Alert.alert(
 				`Introduce ${al.value}?`,
@@ -211,7 +213,7 @@ function AllergenRow({ al, index, total, onViewInLog, onAddWithPrefill }) {
 					</Text>
 				) : (
 					<Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 11, color: C.mutedText, marginTop: 2 }}>
-						Not yet introduced
+						{al.isKnownAllergy ? "Recorded on child profile" : "Not yet introduced"}
 					</Text>
 				)}
 			</View>
@@ -264,7 +266,7 @@ function AllergenRow({ al, index, total, onViewInLog, onAddWithPrefill }) {
 						borderColor: cfg.border,
 					}}>
 					<Text style={{ fontSize: 10, fontFamily: "NunitoSans_700Bold", color: cfg.color }}>
-						{cfg.label}
+						{al.isKnownAllergy ? "Known allergy" : cfg.label}
 					</Text>
 				</View>
 			</View>
@@ -370,6 +372,7 @@ function TipRow({ tip, index }) {
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 export function AllergenScreen({
+	child,
 	foodLog = [],
 	onNavigate,
 	onAddWithPrefill,
@@ -379,9 +382,9 @@ export function AllergenScreen({
 	const { C } = useTheme();
 	const s = useStyles();
 
-	const allergenStatus = computeAllergenStatus(foodLog, ALLERGENS);
+	const allergenStatus = computeAllergenStatus(foodLog, ALLERGENS, child?.knownAllergens || []);
 	const introduced = allergenStatus.filter(
-		(a) => a.status !== "Not Tried",
+		(a) => a.status !== "Not Tried" && !a.isKnownAllergy,
 	).length;
 	const safe = allergenStatus.filter((a) => a.status === "Safe").length;
 	const inProgress = allergenStatus.filter(
@@ -397,7 +400,12 @@ export function AllergenScreen({
 		<ScrollView
 			showsVerticalScrollIndicator={false}
 			contentContainerStyle={{ paddingBottom: 30 }}>
-			{/* ── Check-in banner ── */}
+			{child?.allergyStatus === "yes" && <View style={{ backgroundColor: C.bgPurple, borderRadius: 16, padding: 16, marginBottom: 18 }}>
+                <Text style={{ color: C.primaryPinkDark, fontFamily: "NunitoSans_800ExtraBold", fontSize: 16 }}>Known allergies · {child.name}</Text>
+                <Text style={{ color: C.textCharcoal, marginTop: 6, lineHeight: 21 }}>{[...(child.knownAllergens || []), child.otherAllergies].filter(Boolean).join(" · ")}</Text>
+                <Text style={{ color: C.mutedText, marginTop: 8, fontSize: 12 }}>Saved on their profile, separately from logged reactions. Tap a listed allergen for details. Edit these in your child's profile.</Text>
+              </View>}
+              {/* ── Check-in banner ── */}
 			{checkIns.length > 0 && (
 				<View
 					style={{

@@ -400,11 +400,26 @@ export async function deleteAccount(userId) {
 
 // WEIGHT LOG
 export async function fetchWeightLog(userId) {
-	const snap = await getDocs(
+	// Load entries for every child this account can access so weight history is
+	// shared in the same way as food and bottle logs.
+	const children = await fetchChildren(userId);
+	const ownedSnap = await getDocs(
 		query(collection(db, "weightLog"), where("userId", "==", userId)),
 	);
-	return snap.docs
-		.map((d) => ({ id: d.id, ...d.data() }))
+
+	const allEntries = new Map();
+	ownedSnap.docs.forEach((d) => allEntries.set(d.id, { id: d.id, ...d.data() }));
+
+	const allChildIds = children.map((child) => child.id);
+	for (let i = 0; i < allChildIds.length; i += 30) {
+		const batch = allChildIds.slice(i, i + 30);
+		const childSnap = await getDocs(
+			query(collection(db, "weightLog"), where("childId", "in", batch)),
+		);
+		childSnap.docs.forEach((d) => allEntries.set(d.id, { id: d.id, ...d.data() }));
+	}
+
+	return Array.from(allEntries.values())
 		.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
 }
 
@@ -555,7 +570,7 @@ export async function fetchFoodLog(userId) {
 // Upload a photo to Firebase Storage and return the download URL.
 // Accepts a local file URI (file:// or content://) or a legacy base64 data URL.
 // Already-uploaded https:// URLs pass through unchanged.
-async function uploadPhotoIfBase64(photoUri, storagePath) {
+export async function uploadPhotoIfBase64(photoUri, storagePath) {
 	if (!photoUri) return "";
 	if (photoUri.startsWith("http")) return photoUri; // already an uploaded URL
 

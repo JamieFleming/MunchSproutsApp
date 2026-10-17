@@ -1,3 +1,5 @@
+import { OnboardingScreen } from "./OnboardingScreen";
+import { GettingStartedPreferences } from "../components/GettingStartedPreferences";
 import React, { useState, useEffect } from "react";
 import {
 	View, Text, TouchableOpacity, ScrollView, FlatList,
@@ -527,6 +529,7 @@ export function MoreScreen({
 	onLogout, onDeleteAccount, onUpgradePro, onRestorePurchases,
 	onManageSharing, onGenerateCode, onJoinViaCode, foodLog = [], bottleLog = [], weightLog = [], childName,
 }) {
+	const [previewOnboarding, setPreviewOnboarding] = useState(false);
 	const { C, theme, setTheme } = useTheme();
 	const s = useStyles();
 
@@ -1064,6 +1067,18 @@ export function MoreScreen({
 					</TouchableOpacity>
 				))}
 			</View>
+
+			{__DEV__ && <>
+                <TouchableOpacity onPress={() => setPreviewOnboarding(true)} style={{ padding: 16, borderRadius: 16, backgroundColor: C.bgPurple, marginBottom: 12 }}><Text style={{ color: C.primaryPurple, fontFamily: "NunitoSans_700Bold" }}>Preview new onboarding (no changes saved)</Text></TouchableOpacity>
+                <Modal visible={previewOnboarding} animationType="slide" onRequestClose={() => setPreviewOnboarding(false)}>
+                  <View style={{ flex: 1, backgroundColor: C.white }}>
+                    {previewOnboarding && <OnboardingScreen user={user} preview onPreviewFinish={() => { setPreviewOnboarding(false); Alert.alert("Preview complete", "Nothing was saved. Use a new test account to test saving your onboarding answers."); }} />}
+                    <TouchableOpacity onPress={() => setPreviewOnboarding(false)} style={{ padding: 16, paddingBottom: 30, alignItems: "center" }}><Text style={{ color: C.primaryPurple }}>Close preview</Text></TouchableOpacity>
+                  </View>
+                </Modal>
+              </>}
+              <SectionLabel>Your preferences</SectionLabel>
+			<GettingStartedPreferences user={user} userDoc={userDoc} />
 
 			{/* Dashboard */}
 			<SectionLabel>Dashboard</SectionLabel>

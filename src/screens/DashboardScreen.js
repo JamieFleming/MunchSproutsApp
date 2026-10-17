@@ -1,3 +1,4 @@
+import { PRIORITIES, JOURNEY_STAGES, FEEDING_APPROACHES } from "../onboardingModel";
 import React, { useMemo, memo, useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, ScrollView, Image, RefreshControl, Linking } from "react-native";
 import Svg, { Circle, Path, G } from "react-native-svg";
@@ -135,8 +136,10 @@ const FavouritesSection = memo(function FavouritesSection({ foodLog, onNavigateF
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
-const PROMO_EXPIRY = new Date("2026-06-13T23:59:59");
-const PROMO_URL    = "https://apps.apple.com/redeem?ctx=offercodes&id=6763142582&code=MUNCHSPROUTS50";
+// Keep the offer live through the end of 12 August in the user's local timezone.
+const PROMO_EXPIRY = new Date(2026, 7, 12, 23, 59, 59, 999);
+const PROMO_CODE   = "SPROUTSLIFE";
+const PROMO_URL    = `https://apps.apple.com/redeem?ctx=offercodes&id=6763142582&code=${PROMO_CODE}`;
 
 function PromoCountdownBanner() {
 	const [timeLeft, setTimeLeft] = useState(null);
@@ -173,7 +176,7 @@ function PromoCountdownBanner() {
 					<View style={{ backgroundColor: "#ec4899", borderRadius: 12, paddingHorizontal: 10, paddingVertical: 5, flexShrink: 0 }}>
 						<Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 11, color: "#fff", letterSpacing: 0.5 }}>LIMITED OFFER</Text>
 					</View>
-					<Text style={{ fontFamily: "NunitoSans_800ExtraBold", flex: 1, fontSize: 13, color: "#9d174d" }}>Ends Friday 13th June!</Text>
+					<Text style={{ fontFamily: "NunitoSans_800ExtraBold", flex: 1, fontSize: 13, color: "#9d174d" }}>Ends 12th August!</Text>
 					<Icon name="chevRight" size={14} color="#ec4899" />
 				</View>
 
@@ -200,7 +203,7 @@ function PromoCountdownBanner() {
 				{/* CTA button */}
 				<View style={{ backgroundColor: "#ec4899", borderRadius: 12, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}>
 					<Icon name="crown" size={15} color="#fff" />
-					<Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 13, color: "#fff", letterSpacing: 0.3 }}>Claim 50% Off — Use Code MUNCHSPROUTS50</Text>
+					<Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 13, color: "#fff", letterSpacing: 0.3 }}>Claim 50% Off — Use Code {PROMO_CODE}</Text>
 				</View>
 			</View>
 		</TouchableOpacity>
@@ -211,7 +214,7 @@ export function DashboardScreen({
 	child, foodLog, bottleLog = [], weightLog = [], weightPreference = "lbs",
 	showMilkOnDashboard = true, showAllergenOnDashboard = true,
 	recipes = [], onNavigate, onNavigateToRecipe, onNavigateFiltered, refreshing, onRefresh,
-	isPro = false, onUpgradePro,
+	isPro = false, onUpgradePro, priority,
 }) {
 	const { C } = useTheme();
 	const s = useStyles();
@@ -235,8 +238,8 @@ export function DashboardScreen({
 		[weightLog],
 	);
 
-	const allergenStatus = useMemo(() => computeAllergenStatus(foodLog, ALLERGENS), [foodLog]);
-	const allergenIntroduced = useMemo(() => allergenStatus.filter((a) => a.status !== "Not Tried").length, [allergenStatus]);
+	const allergenStatus = useMemo(() => computeAllergenStatus(foodLog, ALLERGENS, child?.knownAllergens || []), [foodLog, child?.knownAllergens]);
+	const allergenIntroduced = useMemo(() => allergenStatus.filter((a) => a.status !== "Not Tried" && !a.isKnownAllergy).length, [allergenStatus]);
 	const allergenTotal      = ALLERGENS.length;
 	const allergenPct        = allergenTotal > 0 ? Math.round((allergenIntroduced / allergenTotal) * 100) : 0;
 	const nextAllergen       = useMemo(() => allergenStatus.find((a) => a.status === "Not Tried") || null, [allergenStatus]);
@@ -264,7 +267,13 @@ export function DashboardScreen({
 			showsVerticalScrollIndicator={false}
 			refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primaryPurple} colors={[C.primaryPurple]} progressBackgroundColor={C.white} />}>
 
-			{/* ── Promo banner ── */}
+			{priority && <View style={{ backgroundColor: C.bgPurple, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: C.borderLight }}>
+                <Text style={{ fontFamily: "NunitoSans_800ExtraBold", color: C.primaryPinkDark, fontSize: 17 }}>A little space for your journey 🌱</Text>
+                <Text style={{ fontFamily: "NunitoSans_400Regular", color: C.mutedText, marginTop: 6, lineHeight: 20 }}>{[JOURNEY_STAGES.find((p) => p.value === child?.weaningStage)?.label, FEEDING_APPROACHES.find((p) => p.value === child?.feedingApproach)?.label].filter(Boolean).join(" · ") || "Start with what matters most to you."}</Text>
+                {PRIORITIES.filter((p) => p.value === priority).map((p) => <TouchableOpacity key={p.value} onPress={() => onNavigate(p.page)} style={{ marginTop: 12, paddingVertical: 12 }}><Text style={{ fontFamily: "NunitoSans_800ExtraBold", color: C.primaryPurple }}>{p.emoji} {p.action} →</Text></TouchableOpacity>)}
+                {child?.allergyStatus === "yes" && <TouchableOpacity onPress={() => onNavigate("allergens")} style={{ paddingVertical: 8 }}><Text style={{ color: C.primaryPinkDark, fontFamily: "NunitoSans_700Bold" }}>Known allergies: {[...(child.knownAllergens || []), child.otherAllergies].filter(Boolean).join(", ")} →</Text></TouchableOpacity>}
+              </View>}
+              {/* ── Promo banner ── */}
 			{!isPro && <PromoCountdownBanner />}
 
 			{/* ── Child hero ── */}

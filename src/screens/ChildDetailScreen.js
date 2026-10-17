@@ -5,6 +5,8 @@ import {
 } from "react-native";
 import Svg, { Polyline, Circle, Text as SvgText, Path } from "react-native-svg";
 import { useTheme, useStyles } from "../ThemeContext";
+import { FeedingJourneyFields } from "../components/FeedingJourneyFields";
+import { validateChildProfile } from "../onboardingModel";
 import { Icon } from "../components/Icon";
 import { ZoomableImage } from "../components/ZoomableImage";
 import { DateField } from "../components/DatePickerModal";
@@ -338,7 +340,7 @@ function MilestonesSection({ foodLog }) {
 function EditChildModal({ visible, child, onSave, onClose }) {
 	const { C } = useTheme();
 	const s = useStyles();
-	const [form, setForm]   = useState({ name: child.name || "", dob: child.dob || "", weaningStart: child.weaningStart || "" });
+	const [form, setForm]   = useState({ name: child.name || "", dob: child.dob || "", weaningStart: child.weaningStart || "", weaningStage: child.weaningStage || "", feedingApproach: child.feedingApproach || "unsure", allergyStatus: child.allergyStatus || "", knownAllergens: child.knownAllergens || [], otherAllergies: child.otherAllergies || "" });
 	const [photo, setPhoto] = useState(child.photoUri || "");
 	const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -348,7 +350,9 @@ function EditChildModal({ visible, child, onSave, onClose }) {
 	};
 
 	const handleSave = () => {
-		if (!form.name.trim() || !form.dob) return;
+		const error = validateChildProfile(form);
+		if (error) return Alert.alert("Check these details", error);
+		if (form.allergyStatus === "yes" && !form.knownAllergens.length && !form.otherAllergies.trim()) return Alert.alert("Known allergies", "Select an allergen or add details.");
 		onSave({ ...child, ...form, name: form.name.trim(), photoUri: photo });
 		onClose();
 	};
@@ -415,6 +419,7 @@ function EditChildModal({ visible, child, onSave, onClose }) {
 						maxYear={new Date().getFullYear()}
 					/>
 
+					<FeedingJourneyFields value={form} onChange={setForm} includeMilk={false} />
 					{/* Clear weaning */}
 					{form.weaningStart ? (
 						<TouchableOpacity onPress={() => set("weaningStart", "")}

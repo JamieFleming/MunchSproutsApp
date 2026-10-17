@@ -52,7 +52,7 @@ export function applyWeeklyFeaturedRotation(recipes) {
  *   lastDate: string | null
  *   count: number (entries containing this allergen)
  */
-export function computeAllergenStatus(foodLog, allergenList) {
+export function computeAllergenStatus(foodLog, allergenList, knownAllergens = []) {
 	const todayMs = new Date().setHours(0, 0, 0, 0);
 
 	const daysSinceDate = (dateStr) => {
@@ -62,6 +62,7 @@ export function computeAllergenStatus(foodLog, allergenList) {
 	};
 
 	return allergenList.map((allergen) => {
+		if (knownAllergens.includes(allergen.value)) return { ...allergen, status: "Known Allergy", isKnownAllergy: true, firstDate: null, lastDate: null, count: 0, needsCheckIn: false, awaitingWindow: false };
 		const entries = foodLog.filter(
 			(e) => Array.isArray(e.allergens) && e.allergens.includes(allergen.value),
 		);

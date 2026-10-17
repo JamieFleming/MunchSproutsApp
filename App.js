@@ -66,7 +66,8 @@ import {
 	deleteWeightEntry as fbDeleteWeightEntry,
 } from "./src/firebaseHooks";
 import AuthScreen from "./src/screens/AuthScreen";
-import Purchases, { LOG_LEVEL } from "react-native-purchases";
+import Purchases from "react-native-purchases";
+import { useProSubscription } from "./src/useProSubscription";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { ThemeContext, useTheme, useStyles } from "./src/ThemeContext";
@@ -89,6 +90,7 @@ import { ChildrenScreen } from "./src/screens/ChildrenScreen";
 import { BottleScreen } from "./src/screens/BottleScreen";
 import { ChildDetailScreen } from "./src/screens/ChildDetailScreen";
 import { MealsHubScreen } from "./src/screens/MealsHubScreen";
+import { OnboardingCompleteScreen } from "./src/screens/OnboardingCompleteScreen";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import {
 	setupNotifications,
@@ -756,17 +758,14 @@ const PAGE_TITLES = {
 	children: "Children",
 };
 
-function MainApp({ user, userDoc, isPro: isPropPro }) {
+function MainApp({ user, userDoc }) {
 	const { C, theme } = useTheme();
 	const s = useStyles();
 	const insets = useSafeAreaInsets();
-	const [isPro, setIsPro] = useState(isPropPro);
-	const [showMilkOnDashboard, setShowMilkOnDashboard] = useState(true);
-	const [showAllergenOnDashboard, setShowAllergenOnDashboard] = useState(true);
+	const { isPro, purchase, restore, getOfferings } = useProSubscription(user.uid);
+	const [showMilkOnDashboard, setShowMilkOnDashboard] = useState(userDoc?.dashboardPreferences?.showMilk ?? true);
+	const [showAllergenOnDashboard, setShowAllergenOnDashboard] = useState(userDoc?.dashboardPreferences?.showAllergens ?? true);
 
-	useEffect(() => {
-		if (isPropPro) setIsPro(true);
-	}, [isPropPro]);
 
 	useEffect(() => {
 		if (!user) return;
@@ -787,8 +786,8 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 					savedBottleReminderTimes,
 				]) => {
 					if (!alive) return;
-					if (savedMilkDash === "false") setShowMilkOnDashboard(false);
-					if (savedAllergenDash === "false") setShowAllergenOnDashboard(false);
+					setShowMilkOnDashboard(userDoc?.dashboardPreferences?.showMilk ?? savedMilkDash !== "false");
+					setShowAllergenOnDashboard(userDoc?.dashboardPreferences?.showAllergens ?? savedAllergenDash !== "false");
 					if (savedWeightUnit === "kg" || savedWeightUnit === "lbs") {
 						setWeightPreference(savedWeightUnit);
 					}
@@ -808,6 +807,11 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 			alive = false;
 		};
 	}, [user]);
+
+    useEffect(() => {
+        if (typeof userDoc?.dashboardPreferences?.showMilk === "boolean") setShowMilkOnDashboard(userDoc.dashboardPreferences.showMilk);
+        if (typeof userDoc?.dashboardPreferences?.showAllergens === "boolean") setShowAllergenOnDashboard(userDoc.dashboardPreferences.showAllergens);
+    }, [userDoc?.dashboardPreferences?.showMilk, userDoc?.dashboardPreferences?.showAllergens]);
 
 	const [page, setPage] = useState("dashboard");
 	const [mealsResetKey, setMealsResetKey] = useState(0);
@@ -844,27 +848,19 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 	const [smartRecipes, setSmartRecipes] = useState([]);
 
 	const STORAGE_KEY = `defaultChildId_${user?.uid}`;
-	const saveDefaultChild = (id) =>
+	const saveDefaultChild = (id) => {
 		AsyncStorage.setItem(STORAGE_KEY, id).catch(() => {});
-
-	useEffect(() => {
-		if (!user) return;
-		Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-		Purchases.configure({
-			apiKey:
-				Platform.OS === "ios"
-					? "appl_xNGjmEgufsXuWySnKebRetuKCGj"
-					: "goog_rcHUTFIPkKdXdEAQHcexulBdpOj",
-			appUserID: user.uid,
-		});
-	}, [user]);
+		updateDoc(doc(firestoreDb, "users", user.uid), { defaultChildId: id }).catch(() => {});
+	};
 
 	// ── Push notifications ──────────────────────────────────────────────────────
 	useEffect(() => {
 		if (!user) return;
 
 		// Register device and save token to Firestore
-		setupNotifications(user.uid);
+		if (userDoc?.notificationPreference !== "later" && userDoc?.notificationPreference !== "denied") {
+			setupNotifications(user.uid);
+		}
 
 		// Clear badge whenever the app is opened
 		clearBadge().catch(() => {});
@@ -900,8 +896,9 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 		setBottleLog(bottles);
 		setWeightLog(weights);
 		if (kids.length > 0) {
-			const preferred = savedId && kids.find((k) => k.id === savedId);
-			setActiveChildId(preferred ? savedId : kids[0].id);
+			const preferredId = userDoc?.defaultChildId || savedId;
+			const preferred = preferredId && kids.find((k) => k.id === preferredId);
+			setActiveChildId(preferred ? preferred.id : kids[0].id);
 		}
 		setUserMap(buildUserMap(user.uid, user.email, kids));
 	}, [user, STORAGE_KEY]);
@@ -1523,6 +1520,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 	const toggleMilkOnDashboard = async () => {
 		const next = !showMilkOnDashboard;
 		setShowMilkOnDashboard(next);
+		updateDoc(doc(firestoreDb, "users", user.uid), { "dashboardPreferences.showMilk": next }).catch(() => { toast("Could not sync dashboard preference. Please try again."); });
 		AsyncStorage.setItem(`showMilkDash_${user.uid}`, String(next)).catch(
 			() => {},
 		);
@@ -1531,6 +1529,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 	const toggleAllergenOnDashboard = async () => {
 		const next = !showAllergenOnDashboard;
 		setShowAllergenOnDashboard(next);
+		updateDoc(doc(firestoreDb, "users", user.uid), { "dashboardPreferences.showAllergens": next }).catch(() => { toast("Could not sync dashboard preference. Please try again."); });
 		AsyncStorage.setItem(`showAllergenDash_${user.uid}`, String(next)).catch(
 			() => {},
 		);
@@ -1567,7 +1566,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 	};
 
 	const purchaseProPlan = async (planType) => {
-		const offerings = await Purchases.getOfferings();
+		const offerings = await getOfferings();
 		if (
 			!offerings.current ||
 			offerings.current.availablePackages.length === 0
@@ -1592,13 +1591,13 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 			pkg = packages.find(
 				(p) => p.packageType === Purchases.PACKAGE_TYPE.LIFETIME,
 			);
-		if (!pkg) pkg = packages[0]; // fallback if package type not found
-		const { customerInfo } = await Purchases.purchasePackage(pkg);
+		if (!pkg) {
+			Alert.alert("Plan unavailable", "This plan is currently unavailable. Please try again later.");
+			return;
+		}
+		const customerInfo = await purchase(pkg);
+		if (!customerInfo) return;
 		if (customerInfo.entitlements.active["pro"]) {
-			const { doc, updateDoc } = await import("firebase/firestore");
-			const { db: firedb } = await import("./src/firebase");
-			await updateDoc(doc(firedb, "users", user.uid), { plan: "pro" });
-			setIsPro(true);
 			Alert.alert(
 				"Welcome to Pro! 🎉",
 				"You now have access to all recipes and premium features.",
@@ -1658,12 +1657,9 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 
 	const handleRestorePurchases = async () => {
 		try {
-			const customerInfo = await Purchases.restorePurchases();
+			const customerInfo = await restore();
+			if (!customerInfo) return;
 			if (customerInfo.entitlements.active["pro"]) {
-				const { doc, updateDoc } = await import("firebase/firestore");
-				const { db: firedb } = await import("./src/firebase");
-				await updateDoc(doc(firedb, "users", user.uid), { plan: "pro" });
-				setIsPro(true);
 				Alert.alert("Restored ✓", "Your Pro purchase has been restored.");
 			} else {
 				Alert.alert(
@@ -1899,6 +1895,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 				<View
 					style={{ flex: 1, display: page === "dashboard" ? "flex" : "none" }}>
 					<DashboardScreen
+						priority={userDoc?.onboardingPriority}
 						child={activeChild}
 						foodLog={childLog}
 						bottleLog={childBottleLog}
@@ -2006,6 +2003,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 				<View
 					style={{ flex: 1, display: page === "allergens" ? "flex" : "none" }}>
 					<AllergenScreen
+						child={activeChild}
 						foodLog={childLog}
 						onNavigate={setPage}
 						onViewInLog={(allergenValue) => {
@@ -2325,7 +2323,7 @@ function MainApp({ user, userDoc, isPro: isPropPro }) {
 // ── Root ──────────────────────────────────────────────────────────────────────
 
 function Root() {
-	const { user, userDoc, userDocLoaded, loading, isPro } = useAuth();
+	const { user, userDoc, userDocLoaded, loading } = useAuth();
 	// Wait for Firebase Auth AND the first Firestore snapshot to settle.
 	// userDocLoaded becomes true once onSnapshot resolves (even on error),
 	// so we never get stuck on LoadingScreen indefinitely.
@@ -2334,9 +2332,12 @@ function Root() {
 	// New users haven't completed onboarding yet — show the wizard first.
 	// Existing users (onboardingComplete === undefined) skip straight to the app.
 	if (userDoc?.onboardingComplete === false) {
-		return <OnboardingScreen user={user} />;
+		return <OnboardingScreen user={user} userDoc={userDoc} />;
 	}
-	return <MainApp user={user} userDoc={userDoc} isPro={isPro} />;
+	if (userDoc?.onboardingWelcome) {
+		return <OnboardingCompleteScreen user={user} priority={userDoc.onboardingWelcome.priority} childName={userDoc.onboardingWelcome.childName} />;
+	}
+	return <MainApp key={user.uid} user={user} userDoc={userDoc} />;
 }
 
 export default function App() {
