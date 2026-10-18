@@ -19,7 +19,7 @@ export function useProSubscription(uid) {
       apiKey:
         Platform.OS === "ios"
           ? "appl_xNGjmEgufsXuWySnKebRetuKCGj"
-          : "goog_rcHUTFIPkKdXdEAQHcexulBdpOj",
+          : "goog_HgraeNeseMorBReDFtzeZqUmzhQ",
       onInfo: (_info, pro) => {
         setAccess({ uid, pro });
         const plan = pro ? "pro" : "free";
