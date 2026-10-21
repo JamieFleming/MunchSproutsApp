@@ -75,3 +75,26 @@ does not certify production service configuration or every device interaction.
 The app still has large orchestration/screens. This pass removes clearly dead
 code and introduces shared disclosure/calendar/reminder modules; it deliberately
 avoids rewriting working data and subscription flows immediately before release.
+
+## Follow-up: local/EAS runtime mismatch
+
+The first 1.6.1 cloud builds failed at Configure expo-updates. Their fingerprint
+reports showed 35 differences per platform, in installed native dependency
+folders/autolinking data. The local node_modules contained duplicate files.
+A clean `npm ci` installation from the unchanged lockfile resolved the mismatch.
+Both local runtime hashes then exactly matched those calculated on EAS:
+
+- iOS: `80d5f44f834f5024149077a909d66381d841787d`
+- Android: `1a7db505e12b170a51556b0991b1650c1fc1d16d`
+
+The old dependency folder was retained beside the project as
+`MunchSproutsNative-dependencies-backup-20261021`. Do not copy its files back into
+node_modules. The app version remains 1.6.1; fingerprint validation remains enabled.
+Earlier bundle exports and Expo Doctor did not detect the altered dependency
+contents. When diagnosing this error, compare the actual EAS fingerprint diff;
+do not assume passing JavaScript tests proves native dependency parity.
+
+Rebuild using `eas build --platform all --profile production`. Matching fingerprints
+resolves this specific failure; only successful cloud builds confirm subsequent
+native compilation/signing stages. No replacement cloud builds were launched
+as part of this local repair.
