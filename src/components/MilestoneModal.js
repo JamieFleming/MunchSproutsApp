@@ -1,15 +1,7 @@
 import React from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Modal,
-  Image,
-  Platform,
-} from "react-native";
-import { useTheme, useStyles } from "../ThemeContext";
-import { DASHBOARD_COLOURS } from "../dashboardModel";
+import { View, Text, TouchableOpacity, Modal } from "react-native";
+import { useTheme } from "../ThemeContext";
+
 import { Icon } from "./Icon";
 
 export function MilestoneModal({ milestones, onClose }) {

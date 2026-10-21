@@ -2,7 +2,7 @@
 	"expo": {
 		"name": "Munch Sprouts Weaning Tracker",
 		"slug": "MunchSproutsNative",
-		"version": "1.6.0",
+		"version": "1.6.1",
 		"orientation": "portrait",
 		"icon": "./assets/logo.png",
 		"userInterfaceStyle": "light",
@@ -10,7 +10,6 @@
 			"supportsTablet": true,
 			"bundleIdentifier": "com.munchsprouts.app",
 			"scheme": "com.googleusercontent.apps.406023036087-4ci5jet3el9aqgnuetadrocdp3d3s2jr",
-			"buildNumber": "2",
 			"infoPlist": {
 				"ITSAppUsesNonExemptEncryption": false
 			}
@@ -22,7 +21,6 @@
 				"backgroundColor": "#ffffff"
 			},
 			"package": "com.munchsprouts.app",
-			"versionCode": 2,
 			"intentFilters": [
 				{
 					"action": "VIEW",

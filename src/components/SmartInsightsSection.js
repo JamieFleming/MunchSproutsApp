@@ -22,7 +22,6 @@ import {
   computeMilestones,
   computeMilkInsight,
   buildInsightPayload,
-  MILESTONES,
 } from "../smartInsights";
 
 // ─────────────────────────────────────────────────────────────────────────────

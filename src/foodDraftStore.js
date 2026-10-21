@@ -12,6 +12,7 @@ export function sanitiseFoodDraft(value) {
     "date",
     "name",
     "category",
+    "categoryOther",
     "form",
     "reaction",
     "notes",
@@ -31,6 +32,7 @@ export function hasFoodDraft(value) {
   return !!(
     value?.name?.trim() ||
     value?.notes?.trim() ||
+    value?.categoryOther?.trim() ||
     value?.photoUri ||
     value?.categories?.length ||
     value?.allergens?.length ||

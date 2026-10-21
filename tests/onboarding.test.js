@@ -326,6 +326,9 @@ test("known allergies never appear as untried foods or check-in reminders", () =
     "./firebase": {},
     "./constants": {},
     "./milestones": {},
+    "./allergenCheckIn": require("./support/appHarness.cjs")().load(
+      "src/allergenCheckIn.js",
+    ),
   });
   const values = helpers.computeAllergenStatus(
     [],

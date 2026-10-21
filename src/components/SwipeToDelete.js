@@ -116,9 +116,9 @@ export function SwipeToDelete({
           action(
             favourite ? "Unfavourite" : "Favourite",
             favourite ? "starFill" : "star",
-            C.bgPurple,
+            "#fff1b8",
             onFavourite,
-            C.primaryPurpleDark,
+            "#795a0c",
           )}
         {onRepeat &&
           action("Repeat", "plus", C.primaryPurple, onRepeat, C.white)}

@@ -7,9 +7,6 @@ import {
   signOut,
   onAuthStateChanged,
   sendPasswordResetEmail,
-  deleteUser,
-  EmailAuthProvider,
-  reauthenticateWithCredential,
   updateProfile,
 } from "firebase/auth";
 import {
@@ -36,7 +33,6 @@ import {
   uploadString,
   uploadBytes,
   getDownloadURL,
-  deleteObject,
 } from "firebase/storage";
 
 // Set to true by deleteAccount so the onSnapshot handler knows not to
@@ -566,16 +562,8 @@ export async function uploadPhotoIfBase64(photoUri, storagePath) {
   return await getDownloadURL(photoRef);
 }
 
-// Check if a base64 string is within Firestore's safe limit (~700kb to leave room)
-function isSafeBase64Size(base64str, maxKb = 700) {
-  if (!base64str) return true;
-  // base64 encodes 3 bytes as 4 chars, so length * 0.75 = bytes
-  const bytes = base64str.length * 0.75;
-  return bytes < maxKb * 1024;
-}
-
 export async function addFoodEntry(userId, entry) {
-  const safeEntry = { ...entry };
+  const safeEntry = { loggedAt: new Date().toISOString(), ...entry };
   // First create the doc to get an ID, then upload photo using that ID
   const docRef = await addDoc(collection(db, "foodLog"), {
     userId,

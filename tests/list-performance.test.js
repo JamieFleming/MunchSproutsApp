@@ -4,7 +4,7 @@ const harness = require("./support/appHarness.cjs");
 
 // Retain hook state across screen renders to check reference stability and
 // invalidation. Native scrolling/frame timing still requires a device profiler.
-function screenHarness(file, name) {
+function screenHarness(file, name, wholeTree = false) {
   const slots = [];
   let cursor = 0;
   const react = { ...harness().react };
@@ -36,7 +36,8 @@ function screenHarness(file, name) {
   }
   return (props) => {
     cursor = 0;
-    return findList(Screen(props)).props;
+    const tree = Screen(props);
+    return wholeTree ? tree : findList(tree).props;
   };
 }
 
@@ -83,4 +84,57 @@ test("opening milk repeat retains day rows and callbacks; deleting a log invalid
     row.props.onRepeat,
   );
   assert.equal(render({ ...props, bottleLog: [] }).data.length, 0);
+});
+
+test("date groups keep expansion state when scrolling and default to the newest day", () => {
+  const render = screenHarness("src/screens/LogScreen.js", "LogScreen");
+  const props = {
+    foodLog: [
+      { id: "1", name: "Banana", date: "2026-10-21" },
+      { id: "2", name: "Toast", date: "2026-10-20" },
+    ],
+  };
+  let list = render(props);
+  const newest = list.renderItem({ item: "2026-10-21" });
+  assert.equal(newest.props.dayOpen, true);
+  assert.equal(list.renderItem({ item: "2026-10-20" }).props.dayOpen, false);
+  newest.props.onToggleDay("2026-10-21");
+  list = render(props);
+  assert.equal(list.renderItem({ item: "2026-10-21" }).props.dayOpen, false);
+  list.renderItem({ item: "2026-10-20" }).props.onToggleDay("2026-10-20");
+  list = render(props);
+  assert.equal(list.renderItem({ item: "2026-10-20" }).props.dayOpen, true);
+});
+
+test("calendar date selection filters food history and All dates restores it", () => {
+  const render = screenHarness("src/screens/LogScreen.js", "LogScreen", true);
+  const props = {
+    foodLog: [
+      { id: "1", name: "Banana", date: "2026-10-21" },
+      { id: "2", name: "Toast", date: "2026-10-20" },
+    ],
+  };
+  const flat = (node) =>
+    Array.isArray(node)
+      ? node.flatMap(flat)
+      : node && typeof node === "object"
+        ? [node, ...flat(node.props?.children)]
+        : [];
+  let nodes = flat(render(props));
+  const calendar = () =>
+    nodes.find((node) => node.type?.name === "ActivityCalendar");
+  const list = () => nodes.find((node) => node.type === "FlatList");
+  calendar().props.onSelect("2026-10-20");
+  nodes = flat(render(props));
+  assert.deepEqual(list().props.data, ["2026-10-20"]);
+  assert.equal(
+    list().props.renderItem({ item: "2026-10-20" }).props.dayOpen,
+    true,
+  );
+  calendar().props.onSelect("2026-10-19");
+  nodes = flat(render(props));
+  assert.deepEqual(list().props.data, []);
+  calendar().props.onSelect(null);
+  nodes = flat(render(props));
+  assert.deepEqual(list().props.data, ["2026-10-21", "2026-10-20"]);
 });

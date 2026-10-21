@@ -19,7 +19,6 @@
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // ── Foreground behaviour ───────────────────────────────────────────────────────
 // Show alert + play sound when a notification arrives while the app is open.
@@ -103,19 +102,6 @@ export async function setupNotifications(userId) {
 // ── Listeners ─────────────────────────────────────────────────────────────────
 
 /**
- * Called when a notification arrives while the app is in the foreground.
- * Returns an unsubscribe function.
- *
- *   const unsub = onNotificationReceived((notification) => {
- *     console.log(notification.request.content);
- *   });
- */
-export function onNotificationReceived(handler) {
-  const sub = Notifications.addNotificationReceivedListener(handler);
-  return () => sub.remove();
-}
-
-/**
  * Called when the user taps a notification (foreground OR background).
  * Use `response.notification.request.content.data` to navigate.
  * Returns an unsubscribe function.
@@ -137,39 +123,6 @@ export async function clearBadge() {
   await Notifications.setBadgeCountAsync(0);
 }
 
-/** Set the app badge to a specific number (iOS). */
-export async function setBadge(count) {
-  await Notifications.setBadgeCountAsync(count);
-}
-
-// ── Local notification (for future use) ───────────────────────────────────────
-
-/**
- * Schedule a local notification.
- *
- * Example — fire in 5 seconds:
- *   scheduleLocalNotification({
- *     title: "Time to log!",
- *     body: "Don't forget to log Oliver's lunch today.",
- *     data: { screen: "log" },
- *     seconds: 5,
- *   });
- */
-export async function scheduleLocalNotification({
-  title,
-  body,
-  data = {},
-  seconds = 5,
-}) {
-  await Notifications.scheduleNotificationAsync({
-    content: { title, body, data, sound: "default" },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-      seconds,
-    },
-  });
-}
-
 // Ask when the user explicitly enables bottle reminders, even if they skipped
 // notification permission during onboarding. No push token is needed for local reminders.
 export async function requestBottleReminderPermission() {
@@ -178,73 +131,4 @@ export async function requestBottleReminderPermission() {
   if (existing.granted) return true;
   const permission = await Notifications.requestPermissionsAsync();
   return permission.granted;
-}
-
-// ── Bottle feeding reminders ──────────────────────────────────────────────────
-
-const BOTTLE_IDS_KEY = "munchsprouts_bottleReminderIds";
-
-/**
- * Schedule daily bottle feeding reminders.
- * @param {Array<{hour: number, minute: number}>} times - Array of 24h times
- * @param {string} childName - Name to use in the notification body
- */
-export async function scheduleBottleReminders(times, childName = "your baby") {
-  // Cancel any existing bottle reminders before rescheduling
-  await cancelBottleReminders();
-
-  if (!times || times.length === 0) return;
-
-  const ids = [];
-  for (const t of times) {
-    try {
-      const id = await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "🍼 Bottle Feeding Reminder",
-          body: `Time to feed ${childName}!`,
-          data: { screen: "bottle" },
-          sound: "default",
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DAILY,
-          ...(Platform.OS === "android" && { channelId: "default" }),
-          hour: t.hour,
-          minute: t.minute,
-        },
-      });
-      ids.push(id);
-    } catch (e) {
-      console.warn("Bottle reminder schedule failed:", e.message);
-    }
-  }
-
-  try {
-    await AsyncStorage.setItem(BOTTLE_IDS_KEY, JSON.stringify(ids));
-  } catch {
-    /* silent */
-  }
-}
-
-/**
- * Cancel all scheduled bottle feeding reminders.
- */
-export async function cancelBottleReminders() {
-  try {
-    const raw = await AsyncStorage.getItem(BOTTLE_IDS_KEY);
-    if (raw) {
-      const ids = JSON.parse(raw);
-      await Promise.all(
-        ids.map((id) =>
-          Notifications.cancelScheduledNotificationAsync(id).catch(() => {}),
-        ),
-      );
-    }
-  } catch {
-    /* silent */
-  }
-  try {
-    await AsyncStorage.removeItem(BOTTLE_IDS_KEY);
-  } catch {
-    /* silent */
-  }
 }

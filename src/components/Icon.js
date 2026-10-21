@@ -9,7 +9,7 @@ import Svg, {
   G,
 } from "react-native-svg";
 import { useTheme } from "../ThemeContext";
-import { CATEGORIES, REACTIONS, ALLERGENS } from "../constants";
+import { CATEGORIES, ALLERGENS } from "../constants";
 import { reactionCfg } from "../helpers";
 
 export function Icon({ name, size = 18, color }) {

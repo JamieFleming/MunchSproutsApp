@@ -115,6 +115,7 @@ export const FORMS = [
   "Liquid",
   "Sippy Cup",
   "Open Cup",
+  "Other",
 ];
 
 export const REACTIONS = [
@@ -132,6 +133,7 @@ export const MEAL_TIMES = [
   { value: "Afternoon Snack", color: "#3a7a3a", bg: "#ddf0dd" },
   { value: "Dinner / Tea", color: "#2a5f8f", bg: "#d4e8f5" },
   { value: "Drink", color: "#4ab8d8", bg: "#d4eef5" },
+  { value: "Other", color: "#8a7aaa", bg: "#ece8f9" },
 ];
 
 export const MONTHS = [

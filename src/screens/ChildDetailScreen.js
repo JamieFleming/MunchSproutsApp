@@ -17,6 +17,7 @@ import { useSaveAction } from "../useSaveAction";
 import { useTheme, useStyles } from "../ThemeContext";
 import { FeedingJourneyFields } from "../components/FeedingJourneyFields";
 import { validateChildProfile } from "../onboardingModel";
+import { Disclosure } from "../components/Disclosure";
 import { Icon } from "../components/Icon";
 import { ZoomableImage } from "../components/ZoomableImage";
 import { DateField } from "../components/DatePickerModal";
@@ -30,7 +31,7 @@ import {
   computeMilestoneStats,
 } from "../helpers";
 import { SmartInsightsSection } from "../components/SmartInsightsSection";
-import { ALLERGENS, CATEGORIES } from "../constants";
+import { CATEGORIES } from "../constants";
 import {
   CATEGORY_THRESHOLDS,
   TOTAL_FOOD_MILESTONES,
@@ -1083,6 +1084,7 @@ export function ChildDetailScreen({
   onEdit,
   onUpdateWeight,
   onDeleteWeight,
+  onViewMilkLog,
 }) {
   const { C } = useTheme();
   const s = useStyles();
@@ -1133,6 +1135,45 @@ export function ChildDetailScreen({
   const photoEntries = [...foodLog]
     .filter((e) => !!e.photoUri)
     .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const sectionHeader = {
+    paddingHorizontal: 16,
+    backgroundColor: C.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: C.borderLight,
+    marginBottom: 8,
+  };
+  const milkLogButton = onViewMilkLog && (
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityLabel="View milk log"
+      onPress={onViewMilkLog}
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        backgroundColor: C.bgPurple,
+        borderRadius: 12,
+        paddingVertical: 12,
+        marginTop: 12,
+        marginBottom: 8,
+      }}
+    >
+      <Icon name="bottle" size={18} color={C.primaryPurple} />
+      <Text
+        style={{
+          color: C.primaryPurple,
+          fontFamily: "NunitoSans_700Bold",
+          fontSize: 14,
+        }}
+      >
+        View milk log
+      </Text>
+      <Icon name="chevRight" size={14} color={C.primaryPurple} />
+    </TouchableOpacity>
+  );
 
   return (
     <View style={{ flex: 1 }}>
@@ -1353,96 +1394,82 @@ export function ChildDetailScreen({
             unitLabel={graphUnit}
           />
 
-          {/* Recent weight list */}
-          {weightGraphData.length > 0 && (
-            <View
-              style={{
-                marginTop: 16,
-                borderTopWidth: 1,
-                borderTopColor: C.borderLight,
-                paddingTop: 14,
-                gap: 2,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontFamily: "NunitoSans_700Bold",
-                  color: C.mutedText,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                  marginBottom: 8,
-                }}
-              >
-                Recent entries
-              </Text>
-              {[...weightGraphData]
-                .reverse()
-                .slice(0, 5)
-                .map((w) => (
-                  <View
-                    key={w.id}
+          {/* History stays inside the weight card; the graph is always visible. */}
+          <View
+            style={{
+              marginTop: 16,
+              borderTopWidth: 1,
+              borderTopColor: C.borderLight,
+            }}
+          >
+            <Disclosure title="Recent entries">
+              {weightGraphData.length === 0 && (
+                <Text style={{ color: C.mutedText, fontSize: 13 }}>
+                  No weight entries yet.
+                </Text>
+              )}
+              {[...weightGraphData].reverse().map((w) => (
+                <View
+                  key={w.id}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    paddingVertical: 8,
+                    borderBottomWidth: 1,
+                    borderBottomColor: C.borderLight,
+                  }}
+                >
+                  <Text style={{ flex: 1, fontSize: 13, color: C.mutedText }}>
+                    {formatDate(w.date)}
+                  </Text>
+                  <Text
                     style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      paddingVertical: 8,
-                      borderBottomWidth: 1,
-                      borderBottomColor: C.borderLight,
+                      fontSize: 15,
+                      fontFamily: "NunitoSans_700Bold",
+                      color: C.primaryPurple,
+                      marginRight: 14,
                     }}
                   >
-                    <Text style={{ flex: 1, fontSize: 13, color: C.mutedText }}>
-                      {formatDate(w.date)}
-                    </Text>
-                    <Text
-                      style={{
-                        fontSize: 15,
-                        fontFamily: "NunitoSans_700Bold",
-                        color: C.primaryPurple,
-                        marginRight: 14,
-                      }}
-                    >
-                      {formatWeight(w.value_kg, weightPreference)}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => setEditWeightEntry(w)}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      style={{
-                        backgroundColor: C.bgPurple,
-                        borderRadius: 8,
-                        padding: 7,
-                        marginRight: 8,
-                      }}
-                    >
-                      <Icon name="edit" size={13} color={C.primaryPurple} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() =>
-                        Alert.alert(
-                          "Delete Entry",
-                          "Remove this weight entry?",
-                          [
-                            { text: "Cancel", style: "cancel" },
-                            {
-                              text: "Delete",
-                              style: "destructive",
-                              onPress: () => onDeleteWeight?.(w.id),
-                            },
-                          ],
-                        )
-                      }
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      style={{
-                        backgroundColor: "#fde8e8",
-                        borderRadius: 8,
-                        padding: 7,
-                      }}
-                    >
-                      <Icon name="trash" size={13} color="#c0392b" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-            </View>
-          )}
+                    {formatWeight(w.value_kg, weightPreference)}
+                  </Text>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit weight from ${formatDate(w.date)}`}
+                    onPress={() => setEditWeightEntry(w)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={{
+                      backgroundColor: C.bgPurple,
+                      borderRadius: 8,
+                      padding: 7,
+                      marginRight: 8,
+                    }}
+                  >
+                    <Icon name="edit" size={13} color={C.primaryPurple} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() =>
+                      Alert.alert("Delete Entry", "Remove this weight entry?", [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                          text: "Delete",
+                          style: "destructive",
+                          onPress: () => onDeleteWeight?.(w.id),
+                        },
+                      ])
+                    }
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={{
+                      backgroundColor: "#fde8e8",
+                      borderRadius: 8,
+                      padding: 7,
+                    }}
+                  >
+                    <Icon name="trash" size={13} color="#c0392b" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </Disclosure>
+          </View>
         </View>
 
         {/* ── Milk intake graph (Pro) ── */}
@@ -1469,187 +1496,110 @@ export function ChildDetailScreen({
               unitLabel="ml"
               emptyText="No milk entries logged yet"
             />
+            {milkLogButton}
           </View>
         ) : (
-          <ProLock title="Milk Intake Graph" onUpgradePro={onUpgradePro}>
-            <View style={[s.card, { opacity: 0.35 }]}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 6,
-                }}
-              >
-                <Text style={s.sectionTitle}>Milk Intake</Text>
+          <>
+            <ProLock title="Milk Intake Graph" onUpgradePro={onUpgradePro}>
+              <View style={[s.card, { opacity: 0.35 }]}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 6,
+                  }}
+                >
+                  <Text style={s.sectionTitle}>Milk Intake</Text>
+                </View>
+                <Text
+                  style={{ fontSize: 12, color: C.mutedText, marginBottom: 16 }}
+                >
+                  Daily total · last 14 days (ml)
+                </Text>
+                <View
+                  style={{
+                    height: GRAPH_H,
+                    backgroundColor: C.bgPurple,
+                    borderRadius: 12,
+                  }}
+                />
               </View>
-              <Text
-                style={{ fontSize: 12, color: C.mutedText, marginBottom: 16 }}
-              >
-                Daily total · last 14 days (ml)
-              </Text>
-              <View
-                style={{
-                  height: GRAPH_H,
-                  backgroundColor: C.bgPurple,
-                  borderRadius: 12,
-                }}
-              />
-            </View>
-          </ProLock>
+            </ProLock>
+            {milkLogButton}
+          </>
         )}
 
         {/* ── Smart Insights (Pro) ── */}
-        {isPro ? (
-          <View style={[s.card, { gap: 14 }]}>
-            <SmartInsightsSection
-              child={child}
-              foodLog={foodLog}
-              weightLog={weightLog}
-              bottleLog={bottleLog}
-              user={user}
-            />
-          </View>
-        ) : (
-          <ProLock title="Smart Insights" onUpgradePro={onUpgradePro}>
-            <View style={[s.card, { opacity: 0.35, gap: 14 }]}>
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
-              >
-                <View
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 14,
-                    backgroundColor: C.bgPurple,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Icon name="sparkle" size={20} color={C.primaryPurple} />
-                </View>
-                <View>
-                  <Text
-                    style={{
-                      fontFamily: "PlusJakartaSans_600SemiBold",
-                      fontSize: 16,
-                      color: C.primaryPinkDark,
-                    }}
-                  >
-                    Smart Insights
-                  </Text>
-                  <Text style={{ fontSize: 12, color: C.mutedText }}>
-                    AI-powered growth &amp; nutrition insights
-                  </Text>
-                </View>
-              </View>
-              <View
-                style={{
-                  backgroundColor: C.bgPurple,
-                  borderRadius: 14,
-                  height: 80,
-                }}
+        <Disclosure title="Smart Insights" headerStyle={sectionHeader}>
+          {isPro ? (
+            <View style={[s.card, { gap: 14 }]}>
+              <SmartInsightsSection
+                child={child}
+                foodLog={foodLog}
+                weightLog={weightLog}
+                bottleLog={bottleLog}
+                user={user}
               />
             </View>
-          </ProLock>
-        )}
-
-        {/* ── Milestones ── */}
-        <MilestonesSection foodLog={foodLog} />
-
-        {/* ── Photo Gallery (Pro) ── */}
-        {isPro ? (
-          <View style={s.card}>
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 14,
-              }}
-            >
-              <Text style={s.sectionTitle}>
-                Food Photos
-                {photoEntries.length > 0 ? ` · ${photoEntries.length}` : ""}
-              </Text>
-            </View>
-            {photoEntries.length === 0 ? (
-              <View
-                style={{ alignItems: "center", paddingVertical: 24, gap: 8 }}
-              >
-                <Icon name="Camera" size={36} color={C.secondaryPurple} />
-                <Text style={{ fontSize: 13, color: C.mutedText }}>
-                  No food photos yet
-                </Text>
-                <Text
+          ) : (
+            <ProLock title="Smart Insights" onUpgradePro={onUpgradePro}>
+              <View style={[s.card, { opacity: 0.35, gap: 14 }]}>
+                <View
                   style={{
-                    fontSize: 12,
-                    color: C.mutedText,
-                    textAlign: "center",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
                   }}
                 >
-                  Photos are saved when you log food with a picture
-                </Text>
+                  <View
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 14,
+                      backgroundColor: C.bgPurple,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Icon name="sparkle" size={20} color={C.primaryPurple} />
+                  </View>
+                  <View>
+                    <Text
+                      style={{
+                        fontFamily: "PlusJakartaSans_600SemiBold",
+                        fontSize: 16,
+                        color: C.primaryPinkDark,
+                      }}
+                    >
+                      Smart Insights
+                    </Text>
+                    <Text style={{ fontSize: 12, color: C.mutedText }}>
+                      AI-powered growth &amp; nutrition insights
+                    </Text>
+                  </View>
+                </View>
+                <View
+                  style={{
+                    backgroundColor: C.bgPurple,
+                    borderRadius: 14,
+                    height: 80,
+                  }}
+                />
               </View>
-            ) : (
-              <View style={{ gap: 4 }}>
-                {Array.from(
-                  { length: Math.ceil(photoEntries.length / 3) },
-                  (_, rowIdx) => (
-                    <View key={rowIdx} style={{ flexDirection: "row", gap: 4 }}>
-                      {photoEntries
-                        .slice(rowIdx * 3, rowIdx * 3 + 3)
-                        .map((item) => (
-                          <TouchableOpacity
-                            key={item.id}
-                            onPress={() => setLightboxPhoto(item)}
-                            activeOpacity={0.85}
-                            style={{
-                              width: THUMB,
-                              height: THUMB,
-                              borderRadius: 10,
-                              overflow: "hidden",
-                              backgroundColor: C.bgPurple,
-                            }}
-                          >
-                            <Image
-                              source={{ uri: item.photoUri }}
-                              style={{ width: THUMB, height: THUMB }}
-                              resizeMode="cover"
-                            />
-                            <View
-                              style={{
-                                position: "absolute",
-                                bottom: 0,
-                                left: 0,
-                                right: 0,
-                                backgroundColor: "rgba(0,0,0,0.45)",
-                                paddingHorizontal: 5,
-                                paddingVertical: 4,
-                              }}
-                            >
-                              <Text
-                                style={{
-                                  fontSize: 9,
-                                  fontFamily: "NunitoSans_700Bold",
-                                  color: "#fff",
-                                }}
-                                numberOfLines={1}
-                              >
-                                {item.name}
-                              </Text>
-                            </View>
-                          </TouchableOpacity>
-                        ))}
-                    </View>
-                  ),
-                )}
-              </View>
-            )}
-          </View>
-        ) : (
-          <ProLock title="Photo Gallery" onUpgradePro={onUpgradePro}>
-            <View style={[s.card, { opacity: 0.35 }]}>
+            </ProLock>
+          )}
+        </Disclosure>
+
+        {/* ── Milestones ── */}
+        <Disclosure title="Milestones" headerStyle={sectionHeader}>
+          <MilestonesSection foodLog={foodLog} />
+        </Disclosure>
+
+        {/* ── Photo Gallery (Pro) ── */}
+        <Disclosure title="Photo Gallery" headerStyle={sectionHeader}>
+          {isPro ? (
+            <View style={s.card}>
               <View
                 style={{
                   flexDirection: "row",
@@ -1658,24 +1608,118 @@ export function ChildDetailScreen({
                   marginBottom: 14,
                 }}
               >
-                <Text style={s.sectionTitle}>Food Photos</Text>
+                <Text style={s.sectionTitle}>
+                  Photo Gallery
+                  {photoEntries.length > 0 ? ` · ${photoEntries.length}` : ""}
+                </Text>
               </View>
-              <View style={{ flexDirection: "row", gap: 4 }}>
-                {[0, 1, 2].map((i) => (
-                  <View
-                    key={i}
+              {photoEntries.length === 0 ? (
+                <View
+                  style={{ alignItems: "center", paddingVertical: 24, gap: 8 }}
+                >
+                  <Icon name="Camera" size={36} color={C.secondaryPurple} />
+                  <Text style={{ fontSize: 13, color: C.mutedText }}>
+                    No food photos yet
+                  </Text>
+                  <Text
                     style={{
-                      width: THUMB,
-                      height: THUMB,
-                      borderRadius: 10,
-                      backgroundColor: C.bgPurple,
+                      fontSize: 12,
+                      color: C.mutedText,
+                      textAlign: "center",
                     }}
-                  />
-                ))}
-              </View>
+                  >
+                    Photos are saved when you log food with a picture
+                  </Text>
+                </View>
+              ) : (
+                <View style={{ gap: 4 }}>
+                  {Array.from(
+                    { length: Math.ceil(photoEntries.length / 3) },
+                    (_, rowIdx) => (
+                      <View
+                        key={rowIdx}
+                        style={{ flexDirection: "row", gap: 4 }}
+                      >
+                        {photoEntries
+                          .slice(rowIdx * 3, rowIdx * 3 + 3)
+                          .map((item) => (
+                            <TouchableOpacity
+                              key={item.id}
+                              onPress={() => setLightboxPhoto(item)}
+                              activeOpacity={0.85}
+                              style={{
+                                width: THUMB,
+                                height: THUMB,
+                                borderRadius: 10,
+                                overflow: "hidden",
+                                backgroundColor: C.bgPurple,
+                              }}
+                            >
+                              <Image
+                                source={{ uri: item.photoUri }}
+                                style={{ width: THUMB, height: THUMB }}
+                                resizeMode="cover"
+                              />
+                              <View
+                                style={{
+                                  position: "absolute",
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                  backgroundColor: "rgba(0,0,0,0.45)",
+                                  paddingHorizontal: 5,
+                                  paddingVertical: 4,
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    fontSize: 9,
+                                    fontFamily: "NunitoSans_700Bold",
+                                    color: "#fff",
+                                  }}
+                                  numberOfLines={1}
+                                >
+                                  {item.name}
+                                </Text>
+                              </View>
+                            </TouchableOpacity>
+                          ))}
+                      </View>
+                    ),
+                  )}
+                </View>
+              )}
             </View>
-          </ProLock>
-        )}
+          ) : (
+            <ProLock title="Photo Gallery" onUpgradePro={onUpgradePro}>
+              <View style={[s.card, { opacity: 0.35 }]}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 14,
+                  }}
+                >
+                  <Text style={s.sectionTitle}>Photo Gallery</Text>
+                </View>
+                <View style={{ flexDirection: "row", gap: 4 }}>
+                  {[0, 1, 2].map((i) => (
+                    <View
+                      key={i}
+                      style={{
+                        width: THUMB,
+                        height: THUMB,
+                        borderRadius: 10,
+                        backgroundColor: C.bgPurple,
+                      }}
+                    />
+                  ))}
+                </View>
+              </View>
+            </ProLock>
+          )}
+        </Disclosure>
       </ScrollView>
 
       {/* ── Photo Lightbox ── */}

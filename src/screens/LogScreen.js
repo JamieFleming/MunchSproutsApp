@@ -15,6 +15,7 @@ import {
 import Svg, { Circle, Path } from "react-native-svg";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon, CategoryIcon, AllergenIcon } from "../components/Icon";
+import { ActivityCalendar } from "../components/ActivityCalendar";
 import { SwipeToDelete } from "../components/SwipeToDelete";
 import { ZoomableImage } from "../components/ZoomableImage";
 import {
@@ -23,7 +24,9 @@ import {
   DangerBtn,
 } from "../components/SharedComponents";
 import { CATEGORIES, MEAL_TIMES, ALLERGENS } from "../constants";
-import { groupByFood, normalize, formatDate, reactionCfg } from "../helpers";
+import { groupByFood, normalize, formatDate } from "../helpers";
+
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -180,6 +183,11 @@ const AttemptRow = memo(function AttemptRow({
                     </View>
                   ) : null;
                 })()}
+              {!!a.categoryOther && (
+                <Text style={{ color: C.mutedText, fontSize: 13 }}>
+                  Food type: {a.categoryOther}
+                </Text>
+              )}
               {a.form && (
                 <View
                   style={{
@@ -871,31 +879,34 @@ const DateEntryRow = memo(function DateEntryRow({
         </TouchableOpacity>
       </SwipeToDelete>
       {isOpen &&
-        [...allAttempts].reverse().map((a, i) => (
-          <AttemptRow
-            onRepeat={
-              onAddAttempt
-                ? () =>
-                    onAddAttempt({
-                      name: foodName,
-                      category: foodCategory,
-                      attempts: allAttempts,
-                    })
-                : undefined
-            }
-            key={a.id}
-            attempt={a}
-            attemptNum={allAttempts.length - i}
-            milestones={milestones}
-            hasMultipleUsers={hasMultipleUsers}
-            currentUserId={currentUserId}
-            userMap={userMap}
-            onToggleFavourite={onToggleFavourite}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            setLightboxPhoto={setLightboxPhoto}
-          />
-        ))}
+        [...allAttempts]
+          .filter((a) => a.date === attempt.date)
+          .reverse()
+          .map((a) => (
+            <AttemptRow
+              onRepeat={
+                onAddAttempt
+                  ? () =>
+                      onAddAttempt({
+                        name: foodName,
+                        category: foodCategory,
+                        attempts: allAttempts,
+                      })
+                  : undefined
+              }
+              key={a.id}
+              attempt={a}
+              attemptNum={a.attemptNum || allAttempts.indexOf(a) + 1}
+              milestones={milestones}
+              hasMultipleUsers={hasMultipleUsers}
+              currentUserId={currentUserId}
+              userMap={userMap}
+              onToggleFavourite={onToggleFavourite}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              setLightboxPhoto={setLightboxPhoto}
+            />
+          ))}
       {isOpen && onAddAttempt && (
         <TouchableOpacity
           onPress={() =>
@@ -935,6 +946,8 @@ const DateEntryRow = memo(function DateEntryRow({
 
 const DateGroupCard = memo(function DateGroupCard({
   dateKey,
+  dayOpen,
+  onToggleDay,
   entries,
   expandedInDate,
   toggleDateFood,
@@ -954,7 +967,11 @@ const DateGroupCard = memo(function DateGroupCard({
 
   return (
     <View style={[s.card, { padding: 0, overflow: "hidden" }]}>
-      <View
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={`Entries for ${dateKey}`}
+        accessibilityState={{ expanded: dayOpen }}
+        onPress={() => onToggleDay(dateKey)}
         style={{
           paddingVertical: 12,
           paddingHorizontal: 16,
@@ -988,33 +1005,35 @@ const DateGroupCard = memo(function DateGroupCard({
               color: C.primaryPurple,
             }}
           >
-            {uniqueFoodKeys.length} food{uniqueFoodKeys.length !== 1 ? "s" : ""}
+            {uniqueFoodKeys.length} food{uniqueFoodKeys.length !== 1 ? "s" : ""}{" "}
+            {dayOpen ? "⌃" : "⌄"}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
-      {uniqueFoodKeys.map((foodKey) => {
-        const entry = entries.find((e) => e.foodKey === foodKey);
-        const expandKey = `${dateKey}_${foodKey}`;
-        return (
-          <DateEntryRow
-            key={foodKey}
-            entry={entry}
-            expandKey={expandKey}
-            isOpen={expandedInDate.has(expandKey)}
-            onToggle={toggleDateFood}
-            milestones={milestones}
-            hasMultipleUsers={hasMultipleUsers}
-            currentUserId={currentUserId}
-            userMap={userMap}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onToggleFavourite={onToggleFavourite}
-            onAddAttempt={onAddAttempt}
-            setLightboxPhoto={setLightboxPhoto}
-          />
-        );
-      })}
+      {dayOpen &&
+        uniqueFoodKeys.map((foodKey) => {
+          const entry = entries.find((e) => e.foodKey === foodKey);
+          const expandKey = `${dateKey}_${foodKey}`;
+          return (
+            <DateEntryRow
+              key={foodKey}
+              entry={entry}
+              expandKey={expandKey}
+              isOpen={expandedInDate.has(expandKey)}
+              onToggle={toggleDateFood}
+              milestones={milestones}
+              hasMultipleUsers={hasMultipleUsers}
+              currentUserId={currentUserId}
+              userMap={userMap}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onToggleFavourite={onToggleFavourite}
+              onAddAttempt={onAddAttempt}
+              setLightboxPhoto={setLightboxPhoto}
+            />
+          );
+        })}
     </View>
   );
 });
@@ -1025,6 +1044,7 @@ export function LogScreen({
   foodLog,
   childName,
   bottleLog = [],
+  weightLog = [],
   initialFilter,
   initialOpenKey,
   initialAllergenFilter,
@@ -1043,6 +1063,8 @@ export function LogScreen({
   const { C } = useTheme();
   const s = useStyles();
 
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [dayOverrides, setDayOverrides] = useState({});
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("date-desc");
   const [reactionFilter, setReactionFilter] = useState(initialFilter || "");
@@ -1058,11 +1080,13 @@ export function LogScreen({
 
   useEffect(() => {
     if (initialOpenKey) {
+      setSelectedDate(null);
       setViewMode("food");
       setExpanded(new Set([initialOpenKey]));
     }
   }, [initialOpenKey]);
   useEffect(() => {
+    setSelectedDate(null);
     setAllergenFilter(initialAllergenFilter || "");
   }, [initialAllergenFilter]);
 
@@ -1142,6 +1166,23 @@ export function LogScreen({
     [dateGroupsMap],
   );
 
+  const toggleDay = useCallback(
+    (date) => {
+      setDayOverrides((old) => ({
+        ...old,
+        [date]: !(old[date] ?? (date === dateKeys[0] || date === selectedDate)),
+      }));
+    },
+    [dateKeys, selectedDate],
+  );
+  const selectCalendarDay = (date) => {
+    setSelectedDate(date);
+    setViewMode("date");
+    setSearch("");
+    setReactionFilter("");
+    setAllergenFilter("");
+    if (date) setDayOverrides((old) => ({ ...old, [date]: true }));
+  };
   const toggle = useCallback(
     (k) =>
       setExpanded((p) => {
@@ -1196,6 +1237,11 @@ export function LogScreen({
     ({ item: dateKey }) => (
       <DateGroupCard
         dateKey={dateKey}
+        dayOpen={
+          dayOverrides[dateKey] ??
+          (dateKey === dateKeys[0] || dateKey === selectedDate)
+        }
+        onToggleDay={toggleDay}
         entries={dateGroupsMap[dateKey]}
         expandedInDate={expandedInDate}
         toggleDateFood={toggleDateFood}
@@ -1212,6 +1258,10 @@ export function LogScreen({
     ),
     [
       dateGroupsMap,
+      dayOverrides,
+      dateKeys,
+      selectedDate,
+      toggleDay,
       expandedInDate,
       toggleDateFood,
       milestones,
@@ -1253,6 +1303,17 @@ export function LogScreen({
 
   return (
     <View style={{ flex: 1 }}>
+      <ActivityCalendar
+        foodLog={foodLog}
+        bottleLog={bottleLog}
+        weightLog={weightLog}
+        selectedDate={selectedDate}
+        onSelect={selectCalendarDay}
+      />
+      <Text style={{ color: C.mutedText, fontSize: 12, marginBottom: 10 }}>
+        Swipe left on a food to repeat, star or delete. Tap a date to fold it
+        away.
+      </Text>
       {/* Search bar */}
       <View
         style={[
@@ -1297,7 +1358,10 @@ export function LogScreen({
         ].map(({ id, label }) => (
           <TouchableOpacity
             key={id}
-            onPress={() => setViewMode(id)}
+            onPress={() => {
+              setViewMode(id);
+              if (id === "food") setSelectedDate(null);
+            }}
             style={{
               flex: 1,
               paddingVertical: 8,
@@ -1657,7 +1721,11 @@ export function LogScreen({
         />
       ) : (
         <FlatList
-          data={dateKeys}
+          data={
+            selectedDate
+              ? dateKeys.filter((date) => date === selectedDate)
+              : dateKeys
+          }
           keyExtractor={listKey}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ gap: 12, paddingBottom: 20 }}

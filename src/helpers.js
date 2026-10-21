@@ -1,9 +1,14 @@
+import {
+  allergenCheckIn,
+  hasAllergenCheckIn,
+  CHECK_IN_DELAY_MS,
+} from "./allergenCheckIn";
 import { Alert, Platform } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { File, Paths } from "expo-file-system";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "./firebase";
-import { REACTIONS, MONTHS, ALLERGENS } from "./constants";
+import { REACTIONS } from "./constants";
 import {
   CATEGORY_THRESHOLDS,
   TOTAL_FOOD_MILESTONES,
@@ -108,38 +113,15 @@ export function computeAllergenStatus(
     const hasMatureSafe = entries.some(
       (e) =>
         (e.reaction === "Loved" || e.reaction === "Good") &&
-        !!e.isAllergenCheckin,
+        hasAllergenCheckIn(e, allergen.value),
     );
 
-    // First positive-reaction entry that hasn't been confirmed yet via check-in.
-    // Only the very first introduction requires the 48-hour delayed-reaction window —
-    // subsequent logs of the same allergen don't re-trigger the check-in.
-    const firstUnconfirmedPositive = entries
-      .filter(
-        (e) =>
-          (e.reaction === "Loved" || e.reaction === "Good") &&
-          !e.isAllergenCheckin,
-      )
-      .sort((a, b) => (a.date || "").localeCompare(b.date || ""))[0]; // earliest first
-
-    const daysSinceFirstIntro = firstUnconfirmedPositive
-      ? daysSinceDate(firstUnconfirmedPositive.date)
+    const checkIn = allergenCheckIn(entries, allergen.value);
+    const daysSinceFirstIntro = checkIn
+      ? Math.floor((Date.now() - (checkIn.due - CHECK_IN_DELAY_MS)) / 86400000)
       : null;
-
-    // "Awaiting window" = first positive intro logged < 2 days ago, waiting for the 48-hr window
-    const awaitingWindow =
-      !hasReaction &&
-      !hasMatureSafe &&
-      !!firstUnconfirmedPositive &&
-      (daysSinceFirstIntro ?? 999) < 2;
-
-    // "Needs check-in" = first positive intro was >= 2 days ago and not yet confirmed
-    // (ask about delayed reaction in the 48-hr window)
-    const needsCheckIn =
-      !hasReaction &&
-      !hasMatureSafe &&
-      !!firstUnconfirmedPositive &&
-      (daysSinceFirstIntro ?? 0) >= 2;
+    const awaitingWindow = !!checkIn && Date.now() < checkIn.due;
+    const needsCheckIn = !!checkIn && Date.now() >= checkIn.due;
 
     const dates = entries
       .filter((e) => e.date)

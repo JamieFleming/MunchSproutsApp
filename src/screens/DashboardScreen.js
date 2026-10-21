@@ -8,7 +8,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { useTheme, useStyles } from "../ThemeContext";
-import { Icon, CategoryIcon, ReactionFace } from "../components/Icon";
+import { Icon, CategoryIcon } from "../components/Icon";
 import { DashboardPreferences } from "../components/DashboardPreferences";
 import {
   DASHBOARD_COLOURS,
@@ -43,7 +43,7 @@ const SECTION_ACCENTS = {
     colour: "#7655aa",
   },
   "Their food journey": {
-    icon: "leaf",
+    icon: "utensils",
     background: "#e0f1e8",
     colour: "#3d7055",
   },
@@ -69,11 +69,7 @@ function DashboardAccent({ title }) {
         flexShrink: 0,
       }}
     >
-      {title === "Their food journey" ? (
-        <ReactionFace reaction="Loved" size={25} />
-      ) : (
-        <Icon name={accent.icon} size={19} color={accent.colour} />
-      )}
+      <Icon name={accent.icon} size={19} color={accent.colour} />
     </View>
   );
 }
@@ -320,16 +316,24 @@ export function DashboardScreen({
                   gap: 4,
                 }}
               >
-                <CategoryIcon category="Fruits" size={28} />
-                <Text
+                <View
                   style={{
-                    color: palette.ink,
-                    fontFamily: "NunitoSans_800ExtraBold",
-                    fontSize: 20,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
                   }}
                 >
-                  {foodsToday.length}
-                </Text>
+                  <CategoryIcon category="Fruits" size={32} />
+                  <Text
+                    style={{
+                      color: palette.ink,
+                      fontFamily: "NunitoSans_800ExtraBold",
+                      fontSize: 34,
+                    }}
+                  >
+                    {foodsToday.length}
+                  </Text>
+                </View>
                 <Text style={{ color: palette.ink, fontSize: 12 }}>
                   food entries today
                 </Text>
@@ -349,27 +353,35 @@ export function DashboardScreen({
                   }}
                 >
                   <View
-                    accessible={false}
                     style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 10,
-                      backgroundColor: "#dfeefa",
+                      flexDirection: "row",
                       alignItems: "center",
-                      justifyContent: "center",
+                      gap: 10,
                     }}
                   >
-                    <Icon name="bottle" size={18} color="#38698e" />
+                    <View
+                      accessible={false}
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 10,
+                        backgroundColor: "#dfeefa",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Icon name="bottle" size={18} color="#38698e" />
+                    </View>
+                    <Text
+                      style={{
+                        color: palette.ink,
+                        fontFamily: "NunitoSans_800ExtraBold",
+                        fontSize: 34,
+                      }}
+                    >
+                      {bottlesToday.length}
+                    </Text>
                   </View>
-                  <Text
-                    style={{
-                      color: palette.ink,
-                      fontFamily: "NunitoSans_800ExtraBold",
-                      fontSize: 20,
-                    }}
-                  >
-                    {bottlesToday.length}
-                  </Text>
                   <Text style={{ color: palette.ink, fontSize: 12 }}>
                     milk feeds today
                   </Text>

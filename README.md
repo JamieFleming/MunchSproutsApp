@@ -1,6 +1,9 @@
 # MunchSprouts Native
 
-Expo SDK 57 / React Native 0.86.3, app version 1.6.0. Use Node 22 or newer.
+Expo SDK 57 / React Native 0.86.3, app version 1.6.1. Use Node 22 or newer.
+
+New to the code? Read [Understanding and maintaining MunchSprouts](docs/codebase-guide.md)
+for a beginner walkthrough, screen/component map, data flows and maintenance exercises.
 
 ```sh
 npm ci
@@ -19,6 +22,8 @@ is `npm audit --prefix functions`. CI performs these checks and platform exports
 See [iPhone testing](docs/iphone-testing.md) for device setup and
 [release hardening](docs/release-hardening.md) for required backend rollout and
 remaining external release checks. Do not publish an OTA for SDK/native changes.
+
+See [the 1.6.1 release review](docs/release-audit-2026-10-21.md) for checks, cleanup and device testing before release.
 
 ## Where to make changes
 

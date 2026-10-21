@@ -762,6 +762,12 @@ export function BottleScreen({
         keyExtractor={([date]) => date}
         ListHeaderComponent={
           <>
+            <Text
+              style={{ color: C.mutedText, fontSize: 12, marginBottom: 12 }}
+            >
+              Swipe left on a milk entry to repeat or delete. Tap Delete to
+              confirm.
+            </Text>
             {/* Today's summary */}
             <View
               style={[

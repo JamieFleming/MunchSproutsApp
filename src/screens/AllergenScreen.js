@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { Disclosure } from "../components/Disclosure";
 import {
   View,
   Text,
@@ -6,6 +7,7 @@ import {
   ScrollView,
   Linking,
   Alert,
+  AppState,
 } from "react-native";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon, AllergenIcon } from "../components/Icon";
@@ -452,6 +454,7 @@ function TipRow({ tip, index }) {
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 export function AllergenScreen({
+  isActive = true,
   child,
   foodLog = [],
   onNavigate,
@@ -461,6 +464,21 @@ export function AllergenScreen({
 }) {
   const { C } = useTheme();
   const s = useStyles();
+
+  const [, refreshClock] = useState(0);
+  useEffect(() => {
+    if (!isActive) return;
+    const refresh = () => refreshClock((value) => value + 1);
+    // A screen left open must still reveal check-ins once their window expires.
+    const timer = setInterval(refresh, 60000);
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") refresh();
+    });
+    return () => {
+      clearInterval(timer);
+      sub.remove();
+    };
+  }, [isActive]);
 
   const allergenStatus = computeAllergenStatus(
     foodLog,
@@ -485,6 +503,225 @@ export function AllergenScreen({
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 30 }}
     >
+      {/* ── Progress card ── */}
+      <View style={[s.card, { marginBottom: 18 }]}>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 12,
+          }}
+        >
+          <View>
+            <Text style={s.sectionTitle}>Allergen Progress</Text>
+            <Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>
+              {ALLERGENS.length - introduced} still to introduce
+            </Text>
+          </View>
+          <View style={{ alignItems: "flex-end" }}>
+            <Text
+              style={{
+                fontSize: 28,
+                fontFamily: "PlusJakartaSans_700Bold",
+                color: C.primaryPinkDark,
+                lineHeight: 30,
+              }}
+            >
+              {introduced}
+            </Text>
+            <Text
+              style={{
+                fontSize: 11,
+                color: C.mutedText,
+                fontFamily: "NunitoSans_600SemiBold",
+              }}
+            >
+              of {ALLERGENS.length}
+            </Text>
+          </View>
+        </View>
+        <View
+          style={{
+            backgroundColor: C.borderLight,
+            borderRadius: 999,
+            height: 12,
+            overflow: "hidden",
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#3db87a",
+              height: "100%",
+              width: `${pct}%`,
+              borderRadius: 999,
+            }}
+          />
+        </View>
+        {pct > 0 && (
+          <Text
+            style={{
+              fontSize: 11,
+              color: C.mutedText,
+              marginTop: 6,
+              textAlign: "right",
+            }}
+          >
+            {pct}% complete
+          </Text>
+        )}
+        <Disclosure title="Allergen Timeline">
+          <View
+            style={[
+              s.card,
+              { padding: 0, overflow: "hidden", marginBottom: 18 },
+            ]}
+          >
+            {allergenStatus.map((al, i) => (
+              <AllergenRow
+                key={al.value}
+                al={al}
+                index={i}
+                total={allergenStatus.length}
+                onViewInLog={onViewInLog}
+                onAddWithPrefill={onAddWithPrefill}
+              />
+            ))}
+          </View>
+        </Disclosure>
+      </View>
+
+      {/* ── Stats row ── */}
+      <View style={{ flexDirection: "row", gap: 8, marginBottom: 18 }}>
+        {[
+          {
+            label: "Introduced",
+            value: introduced,
+            color: C.primaryPurple,
+            bg: C.bgPurple,
+          },
+          { label: "Safe", value: safe, color: "#2d7a55", bg: "#d4f0e0" },
+          {
+            label: "In Progress",
+            value: inProgress,
+            color: "#a85a1a",
+            bg: "#fde8d4",
+          },
+          {
+            label: "Reactions",
+            value: reactions,
+            color: "#c0392b",
+            bg: "#fde8e8",
+          },
+        ].map((stat) => (
+          <View
+            key={stat.label}
+            style={{
+              flex: 1,
+              backgroundColor: stat.bg,
+              borderRadius: 16,
+              padding: 14,
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: C.borderLight,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 22,
+                fontFamily: "PlusJakartaSans_700Bold",
+                color: stat.color,
+                lineHeight: 26,
+              }}
+            >
+              {stat.value}
+            </Text>
+            <Text
+              style={{
+                fontSize: 9,
+                fontFamily: "NunitoSans_700Bold",
+                color: stat.color,
+                textAlign: "center",
+                marginTop: 3,
+                textTransform: "uppercase",
+                letterSpacing: 0.3,
+              }}
+            >
+              {stat.label}
+            </Text>
+          </View>
+        ))}
+      </View>
+
+      {/* ── Introduction advice ── */}
+      <Disclosure title="Introduction Advice">
+        <View style={[s.card, { marginBottom: 12 }]}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: 16,
+            }}
+          >
+            <View
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 11,
+                backgroundColor: "#d4e8f5",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Icon name="info" size={18} color="#2a5f8f" />
+            </View>
+            <Text
+              style={{
+                fontFamily: "PlusJakartaSans_600SemiBold",
+                fontSize: 15,
+                color: C.primaryPinkDark,
+                flex: 1,
+              }}
+            >
+              How to introduce allergens safely
+            </Text>
+          </View>
+          {ADVICE_TIPS.map((tip, i) => (
+            <TipRow key={i} tip={tip} index={i} />
+          ))}
+          <TouchableOpacity
+            onPress={() =>
+              Linking.openURL(
+                "https://www.nhs.uk/baby/weaning-and-feeding/food-allergies-in-babies-and-young-children/",
+              )
+            }
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              backgroundColor: "#d4e8f5",
+              borderRadius: 12,
+              paddingVertical: 13,
+              marginTop: 6,
+            }}
+            activeOpacity={0.8}
+          >
+            <Icon name="info" size={16} color="#2a5f8f" />
+            <Text
+              style={{
+                fontFamily: "NunitoSans_700Bold",
+                fontSize: 14,
+                color: "#2a5f8f",
+              }}
+            >
+              View NHS Allergen Guidance
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </Disclosure>
+
       {child?.allergyStatus === "yes" && (
         <View
           style={{
@@ -566,267 +803,46 @@ export function AllergenScreen({
         </View>
       )}
 
-      {/* ── Stats row ── */}
-      <View style={{ flexDirection: "row", gap: 8, marginBottom: 18 }}>
-        {[
-          {
-            label: "Introduced",
-            value: introduced,
-            color: C.primaryPurple,
-            bg: C.bgPurple,
-          },
-          { label: "Safe", value: safe, color: "#2d7a55", bg: "#d4f0e0" },
-          {
-            label: "In Progress",
-            value: inProgress,
-            color: "#a85a1a",
-            bg: "#fde8d4",
-          },
-          {
-            label: "Reactions",
-            value: reactions,
-            color: "#c0392b",
-            bg: "#fde8e8",
-          },
-        ].map((stat) => (
-          <View
-            key={stat.label}
-            style={{
-              flex: 1,
-              backgroundColor: stat.bg,
-              borderRadius: 16,
-              padding: 14,
-              alignItems: "center",
-              borderWidth: 1,
-              borderColor: C.borderLight,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 22,
-                fontFamily: "PlusJakartaSans_700Bold",
-                color: stat.color,
-                lineHeight: 26,
-              }}
-            >
-              {stat.value}
-            </Text>
-            <Text
-              style={{
-                fontSize: 9,
-                fontFamily: "NunitoSans_700Bold",
-                color: stat.color,
-                textAlign: "center",
-                marginTop: 3,
-                textTransform: "uppercase",
-                letterSpacing: 0.3,
-              }}
-            >
-              {stat.label}
-            </Text>
-          </View>
-        ))}
-      </View>
-
-      {/* ── Progress card ── */}
-      <View style={[s.card, { marginBottom: 18 }]}>
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 12,
-          }}
-        >
-          <View>
-            <Text style={s.sectionTitle}>Allergen Progress</Text>
-            <Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>
-              {ALLERGENS.length - introduced} still to introduce
-            </Text>
-          </View>
-          <View style={{ alignItems: "flex-end" }}>
-            <Text
-              style={{
-                fontSize: 28,
-                fontFamily: "PlusJakartaSans_700Bold",
-                color: C.primaryPinkDark,
-                lineHeight: 30,
-              }}
-            >
-              {introduced}
-            </Text>
-            <Text
-              style={{
-                fontSize: 11,
-                color: C.mutedText,
-                fontFamily: "NunitoSans_600SemiBold",
-              }}
-            >
-              of {ALLERGENS.length}
-            </Text>
-          </View>
-        </View>
-        <View
-          style={{
-            backgroundColor: C.borderLight,
-            borderRadius: 999,
-            height: 12,
-            overflow: "hidden",
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: "#3db87a",
-              height: "100%",
-              width: `${pct}%`,
-              borderRadius: 999,
-            }}
-          />
-        </View>
-        {pct > 0 && (
-          <Text
-            style={{
-              fontSize: 11,
-              color: C.mutedText,
-              marginTop: 6,
-              textAlign: "right",
-            }}
-          >
-            {pct}% complete
-          </Text>
-        )}
-      </View>
-
       {/* ── How to log ── */}
-      <Text style={[s.sectionTitle, { marginBottom: 10 }]}>
-        How to Log an Allergen
-      </Text>
-      <View
-        style={[s.card, { marginBottom: 18, padding: 0, overflow: "hidden" }]}
-      >
-        {HOW_TO_STEPS.map((item, i) => (
-          <StepRow
-            key={item.step}
-            item={item}
-            isLast={i === HOW_TO_STEPS.length - 1}
-          />
-        ))}
-        <TouchableOpacity
-          onPress={() => onAddWithPrefill?.(null)}
-          activeOpacity={0.8}
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            backgroundColor: C.primaryPurple,
-            margin: 14,
-            marginTop: 4,
-            borderRadius: 14,
-            paddingVertical: 14,
-          }}
-        >
-          <Icon name="plus" size={16} color="#ffffff" />
-          <Text
-            style={{
-              fontFamily: "NunitoSans_800ExtraBold",
-              fontSize: 14,
-              color: "#ffffff",
-            }}
-          >
-            Log a Food with an Allergen
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* ── Timeline ── */}
-      <Text style={[s.sectionTitle, { marginBottom: 10 }]}>
-        Allergen Timeline
-      </Text>
-      <View
-        style={[s.card, { padding: 0, overflow: "hidden", marginBottom: 18 }]}
-      >
-        {allergenStatus.map((al, i) => (
-          <AllergenRow
-            key={al.value}
-            al={al}
-            index={i}
-            total={allergenStatus.length}
-            onViewInLog={onViewInLog}
-            onAddWithPrefill={onAddWithPrefill}
-          />
-        ))}
-      </View>
-
-      {/* ── Introduction advice ── */}
-      <Text style={[s.sectionTitle, { marginBottom: 10 }]}>
-        Introduction Advice
-      </Text>
-      <View style={[s.card, { marginBottom: 12 }]}>
+      <Disclosure title="How to Log an Allergen">
         <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 10,
-            marginBottom: 16,
-          }}
+          style={[s.card, { marginBottom: 18, padding: 0, overflow: "hidden" }]}
         >
-          <View
+          {HOW_TO_STEPS.map((item, i) => (
+            <StepRow
+              key={item.step}
+              item={item}
+              isLast={i === HOW_TO_STEPS.length - 1}
+            />
+          ))}
+          <TouchableOpacity
+            onPress={() => onAddWithPrefill?.(null)}
+            activeOpacity={0.8}
             style={{
-              width: 38,
-              height: 38,
-              borderRadius: 11,
-              backgroundColor: "#d4e8f5",
+              flexDirection: "row",
               alignItems: "center",
               justifyContent: "center",
+              gap: 8,
+              backgroundColor: C.primaryPurple,
+              margin: 14,
+              marginTop: 4,
+              borderRadius: 14,
+              paddingVertical: 14,
             }}
           >
-            <Icon name="info" size={18} color="#2a5f8f" />
-          </View>
-          <Text
-            style={{
-              fontFamily: "PlusJakartaSans_600SemiBold",
-              fontSize: 15,
-              color: C.primaryPinkDark,
-              flex: 1,
-            }}
-          >
-            How to introduce allergens safely
-          </Text>
+            <Icon name="plus" size={16} color="#ffffff" />
+            <Text
+              style={{
+                fontFamily: "NunitoSans_800ExtraBold",
+                fontSize: 14,
+                color: "#ffffff",
+              }}
+            >
+              Log a Food with an Allergen
+            </Text>
+          </TouchableOpacity>
         </View>
-        {ADVICE_TIPS.map((tip, i) => (
-          <TipRow key={i} tip={tip} index={i} />
-        ))}
-        <TouchableOpacity
-          onPress={() =>
-            Linking.openURL(
-              "https://www.nhs.uk/baby/weaning-and-feeding/food-allergies-in-babies-and-young-children/",
-            )
-          }
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            backgroundColor: "#d4e8f5",
-            borderRadius: 12,
-            paddingVertical: 13,
-            marginTop: 6,
-          }}
-          activeOpacity={0.8}
-        >
-          <Icon name="info" size={16} color="#2a5f8f" />
-          <Text
-            style={{
-              fontFamily: "NunitoSans_700Bold",
-              fontSize: 14,
-              color: "#2a5f8f",
-            }}
-          >
-            View NHS Allergen Guidance
-          </Text>
-        </TouchableOpacity>
-      </View>
+      </Disclosure>
 
       {/* ── Disclaimer ── */}
       <View

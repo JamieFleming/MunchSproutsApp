@@ -134,9 +134,9 @@ test("recipe favourites save and remove only the selected user recipe", async ()
     "users/parent/favouriteRecipes/recipe",
   ]);
 });
-test("release metadata agrees on 1.6.0 and prevents old-runtime OTA matching", () => {
+test("release metadata agrees on 1.6.1 and prevents old-runtime OTA matching", () => {
   const app = require("../app.json").expo;
-  assert.equal(app.version, "1.6.0");
+  assert.equal(app.version, "1.6.1");
   assert.equal(require("../package.json").version, app.version);
   assert.equal(
     require("../package-lock.json").packages[""].version,

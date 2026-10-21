@@ -1,14 +1,6 @@
 import React from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Modal,
-  Image,
-  Platform,
-} from "react-native";
-import { useTheme, useStyles } from "../ThemeContext";
+import { View, Text, TouchableOpacity, Modal } from "react-native";
+import { useTheme } from "../ThemeContext";
 import { DASHBOARD_COLOURS } from "../dashboardModel";
 import { Icon } from "./Icon";
 
@@ -30,7 +22,14 @@ export function AddMenuSheet({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <TouchableOpacity style={{ flex: 1 }} onPress={onClose} activeOpacity={1}>
+      <View style={{ flex: 1, backgroundColor: "rgba(24, 18, 40, 0.28)" }}>
+        <TouchableOpacity
+          style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0 }}
+          onPress={onClose}
+          activeOpacity={1}
+          accessibilityRole="button"
+          accessibilityLabel="Close add menu"
+        />
         <View
           style={{
             position: "absolute",
@@ -39,6 +38,7 @@ export function AddMenuSheet({
             backgroundColor: C.white,
             borderRadius: 18,
             minWidth: 230,
+            maxWidth: "90%",
             shadowColor: "#2e2440",
             shadowOpacity: 0.18,
             shadowRadius: 20,
@@ -48,9 +48,29 @@ export function AddMenuSheet({
             borderColor: C.borderLight,
             overflow: "hidden",
           }}
-          onStartShouldSetResponder={() => true}
         >
+          <View
+            style={{
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              backgroundColor: palette.background,
+              borderBottomWidth: 1,
+              borderBottomColor: C.borderLight,
+            }}
+          >
+            <Text
+              style={{
+                color: palette.ink,
+                fontSize: 15,
+                fontFamily: "NunitoSans_800ExtraBold",
+              }}
+            >
+              What would you like to log?
+            </Text>
+          </View>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Add food"
             onPress={onFood}
             style={{
               paddingHorizontal: 16,
@@ -92,6 +112,8 @@ export function AddMenuSheet({
             <Icon name="chevRight" size={12} color={C.mutedText} />
           </TouchableOpacity>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Add milk"
             onPress={onBottle}
             style={{
               paddingHorizontal: 16,
@@ -133,6 +155,8 @@ export function AddMenuSheet({
             <Icon name="chevRight" size={12} color={C.mutedText} />
           </TouchableOpacity>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Add weight"
             onPress={onWeight}
             style={{
               paddingHorizontal: 16,
@@ -172,7 +196,7 @@ export function AddMenuSheet({
             <Icon name="chevRight" size={12} color={C.mutedText} />
           </TouchableOpacity>
         </View>
-      </TouchableOpacity>
+      </View>
     </Modal>
   );
 }

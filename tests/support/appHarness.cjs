@@ -60,5 +60,5 @@ module.exports = function appHarness(platform = 'ios', overrides = {}) {
     if (node.type === 'Modal' && node.props.visible === false) return [];
     return [node, ...render(node.props.children)];
   }
-  return { load, render, react };
+  return { load, render, react, native };
 };

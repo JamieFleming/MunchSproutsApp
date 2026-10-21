@@ -1,8 +1,17 @@
+import { hasAllergenCheckIn } from "./src/allergenCheckIn";
+import { localDay } from "./src/activityCalendar";
+import { syncLocalReminders, notificationsAllowed } from "./src/reminderSync";
 import { ChildPickerModal } from "./src/components/ChildPickerModal";
 import { AddMenuSheet } from "./src/components/AddMenuSheet";
 import { MilestoneModal } from "./src/components/MilestoneModal";
 import { ChildDropdown } from "./src/components/ChildDropdown";
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import { useFonts } from "expo-font";
 import {
   PlusJakartaSans_400Regular,
@@ -28,23 +37,21 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ScrollView,
   Modal,
   Alert,
   StatusBar,
-  Platform,
-  KeyboardAvoidingView,
   Image,
   Linking,
   AppState,
 } from "react-native";
+import * as Notifications from "expo-notifications";
 import * as Updates from "expo-updates";
 import {
   SafeAreaView,
   useSafeAreaInsets,
   SafeAreaProvider,
 } from "react-native-safe-area-context";
-import Svg, { Circle, Path } from "react-native-svg";
+import Svg, { Path } from "react-native-svg";
 import {
   useAuth,
   logOut,
@@ -80,7 +87,6 @@ import { THEMES } from "./src/constants";
 import { applyAppAccent } from "./src/appAccent";
 import {
   normalize,
-  groupByFood,
   applyWeeklyFeaturedRotation,
   computeMilestones,
   uploadChildPhoto,
@@ -107,12 +113,10 @@ import {
   setupNotifications,
   onNotificationTapped,
   clearBadge,
-  scheduleBottleReminders,
   requestBottleReminderPermission,
-  cancelBottleReminders,
 } from "./src/notificationService";
 import { Icon } from "./src/components/Icon";
-import { FoodForm } from "./src/components/FoodForm";
+import { AddFoodModal } from "./src/components/AddFoodModal";
 import { EditModal } from "./src/components/EditModal";
 import { LogRecipeModal } from "./src/components/LogRecipeModal";
 import { foodDraftKey } from "./src/foodDraftStore";
@@ -223,14 +227,18 @@ function MainAppContent({ user, userDoc }) {
             setBottleRemindersEnabled(true);
           if (savedBottleReminderTimes) {
             try {
-              setBottleReminderTimes(JSON.parse(savedBottleReminderTimes));
+              const times = JSON.parse(savedBottleReminderTimes);
+              if (Array.isArray(times)) setBottleReminderTimes(times);
             } catch {
               /* silent */
             }
           }
         },
       )
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (alive) setPreferencesLoaded(true);
+      });
     return () => {
       alive = false;
     };
@@ -253,6 +261,9 @@ function MainAppContent({ user, userDoc }) {
   const [children, setChildren] = useState([]);
   const [activeChildId, setActiveChildId] = useState(null);
   const [dataLoaded, setDataLoaded] = useState(false);
+  // A failed load may unblock the screen, but must not erase existing reminders.
+  const [hasDataSnapshot, setHasDataSnapshot] = useState(false);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [editEntry, setEditEntry] = useState(null);
   const [toasts, setToasts] = useState([]);
   const [undoDelete, setUndoDelete] = useState(null);
@@ -263,6 +274,7 @@ function MainAppContent({ user, userDoc }) {
   const [logOpenKey, setLogOpenKey] = useState(null);
   const [logAllergenFilter, setLogAllergenFilter] = useState("");
   const [prefillFood, setPrefillFood] = useState(null);
+  const [showFoodModal, setShowFoodModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [userMap, setUserMap] = useState({});
   const [showAddMenu, setShowAddMenu] = useState(false);
@@ -294,28 +306,50 @@ function MainAppContent({ user, userDoc }) {
     if (!user) return;
 
     // Register device and save token to Firestore
-    if (
-      userDoc?.notificationPreference !== "later" &&
-      userDoc?.notificationPreference !== "denied"
-    ) {
+    if (userDoc?.notificationPreference === "enabled") {
       setupNotifications(user.uid);
     }
 
     // Clear badge whenever the app is opened
     clearBadge().catch(() => {});
+  }, [user?.uid, userDoc?.notificationPreference]);
 
-    // Handle notification tap
-    const unsub = onNotificationTapped((response) => {
-      const data = response?.notification?.request?.content?.data ?? {};
-      // Open a URL if one is included in the notification data (e.g. App Store offer code redemption link)
-      if (data.url) {
-        Linking.openURL(data.url).catch(() => {});
-      }
-      // e.g. if (data.screen) setPage(data.screen);
-    });
-
-    return unsub;
-  }, [user?.uid]);
+  const lastNotificationTap = useRef(null);
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    const handleTap = (response) => {
+      if (!alive || !response) return;
+      const request = response.notification?.request;
+      const data = request?.content?.data || {};
+      if (data.userId && data.userId !== user.uid) return;
+      // Cold-start taps may arrive before the child records have loaded.
+      if (data.screen === "allergens" && !dataLoaded) return;
+      const tapKey = JSON.stringify([
+        request?.identifier,
+        response.notification?.date,
+      ]);
+      if (lastNotificationTap.current === tapKey) return;
+      lastNotificationTap.current = tapKey;
+      if (data.url) Linking.openURL(data.url).catch(() => {});
+      if (
+        data.screen === "allergens" &&
+        children.some((child) => child.id === data.childId)
+      ) {
+        setActiveChildId(data.childId);
+        setPage("allergens");
+      } else if (data.screen === "bottle") setPage("bottle");
+      Notifications.clearLastNotificationResponseAsync().catch(() => {});
+    };
+    const unsub = onNotificationTapped(handleTap);
+    Notifications.getLastNotificationResponseAsync()
+      .then(handleTap)
+      .catch(() => {});
+    return () => {
+      alive = false;
+      unsub();
+    };
+  }, [user?.uid, children, dataLoaded]);
 
   const loadData = useCallback(async () => {
     const [log, kids, recs, favIds, bottles, weights, savedId] =
@@ -340,6 +374,7 @@ function MainAppContent({ user, userDoc }) {
       setActiveChildId(preferred ? preferred.id : kids[0].id);
     }
     setUserMap(buildUserMap(user.uid, user.email, kids));
+    setHasDataSnapshot(true);
   }, [user, STORAGE_KEY]);
 
   useEffect(() => {
@@ -435,6 +470,54 @@ function MainAppContent({ user, userDoc }) {
     setTimeout(() => setToasts((p) => p.filter((t) => t.id !== id)), 3000);
   }, []);
 
+  useEffect(() => {
+    if (!hasDataSnapshot || !preferencesLoaded) return;
+    const reconcile = () =>
+      syncLocalReminders({
+        userId: user?.uid,
+        enabled: notificationsAllowed(
+          userDoc?.notificationPreference,
+          bottleRemindersEnabled,
+        ),
+        allergensEnabled: !!userDoc?.allergenRemindersEnabled,
+        children,
+        foodLog,
+        bottleEnabled: bottleRemindersEnabled,
+        bottleTimes: bottleReminderTimes,
+        childName: activeChild?.name,
+      }).catch(() =>
+        toast(
+          "Could not update reminders. Check notification settings and try again.",
+          "error",
+        ),
+      );
+    reconcile();
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") reconcile();
+    });
+    return () => sub.remove();
+  }, [
+    hasDataSnapshot,
+    preferencesLoaded,
+    user?.uid,
+    userDoc?.notificationPreference,
+    userDoc?.allergenRemindersEnabled,
+    children,
+    foodLog,
+    bottleRemindersEnabled,
+    bottleReminderTimes,
+    activeChild?.name,
+    toast,
+  ]);
+
+  // MainApp unmounts on sign-out; clear private reminders before another account uses this device.
+  useEffect(
+    () => () => {
+      syncLocalReminders({ enabled: false }).catch(() => {});
+    },
+    [user?.uid],
+  );
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -452,15 +535,15 @@ function MainAppContent({ user, userDoc }) {
     // Use the most recent attempt to pre-populate so the form reflects
     // the latest texture, feed type and allergens logged for this food
     const latest = group.attempts?.[group.attempts.length - 1] || {};
-    setPrefillFood({
+    openFoodModal({
       name: group.name,
       category: group.category,
       categories: latest.categories || (group.category ? [group.category] : []),
+      categoryOther: latest.categoryOther || "",
       form: latest.form || "",
       feedType: latest.feedType || "",
       allergens: latest.allergens || [],
     });
-    setPage("add");
   };
 
   const handleAllergenCheckIn = async (allergenValue, result) => {
@@ -475,7 +558,7 @@ function MainAppContent({ user, userDoc }) {
           (e) =>
             Array.isArray(e.allergens) &&
             e.allergens.includes(allergenValue) &&
-            !e.isAllergenCheckin,
+            !hasAllergenCheckIn(e, allergenValue),
         )
         .sort((a, b) => {
           const da = `${a.date || ""}T${a.time || "00:00"}`;
@@ -492,9 +575,15 @@ function MainAppContent({ user, userDoc }) {
         return;
       }
 
+      const confirmed = [
+        ...new Set([...(original.allergenCheckIns || []), allergenValue]),
+      ];
       const updates = {
         reaction: "Good",
-        isAllergenCheckin: true,
+        allergenCheckIns: confirmed,
+        isAllergenCheckin: original.allergens.every((value) =>
+          confirmed.includes(value),
+        ),
         notes: original.notes
           ? `${original.notes}\n✅ No delayed reaction confirmed after 48+ hours`
           : `✅ No delayed reaction to ${allergenValue} after 48+ hours`,
@@ -565,6 +654,7 @@ function MainAppContent({ user, userDoc }) {
       (f) => normalize(f.name) === normalize(form.name),
     );
     const entry = {
+      loggedAt: new Date().toISOString(),
       childId: activeChild.id,
       attemptNum: existing.length + 1,
       ...form,
@@ -858,8 +948,9 @@ function MainAppContent({ user, userDoc }) {
       (f) => normalize(f.name) === normalize(logRecipeTarget.title),
     );
     const entry = {
+      loggedAt: new Date().toISOString(),
       childId: activeChild.id,
-      date: new Date().toISOString().split("T")[0],
+      date: localDay(),
       name: logRecipeTarget.title,
       category:
         categoryMap[logRecipeTarget.category] ||
@@ -969,9 +1060,29 @@ function MainAppContent({ user, userDoc }) {
     return true;
   }, [children]);
 
+  const openFoodModal = (initial = null) => {
+    if (requireChild()) return;
+    setPrefillFood(initial);
+    setPage("log");
+    setShowFoodModal(true);
+  };
+  const closeFoodModal = () => {
+    setShowFoodModal(false);
+    setPrefillFood(null);
+    setPage("log");
+  };
+
   // ── Bottle reminder notifications ──
 
   const handleToggleBottleReminders = async (enabled) => {
+    if (
+      enabled &&
+      !notificationsAllowed(
+        userDoc?.notificationPreference,
+        bottleRemindersEnabled,
+      )
+    )
+      return;
     if (enabled) {
       try {
         if (!(await requestBottleReminderPermission())) {
@@ -991,14 +1102,6 @@ function MainAppContent({ user, userDoc }) {
       `bottleRemindersEnabled_${user.uid}`,
       String(enabled),
     ).catch(() => {});
-    if (enabled && bottleReminderTimes.length > 0) {
-      scheduleBottleReminders(
-        bottleReminderTimes,
-        activeChild?.name || "your baby",
-      ).catch(() => {});
-    } else {
-      cancelBottleReminders().catch(() => {});
-    }
   };
 
   const handleAddBottleReminderTime = (time) => {
@@ -1010,11 +1113,6 @@ function MainAppContent({ user, userDoc }) {
       `bottleReminderTimes_${user.uid}`,
       JSON.stringify(newTimes),
     ).catch(() => {});
-    if (bottleRemindersEnabled) {
-      scheduleBottleReminders(newTimes, activeChild?.name || "your baby").catch(
-        () => {},
-      );
-    }
   };
 
   const handleRemoveBottleReminderTime = (index) => {
@@ -1024,16 +1122,6 @@ function MainAppContent({ user, userDoc }) {
       `bottleReminderTimes_${user.uid}`,
       JSON.stringify(newTimes),
     ).catch(() => {});
-    if (bottleRemindersEnabled) {
-      if (newTimes.length > 0) {
-        scheduleBottleReminders(
-          newTimes,
-          activeChild?.name || "your baby",
-        ).catch(() => {});
-      } else {
-        cancelBottleReminders().catch(() => {});
-      }
-    }
   };
 
   // ── Settings ──
@@ -1058,10 +1146,24 @@ function MainAppContent({ user, userDoc }) {
   };
 
   const handleLogout = () =>
-    Alert.alert("Sign Out", "Are you sure?", [
-      { text: "Cancel" },
-      { text: "Sign Out", style: "destructive", onPress: () => logOut() },
-    ]);
+    Alert.alert(
+      "Sign out?",
+      "Are you sure you want to sign out of MunchSprouts?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sign Out",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await logOut();
+            } catch {
+              Alert.alert("Could not sign out", "Please try again.");
+            }
+          },
+        },
+      ],
+    );
 
   const handleDeleteAccount = async () => {
     try {
@@ -1297,7 +1399,15 @@ function MainAppContent({ user, userDoc }) {
           }}
           activeOpacity={0.85}
         >
-          <Icon name="baby" size={14} color={appPalette.ink} />
+          {activeChild?.photoUri ? (
+            <Image
+              source={{ uri: activeChild.photoUri }}
+              accessible={false}
+              style={{ width: 24, height: 24, borderRadius: 12 }}
+            />
+          ) : (
+            <Icon name="baby" size={14} color={appPalette.ink} />
+          )}
           <Text
             style={{
               fontFamily: "NunitoSans_700Bold",
@@ -1328,7 +1438,8 @@ function MainAppContent({ user, userDoc }) {
         onSettings={() => setShowMoreModal(true)}
         onManage={() => setPage("children")}
         onClose={() => setShowChildDropdown(false)}
-        onSignOut={() => logOut()}
+        // Let the dropdown dismiss before presenting the native confirmation.
+        onSignOut={() => setTimeout(handleLogout, 300)}
         topOffset={insets.top + 66}
       />
 
@@ -1362,6 +1473,10 @@ function MainAppContent({ user, userDoc }) {
             showAllergenOnDashboard={showAllergenOnDashboard}
             recipes={recipes}
             onNavigate={(pg) => {
+              if (pg === "add") {
+                openFoodModal();
+                return;
+              }
               if (pg === "childDetail") setChildDetailFrom("dashboard");
               setPage(pg);
             }}
@@ -1383,9 +1498,11 @@ function MainAppContent({ user, userDoc }) {
         </View>
         <View style={{ flex: 1, display: page === "log" ? "flex" : "none" }}>
           <LogScreen
+            key={activeChild?.id || "no-child"}
             foodLog={childLog}
             childName={activeChild?.name || null}
             bottleLog={childBottleLog}
+            weightLog={childWeightLog}
             initialFilter={logFilter}
             initialOpenKey={logOpenKey}
             initialAllergenFilter={logAllergenFilter}
@@ -1396,45 +1513,11 @@ function MainAppContent({ user, userDoc }) {
             onDelete={deleteFood}
             onToggleFavourite={toggleFav}
             onAddAttempt={handleAddAttempt}
-            onAddFood={() => {
-              if (requireChild()) return;
-              setPrefillFood(null);
-              setPage("add");
-            }}
+            onAddFood={() => openFoodModal()}
             refreshing={refreshing}
             onRefresh={onRefresh}
           />
         </View>
-        {page === "add" && (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={{ flex: 1 }}
-          >
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ paddingBottom: 40 }}
-            >
-              <Text style={[s.pageTitle, { marginBottom: 20 }]}>
-                Log Food or Drink
-              </Text>
-              <View style={s.card}>
-                <FoodForm
-                  key={foodDraftKey(user.uid, activeChild?.id)}
-                  draftKey={foodDraftKey(user.uid, activeChild?.id)}
-                  onSubmit={async (form, err) => {
-                    const saved = await addFood(form, err);
-                    if (saved) setPrefillFood(null);
-                    return saved;
-                  }}
-                  isPro={isPro}
-                  initial={prefillFood || {}}
-                  recentFoods={childLog}
-                />
-              </View>
-            </ScrollView>
-          </KeyboardAvoidingView>
-        )}
         <View style={{ flex: 1, display: page === "meals" ? "flex" : "none" }}>
           <MealsHubScreen
             isPro={isPro}
@@ -1472,6 +1555,7 @@ function MainAppContent({ user, userDoc }) {
           style={{ flex: 1, display: page === "allergens" ? "flex" : "none" }}
         >
           <AllergenScreen
+            isActive={page === "allergens"}
             child={activeChild}
             foodLog={childLog}
             onNavigate={setPage}
@@ -1482,14 +1566,13 @@ function MainAppContent({ user, userDoc }) {
               setPage("log");
             }}
             onAddWithPrefill={(allergenValue) => {
-              setPrefillFood({
+              openFoodModal({
                 name: "",
                 category: "",
                 categories: [],
                 feedType: "",
                 allergens: allergenValue ? [allergenValue] : [],
               });
-              setPage("add");
             }}
             onAllergenCheckIn={handleAllergenCheckIn}
           />
@@ -1520,6 +1603,7 @@ function MainAppContent({ user, userDoc }) {
             onEdit={editChild}
             onUpdateWeight={updateWeightEntry}
             onDeleteWeight={deleteWeightEntry}
+            onViewMilkLog={() => setPage("bottle")}
           />
         )}
       </View>
@@ -1586,7 +1670,7 @@ function MainAppContent({ user, userDoc }) {
       </View>
 
       {/* Floating Add Button */}
-      {page !== "add" && page !== "meals" && (
+      {page !== "meals" && (
         <TouchableOpacity
           onPress={() => {
             if (requireChild()) return;
@@ -1625,6 +1709,17 @@ function MainAppContent({ user, userDoc }) {
       )}
 
       {/* Modals */}
+      {showFoodModal && (
+        <AddFoodModal
+          key={foodDraftKey(user.uid, activeChild?.id)}
+          draftKey={foodDraftKey(user.uid, activeChild?.id)}
+          initial={prefillFood}
+          isPro={isPro}
+          recentFoods={childLog}
+          onSubmit={addFood}
+          onClose={closeFoodModal}
+        />
+      )}
       <ChildPickerModal
         palette={appPalette}
         visible={showChildPicker}
@@ -1645,8 +1740,7 @@ function MainAppContent({ user, userDoc }) {
         onClose={() => setShowAddMenu(false)}
         onFood={() => {
           setShowAddMenu(false);
-          if (requireChild()) return;
-          setPage("add");
+          openFoodModal();
         }}
         onBottle={() => {
           setShowAddMenu(false);
@@ -1810,16 +1904,16 @@ function MainAppContent({ user, userDoc }) {
               s.toast,
               {
                 backgroundColor:
-                  t.type === "warning" ? C.bgWarning : C.statGreenBg,
+                  t.type !== "success" ? C.bgWarning : C.statGreenBg,
                 borderWidth: 1.5,
                 borderColor:
-                  t.type === "warning" ? C.warningStroke : C.primaryGreenLight,
+                  t.type !== "success" ? C.warningStroke : C.primaryGreenLight,
               },
             ]}
           >
             <Text
               style={{
-                color: t.type === "warning" ? C.warningStroke : C.statGreenText,
+                color: t.type !== "success" ? C.warningStroke : C.statGreenText,
                 fontFamily: "NunitoSans_700Bold",
                 fontSize: 13,
               }}

@@ -6,7 +6,6 @@ import {
   ScrollView,
   Modal,
   Image,
-  Platform,
 } from "react-native";
 import { useTheme, useStyles } from "../ThemeContext";
 import { DASHBOARD_COLOURS } from "../dashboardModel";

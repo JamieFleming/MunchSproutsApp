@@ -1,14 +1,6 @@
 import React from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Modal,
-  Image,
-  Platform,
-} from "react-native";
-import { useTheme, useStyles } from "../ThemeContext";
+import { View, Text, TouchableOpacity, Modal, Image } from "react-native";
+import { useTheme } from "../ThemeContext";
 import { DASHBOARD_COLOURS } from "../dashboardModel";
 import { Icon } from "./Icon";
 
@@ -33,13 +25,20 @@ export function ChildDropdown({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <TouchableOpacity style={{ flex: 1 }} onPress={onClose} activeOpacity={1}>
+      <View style={{ flex: 1, backgroundColor: "rgba(24, 18, 40, 0.28)" }}>
+        <TouchableOpacity
+          style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0 }}
+          onPress={onClose}
+          activeOpacity={1}
+          accessibilityRole="button"
+          accessibilityLabel="Close child menu"
+        />
         <View
           style={{
             position: "absolute",
             top: topOffset,
             right: 16,
-            backgroundColor: "#ffffff",
+            backgroundColor: C.white,
             borderRadius: 18,
             minWidth: 210,
             shadowColor: "#2e2440",
@@ -51,11 +50,13 @@ export function ChildDropdown({
             borderColor: C.borderLight,
             overflow: "hidden",
           }}
-          onStartShouldSetResponder={() => true}
         >
           {children.map((child, i) => (
             <TouchableOpacity
               key={child.id}
+              accessibilityRole="button"
+              accessibilityLabel={`Select ${child.name}`}
+              accessibilityState={{ selected: child.id === activeChildId }}
               onPress={() => {
                 onSelect(child.id);
                 onClose();
@@ -88,13 +89,21 @@ export function ChildDropdown({
                   justifyContent: "center",
                 }}
               >
-                <Icon
-                  name="baby"
-                  size={15}
-                  color={
-                    child.id === activeChildId ? "#ffffff" : palette.accent
-                  }
-                />
+                {child.photoUri ? (
+                  <Image
+                    source={{ uri: child.photoUri }}
+                    accessible={false}
+                    style={{ width: 30, height: 30, borderRadius: 15 }}
+                  />
+                ) : (
+                  <Icon
+                    name="baby"
+                    size={15}
+                    color={
+                      child.id === activeChildId ? "#ffffff" : palette.accent
+                    }
+                  />
+                )}
               </View>
               <Text
                 style={{
@@ -191,7 +200,7 @@ export function ChildDropdown({
             </Text>
           </TouchableOpacity>
         </View>
-      </TouchableOpacity>
+      </View>
     </Modal>
   );
 }

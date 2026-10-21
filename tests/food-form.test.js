@@ -25,6 +25,8 @@ function formHarness(props = {}) {
     },
   };
   const h = harness("ios", { react });
+  const alerts = [];
+  h.native.Alert.alert = (...args) => alerts.push(args);
   const { FoodForm } = h.load("src/components/FoodForm.js");
   const submissions = [];
   const render = () => {
@@ -50,6 +52,7 @@ function formHarness(props = {}) {
     find,
     nodes,
     submissions,
+    alerts,
     save: () => find("Add to Log").props.onPress(),
   };
 }
@@ -79,7 +82,11 @@ test("food edit preserves all categories and hidden optional values", async () =
   };
   const h = formHarness({ initial });
   await h.save();
-  assert.deepEqual(h.submissions[0][0], { ...initial, ml: "" });
+  assert.deepEqual(h.submissions[0][0], {
+    ...initial,
+    ml: "",
+    categoryOther: "",
+  });
   assert.equal(h.find("Food or drink name").props.value, "Mixed meal");
 });
 test("blank names cannot be saved and success trims names", async () => {
@@ -176,4 +183,84 @@ test("allergic reaction opens allergen choices and liquid amount is saved only f
 test("default food date uses the local calendar day", () => {
   const { localFoodDate } = harness().load("src/components/FoodForm.js");
   assert.equal(localFoodDate(new Date(2026, 9, 17, 0, 1)), "2026-10-17");
+});
+
+test("Other food type saves, trims, repeats and clears when Other is deselected", async () => {
+  const h = formHarness({
+    initial: { id: "e", name: "Mixed meal", categories: ["Other"] },
+  });
+  h.find("Other food type").props.onChangeText("  Homemade  ");
+  await h.save();
+  assert.equal(h.submissions[0][0].categoryOther, "Homemade");
+  h.find("Other").props.onPress();
+  h.find("Fruits").props.onPress();
+  assert.equal(h.find("Other food type"), undefined);
+  await h.save();
+  assert.equal(h.submissions[1][0].categoryOther, "");
+  const repeated = formHarness({
+    recentFoods: [
+      { name: "Soup", category: "Other", categoryOther: "Mixed meal" },
+    ],
+  });
+  repeated.find("Soup").props.onPress();
+  assert.equal(repeated.find("Other food type").props.value, "Mixed meal");
+});
+test("clear entry requires confirmation, resets fields and never submits or loses edit identity", async () => {
+  const h = formHarness({
+    initial: {
+      id: "saved-id",
+      name: "Toast",
+      categories: ["Other"],
+      categoryOther: "Bread",
+      notes: "Old note",
+      favourite: true,
+      photoUri: "photo",
+      allergens: ["Wheat"],
+      form: "Mashed",
+      mealTime: "Lunch",
+    },
+  });
+  h.find("Clear entry").props.onPress();
+  assert.equal(h.find("Food or drink name").props.value, "Toast");
+  assert.equal(h.submissions.length, 0);
+  const buttons = h.alerts[0][2];
+  assert.ok(buttons.some((button) => button.style === "cancel"));
+  buttons.find((button) => button.text === "Clear fields").onPress();
+  assert.equal(h.find("Food or drink name").props.value, "");
+  assert.equal(h.find("Other food type"), undefined);
+  assert.equal(h.find("Food notes"), undefined);
+  h.find("Food or drink name").props.onChangeText("Banana");
+  h.find("Fruits").props.onPress();
+  await h.save();
+  assert.equal(h.submissions[0][0].id, "saved-id");
+  for (const key of ["notes", "photoUri", "mealTime", "form", "categoryOther"])
+    assert.equal(h.submissions[0][0][key], "");
+  assert.equal(h.submissions[0][0].favourite, false);
+  assert.deepEqual(h.submissions[0][0].allergens, []);
+});
+test("gold star toggles favourite and Other is offered for texture and meal time", async () => {
+  const h = formHarness({
+    isPro: true,
+    initial: { id: "e", name: "Toast", categories: ["Grains"] },
+  });
+  assert.ok(
+    h.find("Favourite"),
+    "Favourite is available with More details collapsed",
+  );
+  h.find("More food details").props.onPress();
+  h.find("Favourite").props.onPress();
+  assert.equal(h.find("Favourite").props.accessibilityState.selected, true);
+  const others = h
+    .nodes()
+    .filter((node) => node.props.accessibilityLabel === "Other");
+  others[others.length - 1].props.onPress();
+  const picker = h
+    .nodes()
+    .find((node) => node.props.title === "How was it served?");
+  assert.ok(picker.props.options.includes("Other"));
+  picker.props.onSelect("Other");
+  await h.save();
+  assert.equal(h.submissions[0][0].favourite, true);
+  assert.equal(h.submissions[0][0].mealTime, "Other");
+  assert.equal(h.submissions[0][0].form, "Other");
 });

@@ -26,6 +26,7 @@ const EMPTY_FORM = {
   name: "",
   categories: [],
   category: "",
+  categoryOther: "",
   form: "",
   reaction: "",
   notes: "",
@@ -76,12 +77,7 @@ export function FoodForm({
     !!initial.allergens?.length || initial.reaction === "Allergic",
   );
   const [showDetails, setShowDetails] = useState(
-    !!(
-      initial.notes ||
-      initial.photoUri ||
-      initial.mealTime ||
-      initial.favourite
-    ),
+    !!(initial.notes || initial.photoUri || initial.mealTime),
   );
   const [busy, setBusy] = useState(false);
   const saving = useRef(false);
@@ -123,6 +119,7 @@ export function FoodForm({
       name: entry.name,
       categories,
       category: categories[0] || "",
+      categoryOther: entry.categoryOther || "",
       form: entry.form || "",
       allergens: [...(entry.allergens || [])],
       reaction: "",
@@ -130,6 +127,34 @@ export function FoodForm({
     }));
     setShowAllergens(true);
   };
+  const clearEntry = () =>
+    Alert.alert(
+      "Clear this entry?",
+      "This resets the form. A saved entry will only change when you tap Save.",
+      [
+        { text: "Keep editing", style: "cancel" },
+        {
+          text: "Clear fields",
+          style: "destructive",
+          onPress: () => {
+            // Retain identity when editing; autosave removes an empty new-entry draft.
+            setForm({
+              ...initial,
+              ...EMPTY_FORM,
+              date: localFoodDate(),
+              ...(initial.id && {
+                isAllergenCheckin: false,
+                allergenCheckIns: [],
+              }),
+            });
+            setShowDate(false);
+            setShowTexture(false);
+            setShowAllergens(false);
+            setShowDetails(false);
+          },
+        },
+      ],
+    );
   const save = async () => {
     if (saving.current || !draft.ready) return;
     if (!form.name.trim() || !form.date || !form.categories.length) {
@@ -146,6 +171,9 @@ export function FoodForm({
         ...form,
         name: form.name.trim(),
         category: form.categories[0],
+        categoryOther: form.categories.includes("Other")
+          ? form.categoryOther.trim()
+          : "",
         ml: isLiquids ? form.ml || "" : "",
         allergens: form.allergens || [],
       });
@@ -222,13 +250,34 @@ export function FoodForm({
   );
   return (
     <View style={{ gap: 18 }}>
-      {!!draftKey && (
-        <Text style={hint} accessibilityLiveRegion="polite">
-          {!draft.ready
-            ? "Checking for an unfinished entry…"
-            : draft.status || "Unfinished entries are kept on this phone."}
-        </Text>
-      )}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        {!!draftKey && (
+          <Text style={[hint, { flex: 1 }]} accessibilityLiveRegion="polite">
+            {!draft.ready
+              ? "Checking for an unfinished entry…"
+              : draft.status || "Unfinished entries are kept on this phone."}
+          </Text>
+        )}
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Clear entry"
+          disabled={busy || !draft.ready}
+          onPress={clearEntry}
+          style={{
+            marginLeft: "auto",
+            flexShrink: 0,
+            minHeight: 44,
+            justifyContent: "center",
+            paddingHorizontal: 4,
+          }}
+        >
+          <Text
+            style={{ color: C.primaryPurple, fontFamily: "NunitoSans_700Bold" }}
+          >
+            Clear entry
+          </Text>
+        </TouchableOpacity>
+      </View>
       <View
         pointerEvents={busy || !draft.ready ? "none" : "auto"}
         style={{ gap: 18 }}
@@ -244,6 +293,7 @@ export function FoodForm({
             <Text
               style={{
                 color: C.primaryPinkDark,
+                fontSize: 18,
                 fontFamily: "NunitoSans_700Bold",
               }}
             >
@@ -311,6 +361,20 @@ export function FoodForm({
             )}
           </View>
         </View>
+        {form.categories.includes("Other") && (
+          <View>
+            <Text style={s.label}>Food type (optional)</Text>
+            <TextInput
+              accessibilityLabel="Other food type"
+              value={form.categoryOther}
+              onChangeText={(value) => set("categoryOther", value)}
+              maxLength={100}
+              placeholder="e.g. Homemade mixed meal"
+              placeholderTextColor={C.mutedText}
+              style={s.input}
+            />
+          </View>
+        )}
         {isLiquids && (
           <View>
             <Text style={s.label}>Amount in ml (optional)</Text>
@@ -477,7 +541,7 @@ export function FoodForm({
             <Text style={s.label}>
               {showDetails ? "Fewer details" : "More details"}
             </Text>
-            <Text style={hint}>Notes, favourite, meal time & photo</Text>
+            <Text style={hint}>Notes, meal time & photo</Text>
           </View>
           <Icon name="chevDown" size={16} color={C.primaryPurple} />
         </TouchableOpacity>
@@ -495,9 +559,6 @@ export function FoodForm({
                 placeholderTextColor={C.mutedText}
               />
             </View>
-            {chip("Favourite", form.favourite, () =>
-              set("favourite", !form.favourite),
-            )}
             <View>
               <Text style={s.label}>
                 Meal time {isPro ? "(optional)" : "· Pro"}
@@ -567,6 +628,33 @@ export function FoodForm({
             </View>
           </View>
         )}
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Favourite"
+          accessibilityState={{ selected: form.favourite }}
+          onPress={() => set("favourite", !form.favourite)}
+          style={[
+            s.btnPrimary,
+            {
+              minHeight: 52,
+              flexDirection: "row",
+              gap: 8,
+              backgroundColor: form.favourite ? "#fff1b8" : "#fff9e5",
+              shadowColor: "#a77908",
+            },
+          ]}
+        >
+          <Icon
+            name={form.favourite ? "starFill" : "star"}
+            size={20}
+            color="#a77908"
+          />
+          <Text
+            style={[s.btnPrimaryText, { color: "#795a0c", lineHeight: 22 }]}
+          >
+            Favourite
+          </Text>
+        </TouchableOpacity>
       </View>
       <TouchableOpacity
         accessibilityRole="button"
@@ -574,12 +662,14 @@ export function FoodForm({
         accessibilityState={{ disabled: busy || !draft.ready, busy }}
         disabled={busy || !draft.ready}
         onPress={save}
-        style={[s.btnPrimary, { opacity: busy ? 0.7 : 1 }]}
+        style={[s.btnPrimary, { minHeight: 52, opacity: busy ? 0.7 : 1 }]}
       >
         {busy ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={s.btnPrimaryText}>{buttonLabel}</Text>
+          <Text style={[s.btnPrimaryText, { lineHeight: 22 }]}>
+            {buttonLabel}
+          </Text>
         )}
       </TouchableOpacity>
       <Text style={[hint, { textAlign: "center" }]}>

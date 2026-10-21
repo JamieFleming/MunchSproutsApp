@@ -1,5 +1,6 @@
-import { OnboardingScreen } from "./OnboardingScreen";
 import { DashboardPreferences } from "../components/DashboardPreferences";
+import { notificationsAllowed } from "../reminderSync";
+import { Disclosure } from "../components/Disclosure";
 import { GettingStartedPreferences } from "../components/GettingStartedPreferences";
 import React, { useState, useEffect } from "react";
 import {
@@ -639,17 +640,29 @@ const THEMES = [
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function SectionLabel({ children, mt = 6 }) {
-  const s = useStyles();
+function SettingsSection({
+  title,
+  children,
+  initiallyOpen = false,
+  danger = false,
+}) {
+  const { C } = useTheme();
   return (
-    <Text
-      style={[
-        s.smallLabel,
-        { paddingHorizontal: 4, marginBottom: 8, marginTop: mt },
-      ]}
+    <Disclosure
+      title={title}
+      initiallyOpen={initiallyOpen}
+      foregroundColor={danger ? "#ffffff" : undefined}
+      headerStyle={{
+        paddingHorizontal: 16,
+        borderRadius: 14,
+        backgroundColor: danger ? "#b83232" : C.white,
+        borderWidth: 1,
+        borderColor: danger ? "#b83232" : C.borderLight,
+        marginBottom: 8,
+      }}
     >
       {children}
-    </Text>
+    </Disclosure>
   );
 }
 
@@ -778,7 +791,6 @@ export function MoreScreen({
   weightLog = [],
   childName,
 }) {
-  const [previewOnboarding, setPreviewOnboarding] = useState(false);
   const { C, theme, setTheme } = useTheme();
   const s = useStyles();
 
@@ -1197,7 +1209,7 @@ export function MoreScreen({
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={{ flex: 1, backgroundColor: C.bgPurple }}
+          style={{ flex: 1, backgroundColor: C.white }}
         >
           {/* Header */}
           <View
@@ -2012,381 +2024,355 @@ export function MoreScreen({
         </View>
       )}
 
+      <MoreRow
+        icon="info"
+        iconBg={C.statBlueBg}
+        label="Contact Support"
+        sublabel="Get help, report bugs or request features"
+        onPress={() => setShowSupport(true)}
+      />
+
       {/* Appearance */}
-      <SectionLabel>Appearance</SectionLabel>
-      <View
-        style={{
-          backgroundColor: C.white,
-          borderRadius: 16,
-          padding: 16,
-          marginBottom: 10,
-          borderWidth: 1,
-          borderColor: C.borderLight,
-        }}
-      >
-        <Text
+      <SettingsSection title="Appearance">
+        <View
           style={{
-            fontFamily: "NunitoSans_700Bold",
-            fontSize: 14,
-            color: C.primaryPinkDark,
-            marginBottom: 12,
+            backgroundColor: C.white,
+            borderRadius: 16,
+            padding: 16,
+            marginBottom: 10,
+            borderWidth: 1,
+            borderColor: C.borderLight,
           }}
         >
-          Colour Theme
-        </Text>
-        {THEMES.map((t) => (
-          <TouchableOpacity
-            key={t.id}
-            onPress={() => setTheme(t.id)}
-            activeOpacity={0.8}
+          <Text
+            style={{
+              fontFamily: "NunitoSans_700Bold",
+              fontSize: 14,
+              color: C.primaryPinkDark,
+              marginBottom: 12,
+            }}
+          >
+            Colour Theme
+          </Text>
+          {THEMES.map((t) => (
+            <TouchableOpacity
+              key={t.id}
+              onPress={() => setTheme(t.id)}
+              activeOpacity={0.8}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 14,
+                padding: 12,
+                backgroundColor: theme === t.id ? C.bgPurple : "transparent",
+                borderRadius: 12,
+                marginBottom: 4,
+                borderWidth: 1.5,
+                borderColor: theme === t.id ? C.primaryPurple : "transparent",
+              }}
+            >
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: t.dot,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  shadowColor: t.dot,
+                  shadowOpacity: 0.4,
+                  shadowRadius: 4,
+                  elevation: 2,
+                }}
+              >
+                {theme === t.id && <Icon name="check" size={16} color="#fff" />}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontFamily: "NunitoSans_700Bold",
+                    fontSize: 14,
+                    color: theme === t.id ? C.primaryPurple : C.textCharcoal,
+                  }}
+                >
+                  {t.label}
+                </Text>
+                <Text
+                  style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}
+                >
+                  {t.sublabel}
+                </Text>
+              </View>
+              {theme === t.id && (
+                <View
+                  style={{
+                    backgroundColor: C.primaryPurple,
+                    borderRadius: 999,
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 10,
+                      fontFamily: "NunitoSans_700Bold",
+                      color: "#fff",
+                    }}
+                  >
+                    Active
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </SettingsSection>
+
+      <SettingsSection title="Preferences">
+        <View
+          style={{
+            backgroundColor: C.white,
+            borderRadius: 16,
+            padding: 16,
+            marginBottom: 10,
+            borderWidth: 1,
+            borderColor: C.borderLight,
+          }}
+        >
+          {/* Weight unit preference */}
+          <View
             style={{
               flexDirection: "row",
               alignItems: "center",
               gap: 14,
-              padding: 12,
-              backgroundColor: theme === t.id ? C.bgPurple : "transparent",
-              borderRadius: 12,
-              marginBottom: 4,
-              borderWidth: 1.5,
-              borderColor: theme === t.id ? C.primaryPurple : "transparent",
             }}
           >
             <View
               style={{
                 width: 36,
                 height: 36,
-                borderRadius: 18,
-                backgroundColor: t.dot,
+                borderRadius: 10,
+                backgroundColor: "#e6f7ef",
                 alignItems: "center",
                 justifyContent: "center",
-                shadowColor: t.dot,
-                shadowOpacity: 0.4,
-                shadowRadius: 4,
-                elevation: 2,
               }}
             >
-              {theme === t.id && <Icon name="check" size={16} color="#fff" />}
+              <Icon name="scale" size={18} color="#2d7a55" />
             </View>
             <View style={{ flex: 1 }}>
               <Text
                 style={{
                   fontFamily: "NunitoSans_700Bold",
                   fontSize: 14,
-                  color: theme === t.id ? C.primaryPurple : C.textCharcoal,
+                  color: C.primaryPinkDark,
                 }}
               >
-                {t.label}
+                Weight Unit
               </Text>
-              <Text style={{ fontSize: 12, color: C.mutedText, marginTop: 2 }}>
-                {t.sublabel}
-              </Text>
-            </View>
-            {theme === t.id && (
-              <View
-                style={{
-                  backgroundColor: C.primaryPurple,
-                  borderRadius: 999,
-                  paddingHorizontal: 8,
-                  paddingVertical: 3,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 10,
-                    fontFamily: "NunitoSans_700Bold",
-                    color: "#fff",
-                  }}
-                >
-                  Active
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {__DEV__ && (
-        <>
-          <TouchableOpacity
-            onPress={() => setPreviewOnboarding(true)}
-            style={{
-              padding: 16,
-              borderRadius: 16,
-              backgroundColor: C.bgPurple,
-              marginBottom: 12,
-            }}
-          >
-            <Text
-              style={{
-                color: C.primaryPurple,
-                fontFamily: "NunitoSans_700Bold",
-              }}
-            >
-              Preview new onboarding (no changes saved)
-            </Text>
-          </TouchableOpacity>
-          <Modal
-            visible={previewOnboarding}
-            animationType="slide"
-            onRequestClose={() => setPreviewOnboarding(false)}
-          >
-            <View style={{ flex: 1, backgroundColor: C.white }}>
-              {previewOnboarding && (
-                <OnboardingScreen
-                  user={user}
-                  preview
-                  onPreviewFinish={() => {
-                    setPreviewOnboarding(false);
-                    Alert.alert(
-                      "Preview complete",
-                      "Nothing was saved. Use a new test account to test saving your onboarding answers.",
-                    );
-                  }}
-                />
-              )}
-              <TouchableOpacity
-                onPress={() => setPreviewOnboarding(false)}
-                style={{ padding: 16, paddingBottom: 30, alignItems: "center" }}
-              >
-                <Text style={{ color: C.primaryPurple }}>Close preview</Text>
-              </TouchableOpacity>
-            </View>
-          </Modal>
-        </>
-      )}
-      <SectionLabel>Your preferences</SectionLabel>
-      <GettingStartedPreferences user={user} userDoc={userDoc} />
-
-      {/* Dashboard */}
-      <SectionLabel>Dashboard</SectionLabel>
-      <DashboardPreferences
-        value={{
-          ...userDoc?.dashboardPreferences,
-          showMilk: showMilkOnDashboard,
-          showAllergens: showAllergenOnDashboard,
-        }}
-        onSave={onSaveDashboardPreference}
-      />
-      <View
-        style={{
-          backgroundColor: C.white,
-          borderRadius: 16,
-          padding: 16,
-          marginBottom: 10,
-          borderWidth: 1,
-          borderColor: C.borderLight,
-        }}
-      >
-        {/* Weight unit preference */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 14,
-            marginTop: 16,
-          }}
-        >
-          <View
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 10,
-              backgroundColor: "#e6f7ef",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Icon name="scale" size={18} color="#2d7a55" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text
-              style={{
-                fontFamily: "NunitoSans_700Bold",
-                fontSize: 14,
-                color: C.primaryPinkDark,
-              }}
-            >
-              Weight Unit
-            </Text>
-            <Text
-              style={{
-                fontFamily: "NunitoSans_400Regular",
-                fontSize: 12,
-                color: C.mutedText,
-                marginTop: 2,
-              }}
-            >
-              Preferred display for weight measurements
-            </Text>
-          </View>
-          <View
-            style={{
-              flexDirection: "row",
-              backgroundColor: C.bgPurple,
-              borderRadius: 10,
-              overflow: "hidden",
-            }}
-          >
-            {["lbs", "kg"].map((u) => (
-              <TouchableOpacity
-                key={u}
-                onPress={() => onSetWeightPreference?.(u)}
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 7,
-                  backgroundColor:
-                    weightPreference === u ? C.primaryPurple : "transparent",
-                }}
-              >
-                <Text
-                  style={{
-                    fontFamily: "NunitoSans_700Bold",
-                    fontSize: 13,
-                    color: weightPreference === u ? "#fff" : C.mutedText,
-                  }}
-                >
-                  {u}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      </View>
-
-      {/* Notifications */}
-      <SectionLabel>Notifications</SectionLabel>
-      <View
-        style={{
-          backgroundColor: C.white,
-          borderRadius: 16,
-          padding: 16,
-          marginBottom: 10,
-          borderWidth: 1,
-          borderColor: C.borderLight,
-        }}
-      >
-        {/* Toggle row */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-          <View
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 10,
-              backgroundColor: "#d4e8f5",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Icon name="bottle" size={18} color="#2a5f8f" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text
-              style={{
-                fontFamily: "NunitoSans_700Bold",
-                fontSize: 14,
-                color: C.primaryPinkDark,
-              }}
-            >
-              Bottle Feeding Reminders
-            </Text>
-            <Text
-              style={{
-                fontFamily: "NunitoSans_400Regular",
-                fontSize: 12,
-                color: C.mutedText,
-                marginTop: 2,
-              }}
-            >
-              Get daily reminders to feed your baby
-            </Text>
-          </View>
-          <Switch
-            value={bottleRemindersEnabled}
-            onValueChange={onToggleBottleReminders}
-            trackColor={{ false: C.borderLight, true: "#2a5f8f" }}
-            thumbColor="#ffffff"
-          />
-        </View>
-
-        {/* Time list */}
-        {bottleRemindersEnabled && (
-          <View style={{ marginTop: 16 }}>
-            {bottleReminderTimes.length === 0 ? (
               <Text
                 style={{
-                  fontSize: 13,
+                  fontFamily: "NunitoSans_400Regular",
+                  fontSize: 12,
                   color: C.mutedText,
-                  textAlign: "center",
-                  paddingVertical: 8,
+                  marginTop: 2,
                 }}
               >
-                No reminders set — tap "Add Time" below
+                Preferred display for weight measurements
               </Text>
-            ) : (
-              bottleReminderTimes.map((t, i) => (
-                <View
-                  key={i}
+            </View>
+            <View
+              style={{
+                flexDirection: "row",
+                backgroundColor: C.bgPurple,
+                borderRadius: 10,
+                overflow: "hidden",
+              }}
+            >
+              {["lbs", "kg"].map((u) => (
+                <TouchableOpacity
+                  key={u}
+                  onPress={() => onSetWeightPreference?.(u)}
                   style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    backgroundColor: "#f0f6fc",
-                    borderRadius: 10,
                     paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    marginBottom: 8,
+                    paddingVertical: 7,
+                    backgroundColor:
+                      weightPreference === u ? C.primaryPurple : "transparent",
                   }}
                 >
                   <Text
                     style={{
-                      flex: 1,
                       fontFamily: "NunitoSans_700Bold",
-                      fontSize: 14,
-                      color: "#2a5f8f",
+                      fontSize: 13,
+                      color: weightPreference === u ? "#fff" : C.mutedText,
                     }}
                   >
-                    {fmt24(t.hour, t.minute)}
+                    {u}
                   </Text>
-                  <TouchableOpacity
-                    onPress={() => onRemoveBottleReminderTime?.(i)}
-                    style={{
-                      backgroundColor: "#fde8e8",
-                      borderRadius: 8,
-                      padding: 7,
-                    }}
-                  >
-                    <Icon name="trash" size={14} color="#c0392b" />
-                  </TouchableOpacity>
-                </View>
-              ))
-            )}
-            <TouchableOpacity
-              onPress={() => setShowTimePicker(true)}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                backgroundColor: C.bgPurple,
-                borderRadius: 10,
-                paddingVertical: 11,
-                marginTop: 4,
-              }}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+
+        <GettingStartedPreferences
+          user={user}
+          userDoc={userDoc}
+          bottleRemindersEnabled={bottleRemindersEnabled}
+        >
+          <View
+            style={{
+              backgroundColor: C.white,
+              borderRadius: 16,
+              padding: 16,
+              marginBottom: 10,
+              borderWidth: 1,
+              borderColor: C.borderLight,
+            }}
+          >
+            {/* Toggle row */}
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 14 }}
             >
-              <Icon name="plus" size={16} color={C.primaryPurple} />
-              <Text
+              <View
                 style={{
-                  fontFamily: "NunitoSans_700Bold",
-                  fontSize: 14,
-                  color: C.primaryPurple,
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  backgroundColor: "#d4e8f5",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                Add Time
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
+                <Icon name="bottle" size={18} color="#2a5f8f" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontFamily: "NunitoSans_700Bold",
+                    fontSize: 14,
+                    color: C.primaryPinkDark,
+                  }}
+                >
+                  Bottle Feeding Reminders
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: "NunitoSans_400Regular",
+                    fontSize: 12,
+                    color: C.mutedText,
+                    marginTop: 2,
+                  }}
+                >
+                  Get daily reminders to feed your baby
+                </Text>
+              </View>
+              <Switch
+                accessibilityLabel="Bottle feeding reminders"
+                disabled={
+                  !notificationsAllowed(
+                    userDoc?.notificationPreference,
+                    bottleRemindersEnabled,
+                  )
+                }
+                value={bottleRemindersEnabled}
+                onValueChange={onToggleBottleReminders}
+                trackColor={{ false: C.borderLight, true: "#2a5f8f" }}
+                thumbColor="#ffffff"
+              />
+            </View>
 
+            {/* Time list */}
+            {bottleRemindersEnabled && (
+              <View style={{ marginTop: 16 }}>
+                {bottleReminderTimes.length === 0 ? (
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: C.mutedText,
+                      textAlign: "center",
+                      paddingVertical: 8,
+                    }}
+                  >
+                    No reminders set — tap "Add Time" below
+                  </Text>
+                ) : (
+                  bottleReminderTimes.map((t, i) => (
+                    <View
+                      key={i}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        backgroundColor: "#f0f6fc",
+                        borderRadius: 10,
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                        marginBottom: 8,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          flex: 1,
+                          fontFamily: "NunitoSans_700Bold",
+                          fontSize: 14,
+                          color: "#2a5f8f",
+                        }}
+                      >
+                        {fmt24(t.hour, t.minute)}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => onRemoveBottleReminderTime?.(i)}
+                        style={{
+                          backgroundColor: "#fde8e8",
+                          borderRadius: 8,
+                          padding: 7,
+                        }}
+                      >
+                        <Icon name="trash" size={14} color="#c0392b" />
+                      </TouchableOpacity>
+                    </View>
+                  ))
+                )}
+                <TouchableOpacity
+                  onPress={() => setShowTimePicker(true)}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    backgroundColor: C.bgPurple,
+                    borderRadius: 10,
+                    paddingVertical: 11,
+                    marginTop: 4,
+                  }}
+                >
+                  <Icon name="plus" size={16} color={C.primaryPurple} />
+                  <Text
+                    style={{
+                      fontFamily: "NunitoSans_700Bold",
+                      fontSize: 14,
+                      color: C.primaryPurple,
+                    }}
+                  >
+                    Add Time
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </GettingStartedPreferences>
+      </SettingsSection>
+
+      {/* Dashboard */}
+      <SettingsSection title="Dashboard">
+        <DashboardPreferences
+          value={{
+            ...userDoc?.dashboardPreferences,
+            showMilk: showMilkOnDashboard,
+            showAllergens: showAllergenOnDashboard,
+          }}
+          onSave={onSaveDashboardPreference}
+        />
+      </SettingsSection>
       {/* Time Picker Modal */}
       <Modal
         visible={showTimePicker}
@@ -3136,97 +3122,100 @@ export function MoreScreen({
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Gallery */}
-      <MoreRow
-        icon="Camera"
-        iconBg={isPro ? C.bgPurple : C.bgPurple}
-        label="Photo Gallery"
-        sublabel={
-          isPro
-            ? `${photoEntries.length} food photo${photoEntries.length !== 1 ? "s" : ""} saved`
-            : "Pro feature — view photos attached to food entries"
-        }
-        color={isPro ? undefined : C.mutedText}
-        onPress={isPro ? () => setShowGallery(true) : onUpgradePro}
-        right={
-          isPro ? undefined : (
-            <View
-              style={{
-                backgroundColor: C.warningStroke,
-                borderRadius: 999,
-                paddingHorizontal: 8,
-                paddingVertical: 3,
-              }}
-            >
-              <Text
+      <SettingsSection title="Data">
+        {/* Gallery */}
+        <MoreRow
+          icon="Camera"
+          iconBg={isPro ? C.bgPurple : C.bgPurple}
+          label="Photo Gallery"
+          sublabel={
+            isPro
+              ? `${photoEntries.length} food photo${photoEntries.length !== 1 ? "s" : ""} saved`
+              : "Pro feature — view photos attached to food entries"
+          }
+          color={isPro ? undefined : C.mutedText}
+          onPress={isPro ? () => setShowGallery(true) : onUpgradePro}
+          right={
+            isPro ? undefined : (
+              <View
                 style={{
-                  fontSize: 10,
-                  fontFamily: "NunitoSans_700Bold",
-                  color: C.white,
+                  backgroundColor: C.warningStroke,
+                  borderRadius: 999,
+                  paddingHorizontal: 8,
+                  paddingVertical: 3,
                 }}
               >
-                PRO
-              </Text>
-            </View>
-          )
-        }
-      />
+                <Text
+                  style={{
+                    fontSize: 10,
+                    fontFamily: "NunitoSans_700Bold",
+                    color: C.white,
+                  }}
+                >
+                  PRO
+                </Text>
+              </View>
+            )
+          }
+        />
 
-      {/* Data Export */}
-      <SectionLabel mt={4}>Data</SectionLabel>
-      <MoreRow
-        icon="pdf"
-        iconBg={C.bgPurple}
-        label="Export as PDF"
-        sublabel={
-          isPro
-            ? "Download your food, milk & allergen data as a PDF"
-            : "Last 7 days free · Upgrade Pro for full history"
-        }
-        onPress={() => {
-          if (!isPro) setExportRange("7d");
-          setShowExportModal(true);
-        }}
-      />
+        {/* Data Export */}
+
+        <MoreRow
+          icon="pdf"
+          iconBg={C.bgPurple}
+          label="Export as PDF"
+          sublabel={
+            isPro
+              ? "Download your food, milk & allergen data as a PDF"
+              : "Last 7 days free · Upgrade Pro for full history"
+          }
+          onPress={() => {
+            if (!isPro) setExportRange("7d");
+            setShowExportModal(true);
+          }}
+        />
+      </SettingsSection>
 
       {/* Account — password/sign-out moved into profile edit modal (tap the card above) */}
 
       {/* Family Sharing */}
-      <SectionLabel mt={10}>Family Sharing</SectionLabel>
-      <MoreRow
-        icon={isPro ? "users" : "lock"}
-        iconBg={isPro ? C.statBlueBg : C.bgPurple}
-        label="Share with Family"
-        sublabel={
-          isPro
-            ? "Invite by email or share an invite code"
-            : "Pro feature — upgrade to unlock"
-        }
-        color={isPro ? undefined : C.mutedText}
-        onPress={isPro ? () => setShowSharing(true) : onUpgradePro}
-        right={
-          isPro ? undefined : (
-            <View
-              style={{
-                backgroundColor: C.warningStroke,
-                borderRadius: 999,
-                paddingHorizontal: 8,
-                paddingVertical: 3,
-              }}
-            >
-              <Text
+      <SettingsSection title="Family Sharing">
+        <MoreRow
+          icon={isPro ? "users" : "lock"}
+          iconBg={isPro ? C.statBlueBg : C.bgPurple}
+          label="Share with Family"
+          sublabel={
+            isPro
+              ? "Invite by email or share an invite code"
+              : "Pro feature — upgrade to unlock"
+          }
+          color={isPro ? undefined : C.mutedText}
+          onPress={isPro ? () => setShowSharing(true) : onUpgradePro}
+          right={
+            isPro ? undefined : (
+              <View
                 style={{
-                  fontSize: 10,
-                  fontFamily: "NunitoSans_700Bold",
-                  color: C.white,
+                  backgroundColor: C.warningStroke,
+                  borderRadius: 999,
+                  paddingHorizontal: 8,
+                  paddingVertical: 3,
                 }}
               >
-                PRO
-              </Text>
-            </View>
-          )
-        }
-      />
+                <Text
+                  style={{
+                    fontSize: 10,
+                    fontFamily: "NunitoSans_700Bold",
+                    color: C.white,
+                  }}
+                >
+                  PRO
+                </Text>
+              </View>
+            )
+          }
+        />
+      </SettingsSection>
       <FamilySharingModal
         visible={showSharing}
         onClose={() => setShowSharing(false)}
@@ -3238,15 +3227,6 @@ export function MoreScreen({
         onJoinViaCode={onJoinViaCode}
       />
 
-      {/* Support */}
-      <SectionLabel mt={10}>Support</SectionLabel>
-      <MoreRow
-        icon="info"
-        iconBg={C.statBlueBg}
-        label="Contact Support"
-        sublabel="Get help, report bugs or request features"
-        onPress={() => setShowSupport(true)}
-      />
       <SupportModal
         visible={showSupport}
         onClose={() => setShowSupport(false)}
@@ -3254,33 +3234,35 @@ export function MoreScreen({
       />
 
       {/* Legal */}
-      <SectionLabel mt={10}>Legal</SectionLabel>
-      <MoreRow
-        icon="info"
-        iconBg={C.bgPurple}
-        label="Privacy Policy"
-        sublabel="How we collect and use your data"
-        onPress={() => Linking.openURL(LEGAL_URLS.privacy)}
-      />
-      <MoreRow
-        icon="info"
-        iconBg={C.bgPurple}
-        label="Terms of Use"
-        sublabel="Rules and conditions for using Munch Sprouts"
-        onPress={() => Linking.openURL(LEGAL_URLS.terms)}
-      />
+      <SettingsSection title="Legal">
+        <MoreRow
+          icon="info"
+          iconBg={C.bgPurple}
+          label="Privacy Policy"
+          sublabel="How we collect and use your data"
+          onPress={() => Linking.openURL(LEGAL_URLS.privacy)}
+        />
+        <MoreRow
+          icon="info"
+          iconBg={C.bgPurple}
+          label="Terms of Use"
+          sublabel="Rules and conditions for using Munch Sprouts"
+          onPress={() => Linking.openURL(LEGAL_URLS.terms)}
+        />
+      </SettingsSection>
 
       {/* Danger Zone */}
-      <SectionLabel mt={10}>Danger Zone</SectionLabel>
-      <MoreRow
-        icon="trash"
-        iconBg={C.statRedBg}
-        label="Delete Account"
-        sublabel="Permanently delete account and all data"
-        color="#c0392b"
-        onPress={confirmDelete}
-        right={<View />}
-      />
+      <SettingsSection title="Danger Zone" danger>
+        <MoreRow
+          icon="trash"
+          iconBg={C.statRedBg}
+          label="Delete Account"
+          sublabel="Permanently delete account and all data"
+          color="#c0392b"
+          onPress={confirmDelete}
+          right={<View />}
+        />
+      </SettingsSection>
 
       {/* Photo Gallery Modal */}
       <Modal
