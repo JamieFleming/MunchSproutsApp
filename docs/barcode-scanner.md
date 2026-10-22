@@ -27,7 +27,9 @@ npx expo start --dev-client --clear
 Install the new build and open its Metro QR code. An older dev client lacks the
 camera module. iOS requires a registered device in the provisioning profile.
 The `barcode-development` profile inherits development settings and uses its own
-update channel. It retains the existing app identifiers/auth configuration, so
+update channel. It uses the production EAS environment solely to obtain the existing
+Google Services file (the development environment has none). This does not submit
+or release the app. It retains the existing app identifiers/auth configuration, so
 installing it can replace the TestFlight/store installation on the same device.
 It also uses the existing Firebase project: test with a designated test account;
 food records saved during testing are real records for that account.

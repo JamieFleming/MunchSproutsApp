@@ -31,7 +31,8 @@
     },
     "barcode-development": {
       "extends": "development",
-      "channel": "barcode-development"
+      "channel": "barcode-development",
+      "environment": "production"
     }
   },
   "submit": {
