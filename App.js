@@ -1,3 +1,5 @@
+import { AutomaticWhatsNew } from "./src/components/WhatsNewModal";
+import { dismissWhatsNew } from "./src/whatsNew";
 import { hasAllergenCheckIn } from "./src/allergenCheckIn";
 import { localDay } from "./src/activityCalendar";
 import { syncLocalReminders, notificationsAllowed } from "./src/reminderSync";
@@ -1708,6 +1710,7 @@ function MainAppContent({ user, userDoc }) {
         </TouchableOpacity>
       )}
 
+      <AutomaticWhatsNew user={user} />
       {/* Modals */}
       {showFoodModal && (
         <AddFoodModal
@@ -1931,6 +1934,12 @@ function MainAppContent({ user, userDoc }) {
 
 function Root() {
   const { user, userDoc, userDocLoaded, loading } = useAuth();
+  const onboardingActive =
+    userDoc?.onboardingComplete === false || !!userDoc?.onboardingWelcome;
+  useEffect(() => {
+    if (user?.uid && userDocLoaded && onboardingActive)
+      void dismissWhatsNew(user.uid);
+  }, [user?.uid, userDocLoaded, onboardingActive]);
   // Wait for Firebase Auth AND the first Firestore snapshot to settle.
   // userDocLoaded becomes true once onSnapshot resolves (even on error),
   // so we never get stuck on LoadingScreen indefinitely.

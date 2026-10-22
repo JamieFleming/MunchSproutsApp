@@ -1,3 +1,4 @@
+import { WhatsNewModal } from "../components/WhatsNewModal";
 import { DashboardPreferences } from "../components/DashboardPreferences";
 import { notificationsAllowed } from "../reminderSync";
 import { Disclosure } from "../components/Disclosure";
@@ -799,6 +800,7 @@ export function MoreScreen({
   const [upgradePlan, setUpgradePlan] = useState("monthly");
   const [showSharing, setShowSharing] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState(userDoc?.photoURL || "");
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
@@ -2032,6 +2034,22 @@ export function MoreScreen({
         onPress={() => setShowSupport(true)}
       />
 
+      <TouchableOpacity
+        accessibilityRole="button"
+        onPress={() => setShowWhatsNew(true)}
+        style={{ padding: 16, minHeight: 48 }}
+      >
+        <Text
+          style={{
+            fontFamily: "NunitoSans_700Bold",
+            fontSize: 16,
+            color: C.primaryPurple,
+          }}
+        >
+          What’s new in 1.6.2
+        </Text>
+      </TouchableOpacity>
+      {showWhatsNew && <WhatsNewModal onClose={() => setShowWhatsNew(false)} />}
       {/* Appearance */}
       <SettingsSection title="Appearance">
         <View
