@@ -163,7 +163,8 @@ export function FoodBarcodeScanner({ onClose, onUse }) {
             </View>
           )}
           <Text style={body}>
-            Point at the barcode on the packaging, keeping all the bars in view.
+            Point at the barcode on the packaging, keeping the whole barcode in
+            view. If it won’t scan, type the printed digits below.
           </Text>
         </>
       )}
@@ -178,16 +179,28 @@ export function FoodBarcodeScanner({ onClose, onUse }) {
       ) : (
         status !== "review" && (
           <>
+            <Text style={[body, { fontFamily: "NunitoSans_700Bold" }]}>
+              Type barcode digits
+            </Text>
             <TextInput
               accessibilityLabel="Product barcode"
               value={code}
               onChangeText={setCode}
               keyboardType="number-pad"
-              placeholder="Type barcode digits"
+              placeholder="e.g. 5060107333970"
               placeholderTextColor={C.mutedText}
               style={s.input}
               maxLength={18}
             />
+            <Text style={body}>
+              Include every digit from left to right, even the first digit
+              outside the bars. Keep any leading zero, but don’t add an extra
+              one.
+            </Text>
+            <Text style={body}>
+              Example: 5 060107 333970 → 5060107333970. Start with the 5 and
+              leave out spaces or symbols.
+            </Text>
             {button("Find product", () => search(code), !code.trim(), true)}
           </>
         )
