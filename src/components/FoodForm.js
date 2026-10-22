@@ -703,6 +703,7 @@ export function FoodForm({
         <TouchableOpacity
           accessibilityRole="button"
           accessibilityLabel="Clear entry"
+          accessibilityState={{ disabled: busy || !draft.ready }}
           disabled={busy || !draft.ready}
           onPress={clearEntry}
           style={{
@@ -710,12 +711,15 @@ export function FoodForm({
             flexShrink: 0,
             minHeight: 44,
             justifyContent: "center",
-            paddingHorizontal: 4,
+            paddingHorizontal: 14,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: "#e07070",
+            backgroundColor: C.statRedBg,
+            opacity: busy || !draft.ready ? 0.5 : 1,
           }}
         >
-          <Text
-            style={{ color: C.primaryPurple, fontFamily: "NunitoSans_700Bold" }}
-          >
+          <Text style={{ color: "#9f2929", fontFamily: "NunitoSans_700Bold" }}>
             Clear entry
           </Text>
         </TouchableOpacity>
