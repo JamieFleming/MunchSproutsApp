@@ -12,7 +12,8 @@
     "format:check": "prettier --check App.js index.js \"src/**/*.js\" \"functions/*.js\" \"tests/*.{js,cjs}\" \"tests/rules/*.cjs\" \"scripts/*.cjs\"",
     "format": "prettier --write App.js index.js \"src/**/*.js\" \"functions/*.js\" \"tests/*.{js,cjs}\" \"tests/rules/*.cjs\" \"scripts/*.cjs\"",
     "test:rules": "firebase emulators:exec --config firebase.emulator.json --project demo-munchsprouts --only firestore,storage \"node tests/rules/verify.cjs && node tests/rules/audit.cjs && node tests/rules/server.cjs && node tests/rules/storage.cjs\"",
-    "audit:reviewed": "node scripts/checkDependencyAudit.cjs"
+    "audit:reviewed": "node scripts/checkDependencyAudit.cjs",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@expo-google-fonts/nunito-sans": "^0.4.2",
@@ -50,6 +51,7 @@
     "eslint": "^9.39.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "firebase-admin": "^14.5.0",
+    "patch-package": "^8.0.1",
     "prettier": "^3.9.10"
   },
   "engines": {

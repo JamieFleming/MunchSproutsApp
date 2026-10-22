@@ -86,3 +86,21 @@ On an iPhone and Android development build, check:
 6. Import contains/trace warnings, edit, save, reopen and verify draft recovery.
 7. Background/foreground the scanner and check that the camera resumes correctly.
 8. Confirm no microphone prompt and no effect on existing manual food logging.
+
+
+### Tap to focus (native patch)
+
+`patches/expo-camera+57.0.6.patch` adds native tap handling to the camera preview.
+`npm ci` applies it through the `postinstall` script using patch-package. Keep the
+patch committed and review/recreate it whenever expo-camera is upgraded.
+
+On iOS, the preview layer converts the tap into camera coordinates, then updates
+the supported focus point on the capture session queue while keeping continuous
+autofocus. Android uses CameraX preview coordinates and restores normal autofocus
+after three seconds. Devices without focus-point support retain automatic focus.
+
+This needs a new barcode development build on each platform; Metro reload or OTA
+alone cannot add the native gesture to an existing client. Expo Go does not include
+this patch. Test centre/edge taps, scrolling past the preview, repeated scans and
+background/resume on physical iOS and Android devices before release. No focus
+success indicator is shown because a tap does not guarantee optical focus.

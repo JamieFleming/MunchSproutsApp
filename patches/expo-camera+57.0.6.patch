@@ -1,0 +1,63 @@
+diff --git a/node_modules/expo-camera/android/src/main/java/expo/modules/camera/ExpoCameraView.kt b/node_modules/expo-camera/android/src/main/java/expo/modules/camera/ExpoCameraView.kt
+index 999a22c..b99f1a6 100644
+--- a/node_modules/expo-camera/android/src/main/java/expo/modules/camera/ExpoCameraView.kt
++++ b/node_modules/expo-camera/android/src/main/java/expo/modules/camera/ExpoCameraView.kt
+@@ -830,6 +830,24 @@ class ExpoCameraView(
+   override fun getPreviewSizeAsArray() = intArrayOf(previewView.width, previewView.height)
+ 
+   init {
++    // MunchSprouts: let CameraX map taps through the preview's crop and rotation.
++    val focusGesture = android.view.GestureDetector(context, object : android.view.GestureDetector.SimpleOnGestureListener() {
++      override fun onDown(event: android.view.MotionEvent) = true
++
++      override fun onSingleTapUp(event: android.view.MotionEvent): Boolean {
++        val currentCamera = camera ?: return true
++        val point = previewView.meteringPointFactory.createPoint(event.x, event.y)
++        val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF)
++          .setAutoCancelDuration(3, java.util.concurrent.TimeUnit.SECONDS)
++          .build()
++        if (currentCamera.cameraInfo.isFocusMeteringSupported(action)) {
++          currentCamera.cameraControl.startFocusAndMetering(action)
++        }
++        previewView.performClick()
++        return true
++      }
++    })
++    previewView.setOnTouchListener { _, event -> focusGesture.onTouchEvent(event) }
+     orientationEventListener.enable()
+     previewView.setOnHierarchyChangeListener(object : OnHierarchyChangeListener {
+       override fun onChildViewRemoved(parent: View?, child: View?) = Unit
+diff --git a/node_modules/expo-camera/ios/Current/CameraView.swift b/node_modules/expo-camera/ios/Current/CameraView.swift
+index 4692d00..140c04e 100644
+--- a/node_modules/expo-camera/ios/Current/CameraView.swift
++++ b/node_modules/expo-camera/ios/Current/CameraView.swift
+@@ -162,8 +162,29 @@ public class CameraView: ExpoView, EXAppLifecycleListener, EXCameraInterface, Ca
+     }.first?.interfaceOrientation ?? .unknown
+   }
+ 
++  // MunchSprouts: convert preview coordinates before configuring the capture device.
++  @objc private func focusAtTap(_ gesture: UITapGestureRecognizer) {
++    let point = previewLayer.captureDevicePointConverted(fromLayerPoint: gesture.location(in: self))
++    sessionQueue.async { [weak self] in
++      guard let self, let device = self.sessionManager.currentDevice,
++        device.isFocusPointOfInterestSupported,
++        device.isFocusModeSupported(.continuousAutoFocus) else { return }
++      do {
++        try device.lockForConfiguration()
++        defer { device.unlockForConfiguration() }
++        device.focusPointOfInterest = point
++        device.focusMode = .continuousAutoFocus
++      } catch {
++        // A busy or disconnected camera should not interrupt barcode entry.
++      }
++    }
++  }
++
+   required init(appContext: AppContext? = nil) {
+     super.init(appContext: appContext)
++    let focusTap = UITapGestureRecognizer(target: self, action: #selector(focusAtTap(_:)))
++    focusTap.cancelsTouchesInView = false
++    addGestureRecognizer(focusTap)
+     lifecycleManager = appContext?.legacyModule(implementing: EXAppLifecycleService.self)
+     permissionsManager = appContext?.permissions
+ 

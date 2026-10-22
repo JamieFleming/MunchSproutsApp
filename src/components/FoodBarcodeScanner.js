@@ -164,7 +164,8 @@ export function FoodBarcodeScanner({ onClose, onUse }) {
           )}
           <Text style={body}>
             Point at the barcode on the packaging, keeping the whole barcode in
-            view. If it won’t scan, type the printed digits below.
+            view. Tap the preview to focus on the barcode. If it won’t scan,
+            type the printed digits below.
           </Text>
         </>
       )}
