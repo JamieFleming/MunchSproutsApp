@@ -52,7 +52,11 @@ export function AddFoodModal({
         <View
           style={[
             s.modalSheet,
-            { paddingBottom: Math.max(20, insets.bottom), maxHeight: "95%" },
+            {
+              paddingTop: 20,
+              paddingBottom: Math.max(20, insets.bottom),
+              maxHeight: "95%",
+            },
           ]}
         >
           <View
@@ -60,7 +64,7 @@ export function AddFoodModal({
               flexDirection: "row",
               alignItems: "center",
               gap: 12,
-              marginBottom: 14,
+              marginBottom: 6,
             }}
           >
             <Text style={[s.modalTitle, { flex: 1 }]}>Log Food or Drink</Text>

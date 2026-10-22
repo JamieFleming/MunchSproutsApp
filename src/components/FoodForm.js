@@ -265,34 +265,6 @@ export function FoodForm({
     );
   return (
     <View style={{ gap: 18 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        {!!draftKey && (
-          <Text style={[hint, { flex: 1 }]} accessibilityLiveRegion="polite">
-            {!draft.ready
-              ? "Checking for an unfinished entry…"
-              : draft.status || "Unfinished entries are kept on this phone."}
-          </Text>
-        )}
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel="Clear entry"
-          disabled={busy || !draft.ready}
-          onPress={clearEntry}
-          style={{
-            marginLeft: "auto",
-            flexShrink: 0,
-            minHeight: 44,
-            justifyContent: "center",
-            paddingHorizontal: 4,
-          }}
-        >
-          <Text
-            style={{ color: C.primaryPurple, fontFamily: "NunitoSans_700Bold" }}
-          >
-            Clear entry
-          </Text>
-        </TouchableOpacity>
-      </View>
       <View
         pointerEvents={busy || !draft.ready ? "none" : "auto"}
         style={{ gap: 18 }}
@@ -303,7 +275,7 @@ export function FoodForm({
             accessibilityLabel="Change food date"
             accessibilityState={{ expanded: showDate }}
             onPress={() => setShowDate(!showDate)}
-            style={row}
+            style={[row, { paddingVertical: 6, minHeight: 44 }]}
           >
             <Text
               style={{
@@ -720,6 +692,34 @@ export function FoodForm({
           </Text>
         )}
       </TouchableOpacity>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        {!!draftKey && (
+          <Text style={[hint, { flex: 1 }]} accessibilityLiveRegion="polite">
+            {!draft.ready
+              ? "Checking for an unfinished entry…"
+              : draft.status || "Unfinished entries stay on this phone."}
+          </Text>
+        )}
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Clear entry"
+          disabled={busy || !draft.ready}
+          onPress={clearEntry}
+          style={{
+            marginLeft: "auto",
+            flexShrink: 0,
+            minHeight: 44,
+            justifyContent: "center",
+            paddingHorizontal: 4,
+          }}
+        >
+          <Text
+            style={{ color: C.primaryPurple, fontFamily: "NunitoSans_700Bold" }}
+          >
+            Clear entry
+          </Text>
+        </TouchableOpacity>
+      </View>
       <Text style={[hint, { textAlign: "center" }]}>
         Only a name and food group are needed. Add more whenever you like.
       </Text>
