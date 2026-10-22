@@ -93,6 +93,8 @@ On an iPhone and Android development build, check:
 `patches/expo-camera+57.0.6.patch` adds native tap handling to the camera preview.
 `npm ci` applies it through the `postinstall` script using patch-package. Keep the
 patch committed and review/recreate it whenever expo-camera is upgraded.
+`expo.autolinking.buildFromSource` in package.json must include `expo-camera`
+on both platforms: precompiled camera binaries otherwise bypass the native patch.
 
 On iOS, the preview layer converts the tap into camera coordinates, then updates
 the supported focus point on the capture session queue while keeping continuous
