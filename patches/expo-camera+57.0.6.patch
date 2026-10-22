@@ -4,7 +4,7 @@ index 999a22c..b99f1a6 100644
 +++ b/node_modules/expo-camera/android/src/main/java/expo/modules/camera/ExpoCameraView.kt
 @@ -830,6 +830,24 @@ class ExpoCameraView(
    override fun getPreviewSizeAsArray() = intArrayOf(previewView.width, previewView.height)
- 
+
    init {
 +    // MunchSprouts: let CameraX map taps through the preview's crop and rotation.
 +    val focusGesture = android.view.GestureDetector(context, object : android.view.GestureDetector.SimpleOnGestureListener() {
@@ -28,27 +28,77 @@ index 999a22c..b99f1a6 100644
      previewView.setOnHierarchyChangeListener(object : OnHierarchyChangeListener {
        override fun onChildViewRemoved(parent: View?, child: View?) = Unit
 diff --git a/node_modules/expo-camera/ios/Current/CameraView.swift b/node_modules/expo-camera/ios/Current/CameraView.swift
-index 4692d00..140c04e 100644
+index 4692d00..139f1b9 100644
 --- a/node_modules/expo-camera/ios/Current/CameraView.swift
 +++ b/node_modules/expo-camera/ios/Current/CameraView.swift
-@@ -162,8 +162,29 @@ public class CameraView: ExpoView, EXAppLifecycleListener, EXCameraInterface, Ca
+@@ -3,7 +3,7 @@ import UIKit
+ import CoreMotion
+
+ public class CameraView: ExpoView, EXAppLifecycleListener, EXCameraInterface, CameraEvent,
+-  CameraSessionManagerDelegate, CameraPhotoCaptureDelegate, CameraVideoRecordingDelegate {
++  CameraSessionManagerDelegate, CameraPhotoCaptureDelegate, CameraVideoRecordingDelegate, UIGestureRecognizerDelegate {
+   public var sessionQueue = DispatchQueue(label: "captureSessionQueue")
+   // Needed to satisfy EXCameraInterface
+   // swiftlint:disable implicitly_unwrapped_optional
+@@ -162,8 +162,72 @@ public class CameraView: ExpoView, EXAppLifecycleListener, EXCameraInterface, Ca
      }.first?.interfaceOrientation ?? .unknown
    }
- 
-+  // MunchSprouts: convert preview coordinates before configuring the capture device.
+
++  // MunchSprouts: native feedback distinguishes received taps from JS-only UI.
++  private var focusTapRecognizer: UITapGestureRecognizer?
++  // Access only on sessionQueue; prevents an older tap resetting a newer request.
++  private var focusRequestID = UUID()
++
++  public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
++    shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
++    gestureRecognizer === focusTapRecognizer || otherGestureRecognizer === focusTapRecognizer
++  }
++
 +  @objc private func focusAtTap(_ gesture: UITapGestureRecognizer) {
-+    let point = previewLayer.captureDevicePointConverted(fromLayerPoint: gesture.location(in: self))
++    guard gesture.state == .ended else { return }
++    let location = gesture.location(in: self)
++    let point = previewLayer.captureDevicePointConverted(fromLayerPoint: location)
++    let marker = CALayer()
++    marker.frame = CGRect(x: min(max(2, location.x - 28), max(2, bounds.width - 58)),
++      y: min(max(2, location.y - 28), max(2, bounds.height - 58)), width: 56, height: 56)
++    marker.borderWidth = 2
++    marker.cornerRadius = 8
++    marker.borderColor = UIColor.systemYellow.cgColor
++    layer.addSublayer(marker)
++    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { marker.removeFromSuperlayer() }
++
 +    sessionQueue.async { [weak self] in
-+      guard let self, let device = self.sessionManager.currentDevice,
-+        device.isFocusPointOfInterestSupported,
-+        device.isFocusModeSupported(.continuousAutoFocus) else { return }
++      guard let self else { return }
++      let requestID = UUID()
++      self.focusRequestID = requestID
++      guard let device = self.sessionManager.currentDevice,
++        self.session.isRunning, device.isFocusPointOfInterestSupported,
++        device.isFocusModeSupported(.autoFocus) else {
++        DispatchQueue.main.async { marker.borderColor = UIColor.systemRed.cgColor }
++        return
++      }
 +      do {
 +        try device.lockForConfiguration()
 +        defer { device.unlockForConfiguration() }
 +        device.focusPointOfInterest = point
-+        device.focusMode = .continuousAutoFocus
++        // Request a fresh scan rather than reapplying the existing continuous mode.
++        device.focusMode = .autoFocus
 +      } catch {
-+        // A busy or disconnected camera should not interrupt barcode entry.
++        DispatchQueue.main.async { marker.borderColor = UIColor.systemRed.cgColor }
++        return
++      }
++      // Resume normal tracking so moving the product does not leave focus locked.
++      self.sessionQueue.asyncAfter(deadline: .now() + 3) { [weak self, weak device] in
++        guard let self, let device, self.focusRequestID == requestID,
++          self.sessionManager.currentDevice === device, self.session.isRunning,
++          device.isFocusModeSupported(.continuousAutoFocus) else { return }
++        do {
++          try device.lockForConfiguration()
++          defer { device.unlockForConfiguration() }
++          device.focusMode = .continuousAutoFocus
++        } catch {
++          // Camera may have stopped or changed during the delay.
++        }
 +      }
 +    }
 +  }
@@ -57,7 +107,9 @@ index 4692d00..140c04e 100644
      super.init(appContext: appContext)
 +    let focusTap = UITapGestureRecognizer(target: self, action: #selector(focusAtTap(_:)))
 +    focusTap.cancelsTouchesInView = false
++    focusTap.delegate = self
++    focusTapRecognizer = focusTap
 +    addGestureRecognizer(focusTap)
      lifecycleManager = appContext?.legacyModule(implementing: EXAppLifecycleService.self)
      permissionsManager = appContext?.permissions
- 
+

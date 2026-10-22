@@ -96,13 +96,17 @@ patch committed and review/recreate it whenever expo-camera is upgraded.
 `expo.autolinking.buildFromSource` in package.json must include `expo-camera`
 on both platforms: precompiled camera binaries otherwise bypass the native patch.
 
-On iOS, the preview layer converts the tap into camera coordinates, then updates
-the supported focus point on the capture session queue while keeping continuous
-autofocus. Android uses CameraX preview coordinates and restores normal autofocus
+On iOS, the preview layer converts the tap into camera coordinates, then requests
+a fresh autofocus scan at the supported focus point on the capture session queue.
+Continuous autofocus resumes after three seconds; older timers cannot override a
+newer tap. The native tap recognizer allows simultaneous sheet gestures. Android uses CameraX preview coordinates and restores normal autofocus
 after three seconds. Devices without focus-point support retain automatic focus.
 
 This needs a new barcode development build on each platform; Metro reload or OTA
 alone cannot add the native gesture to an existing client. Expo Go does not include
 this patch. Test centre/edge taps, scrolling past the preview, repeated scans and
-background/resume on physical iOS and Android devices before release. No focus
-success indicator is shown because a tap does not guarantee optical focus.
+background/resume on physical iOS and Android devices before release. On iOS, a yellow square confirms that the native handler received the tap; it
+does not promise sharp focus. A red square means focus is unsupported, the camera
+is not running, or configuration failed. The square disappears after 1.5 seconds.
+If no square appears, check gesture delivery and whether the installed binary
+includes this patch before investigating lens behaviour.
