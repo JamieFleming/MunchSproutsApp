@@ -1310,10 +1310,6 @@ export function LogScreen({
         selectedDate={selectedDate}
         onSelect={selectCalendarDay}
       />
-      <Text style={{ color: C.mutedText, fontSize: 12, marginBottom: 10 }}>
-        Swipe left on a food to repeat, star or delete. Tap a date to fold it
-        away.
-      </Text>
       {/* Search bar */}
       <View
         style={[
@@ -1551,6 +1547,11 @@ export function LogScreen({
         {viewMode === "date"
           ? `${dateKeys.length} day${dateKeys.length !== 1 ? "s" : ""}`
           : `${keys.length} food${keys.length !== 1 ? "s" : ""}`}
+      </Text>
+
+      <Text style={{ color: C.mutedText, fontSize: 12, marginBottom: 10 }}>
+        Swipe left on a food to repeat, star or delete.
+        {viewMode === "date" ? " Tap a date to fold it away." : ""}
       </Text>
 
       {/* Food list */}

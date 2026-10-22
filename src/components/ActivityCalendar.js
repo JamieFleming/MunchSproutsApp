@@ -161,6 +161,34 @@ export function ActivityCalendar({
                 <Text style={{ color: C.primaryPurple, fontSize: 24 }}>›</Text>
               </TouchableOpacity>
             </View>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Show today’s activity"
+              onPress={() => {
+                const today = new Date();
+                setMonth(today);
+                onSelect(localDay(today));
+                setVisible(false);
+              }}
+              style={{
+                ...button,
+                alignSelf: "center",
+                backgroundColor: C.bgPurple,
+                borderRadius: 12,
+                paddingHorizontal: 20,
+                marginBottom: 8,
+              }}
+            >
+              <Text
+                style={{
+                  color: C.primaryPurple,
+                  fontFamily: "NunitoSans_700Bold",
+                  fontSize: 15,
+                }}
+              >
+                Today
+              </Text>
+            </TouchableOpacity>
             <View style={{ flexDirection: "row" }}>
               {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => (
                 <Text
