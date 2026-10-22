@@ -2,7 +2,7 @@
 	"expo": {
 		"name": "Munch Sprouts Weaning Tracker",
 		"slug": "MunchSproutsNative",
-		"version": "1.6.1",
+		"version": "1.6.2",
 		"orientation": "portrait",
 		"icon": "./assets/logo.png",
 		"userInterfaceStyle": "light",
@@ -80,6 +80,15 @@
 							}
 						]
 					}
+				}
+			],
+			[
+				"expo-camera",
+				{
+					"cameraPermission": "Allow MunchSprouts to use your camera to scan food barcodes.",
+					"microphonePermission": false,
+					"recordAudioAndroid": false,
+					"barcodeScannerEnabled": true
 				}
 			]
 		],

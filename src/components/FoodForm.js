@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { FoodBarcodeScanner } from "./FoodBarcodeScanner";
+import { applyScannedProduct } from "../barcodeLookup";
 import { useFoodDraft } from "../useFoodDraft";
 import { useTheme, useStyles } from "../ThemeContext";
 import { Icon, ReactionFace } from "./Icon";
@@ -71,6 +73,7 @@ export function FoodForm({
     setForm,
     initial,
   );
+  const [showScanner, setShowScanner] = useState(false);
   const [showDate, setShowDate] = useState(false);
   const [showTexture, setShowTexture] = useState(false);
   const [showAllergens, setShowAllergens] = useState(
@@ -248,6 +251,18 @@ export function FoodForm({
       </Text>
     </TouchableOpacity>
   );
+  if (showScanner)
+    return (
+      <FoodBarcodeScanner
+        onClose={() => setShowScanner(false)}
+        onUse={(product) => {
+          setForm((old) => applyScannedProduct(old, product));
+          setShowAllergens(true);
+          setShowDetails(true);
+          setShowScanner(false);
+        }}
+      />
+    );
   return (
     <View style={{ gap: 18 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
@@ -319,7 +334,40 @@ export function FoodForm({
           )}
         </View>
         <View>
-          <Text style={s.label}>What did they try?</Text>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+            }}
+          >
+            <Text style={s.label}>What did they try?</Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Scan food barcode"
+              disabled={busy || !draft.ready}
+              onPress={() => setShowScanner(true)}
+              style={{
+                minHeight: 44,
+                paddingHorizontal: 10,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <Icon name="barcode" size={20} color={C.primaryPurple} />
+              <Text
+                style={{
+                  color: C.primaryPurple,
+                  fontFamily: "NunitoSans_700Bold",
+                  fontSize: 15,
+                }}
+              >
+                Scan barcode
+              </Text>
+            </TouchableOpacity>
+          </View>
           <TextInput
             accessibilityLabel="Food or drink name"
             value={form.name}

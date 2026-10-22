@@ -23,6 +23,14 @@ export function Icon({ name, size = 18, color }) {
     fill: "none",
   };
   const icons = {
+    barcode: (
+      <Svg width={size} height={size} viewBox="0 0 24 24">
+        <Path
+          {...p}
+          d="M3 7V3h4M17 3h4v4M21 17v4h-4M7 21H3v-4M7 7v10M10 7v10M14 7v10M17 7v10"
+        />
+      </Svg>
+    ),
     home: (
       <Svg width={size} height={size} viewBox="0 0 24 24">
         <Path {...p} d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />

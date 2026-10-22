@@ -1,6 +1,8 @@
 # MunchSprouts Native
 
-Expo SDK 57 / React Native 0.86.3, app version 1.6.1. Use Node 22 or newer.
+Expo SDK 57 / React Native 0.86.3, app version 1.6.2 (barcode-scanner development branch). Use Node 22 or newer.
+
+Barcode development and 1.6.1 OTA isolation: see [scanner testing](docs/barcode-scanner.md).
 
 New to the code? Read [Understanding and maintaining MunchSprouts](docs/codebase-guide.md)
 for a beginner walkthrough, screen/component map, data flows and maintenance exercises.

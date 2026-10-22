@@ -22,6 +22,7 @@ module.exports = function appHarness(platform = 'ios', overrides = {}) {
     Dimensions: { get: () => ({ width: 390, height: 844 }) },
     Animated: { Value: class { constructor(v) { this.value = v; } }, View: 'Animated.View' },
     PanResponder: { create: () => ({ panHandlers: {} }) },
+    AppState: { currentState: 'active', addEventListener: () => ({ remove: noop }) },
     Alert: { alert: noop }, Keyboard: { dismiss: noop }, Linking: {},
   });
   const mocks = {
@@ -29,6 +30,7 @@ module.exports = function appHarness(platform = 'ios', overrides = {}) {
     'react-native-svg': { __esModule: true, default: 'Svg', ...Object.fromEntries(['Circle','Path','G','Rect','Line','Polyline','Text','Defs','LinearGradient','Stop','Ellipse','Polygon'].map((v) => [v,v])) },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) },
     'firebase/app': {}, 'firebase/functions': {}, 'firebase/auth': {}, 'firebase/firestore': {}, 'firebase/storage': {},
+    'expo-camera': { CameraView: 'CameraView', useCameraPermissions: () => [{ granted: false, canAskAgain: true }, async () => ({}), async () => ({})] },
     'expo-image-picker': {}, 'expo-file-system': {}, 'expo-notifications': { setNotificationHandler: noop },
     'expo-web-browser': { maybeCompleteAuthSession: noop },
     'expo-auth-session/providers/google': { useAuthRequest: () => [null, null, noop], useIdTokenAuthRequest: () => [null, null, noop] },

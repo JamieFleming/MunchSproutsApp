@@ -264,3 +264,31 @@ test("gold star toggles favourite and Other is offered for texture and meal time
   assert.equal(h.submissions[0][0].mealTime, "Other");
   assert.equal(h.submissions[0][0].form, "Other");
 });
+
+test("scanned food fills editable name/allergens and keeps trace warnings in saved notes", async () => {
+  const h = formHarness({
+    initial: {
+      name: "Previous",
+      categories: ["Vegetables"],
+      allergens: ["Eggs"],
+    },
+  });
+  h.find("Scan food barcode").props.onPress();
+  const scanner = h
+    .nodes()
+    .find((node) => node.type?.name === "FoodBarcodeScanner");
+  assert.ok(scanner);
+  scanner.props.onUse({
+    name: "Salmon meal",
+    barcode: "3017620422003",
+    allergens: ["Fish"],
+    contains: ["fish"],
+    untracked: [],
+    traces: ["milk"],
+    sourceUrl: "https://world.openfoodfacts.org/product/3017620422003",
+  });
+  assert.equal(h.find("Food or drink name").props.value, "Salmon meal");
+  await h.save();
+  assert.deepEqual(h.submissions[0][0].allergens, ["Fish"]);
+  assert.match(h.submissions[0][0].notes, /May contain: milk/);
+});
