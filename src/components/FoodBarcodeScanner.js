@@ -55,10 +55,10 @@ export function FoodBarcodeScanner({ onClose, onUse }) {
       const result = await lookupBarcode(value, { signal: controller.signal });
       if (!mounted.current || controller.signal.aborted) return;
       setProduct(result);
-      setStatus(result ? "review" : "error");
+      setStatus(result ? "review" : "missing");
       if (!result)
         setError(
-          "This product isn't in the database yet. You can scan another or enter the food manually.",
+          "We couldn't find product details for this barcode. The product may be missing or its record may be incomplete.",
         );
     } catch (e) {
       if (mounted.current && !controller.signal.aborted) {
@@ -196,6 +196,55 @@ export function FoodBarcodeScanner({ onClose, onUse }) {
         <Text accessibilityRole="alert" style={body}>
           {error}
         </Text>
+      )}
+      {status === "missing" && (
+        <View
+          style={{
+            padding: 16,
+            gap: 12,
+            borderRadius: 16,
+            backgroundColor: C.bgPurple,
+          }}
+        >
+          <Text style={[body, { fontFamily: "NunitoSans_700Bold" }]}>
+            Help other parents find this food
+          </Text>
+          <Text style={body}>
+            You can add or complete this product on Open Food Facts. Sign in
+            there, look up the barcode, and use the packaging to add the name,
+            ingredients and allergen information.
+          </Text>
+          <Text style={body}>
+            After saving on Open Food Facts, return here and try again. You can
+            also go back and enter the food manually now.
+          </Text>
+          <TouchableOpacity
+            accessibilityRole="link"
+            accessibilityLabel="Add or update on Open Food Facts"
+            onPress={() =>
+              Linking.openURL("https://world.openfoodfacts.org").catch(() =>
+                Alert.alert(
+                  "Couldn't open Open Food Facts",
+                  "Please try again later.",
+                ),
+              )
+            }
+            style={{ minHeight: 48, justifyContent: "center" }}
+          >
+            <Text
+              style={[
+                body,
+                {
+                  color: C.primaryPurple,
+                  fontFamily: "NunitoSans_700Bold",
+                  textDecorationLine: "underline",
+                },
+              ]}
+            >
+              Add or update on Open Food Facts ↗
+            </Text>
+          </TouchableOpacity>
+        </View>
       )}
       {product && (
         <View
