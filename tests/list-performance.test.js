@@ -163,23 +163,29 @@ test("food log hides controls on downward drag, retains pills, and reveals on up
   assert.equal(read().header.props.progress.value, 1);
   view.list.onScrollBeginDrag(event(0));
   view.list.onScroll(event(10));
-  let partial = read().header.props.progress.value;
-  assert.ok(partial < 1 && partial > 0.9);
-  view.list.onScroll(event(65));
-  assert.ok(read().header.props.progress.value > 0.8);
-  for (let y = 85; y <= 305; y += 20) view.list.onScroll(event(y));
+  assert.equal(read().header.props.progress.value, 1);
+  view.list.onScroll(event(180)); // A fast down swipe fully hides.
   view = read();
-  assert.equal(view.header.props.accessibilityElementsHidden, true);
+  assert.equal(view.header.props.progress.value, 0);
   assert.ok(view.pills.length > 0);
-  view.list.onScrollEndDrag();
-  view.list.onScroll(event(0));
+  view.list.onScrollEndDrag(event(180));
+  view.list.onScroll(event(20)); // Layout corrections cannot reverse it.
   assert.equal(read().header.props.progress.value, 0);
-  view.list.onScrollBeginDrag(event(300));
-  view.list.onScroll(event(280));
-  view = read();
-  assert.equal(view.header.props.accessibilityElementsHidden, false);
-  assert.ok(
-    view.header.props.progress.value > 0 &&
-      view.header.props.progress.value < 0.1,
-  );
+  view.list.onScrollBeginDrag(event(180));
+  view.list.onScroll(event(30)); // A fast upward swipe fully reveals.
+  assert.equal(read().header.props.progress.value, 1);
+  view.list.onScrollBeginDrag(event(100));
+  view.list.onScrollEndDrag({
+    nativeEvent: { contentOffset: { y: 160 }, velocity: { y: 2 } },
+  });
+  assert.equal(read().header.props.progress.value, 0);
+  view.list.onScrollBeginDrag(event(160));
+  view.list.onScrollEndDrag({
+    nativeEvent: { contentOffset: { y: 150 }, velocity: { y: -2 } },
+  });
+  assert.equal(read().header.props.progress.value, 1);
+  view.list.onScrollBeginDrag(event(100));
+  view.list.onScroll(event(180));
+  view.list.onMomentumScrollEnd(event(0));
+  assert.equal(read().header.props.progress.value, 1);
 });

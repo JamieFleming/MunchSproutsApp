@@ -20,6 +20,7 @@ import {
   RefreshControl,
   Platform,
   Animated,
+  Easing,
 } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { useTheme, useStyles } from "../ThemeContext";
@@ -1101,38 +1102,94 @@ export function LogScreen({
 
   const [controlsHidden, setControlsHidden] = useState(false);
   const controlsProgress = useRef(new Animated.Value(1)).current;
-  const scrollTracking = useRef({ y: 0, progress: 1, dragging: false });
+  const scrollTracking = useRef({
+    y: 0,
+    target: 1,
+    distance: 0,
+    direction: 0,
+    dragging: false,
+    ignoreUntil: 0,
+  });
+  const animateControls = useCallback(
+    (target) => {
+      const tracking = scrollTracking.current;
+      if (tracking.target === target) return;
+      tracking.target = target;
+      tracking.ignoreUntil = Date.now() + 360;
+      tracking.distance = 0;
+      setControlsHidden(target === 0);
+      // Complete the transition after finger lift; never leave a partial header.
+      Animated.timing(controlsProgress, {
+        toValue: target,
+        duration: 340,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: false,
+        isInteraction: false,
+      }).start();
+    },
+    [controlsProgress],
+  );
   const handleLogScroll = useCallback(
     ({ nativeEvent }) => {
       const tracking = scrollTracking.current;
       const y = Math.max(0, nativeEvent.contentOffset.y);
       const delta = y - tracking.y;
       tracking.y = y;
-      if (!tracking.dragging) return;
-      // Follow scroll distance instead of firing an all-or-nothing animation.
-      // Cap a single event so offset corrections cannot snap the entire header.
-      const step = Math.max(-24, Math.min(24, delta));
-      tracking.progress = Math.max(
-        0,
-        Math.min(1, tracking.progress - step / 220),
-      );
-      controlsProgress.setValue(tracking.progress);
-      setControlsHidden(tracking.progress <= 0.001);
+      // Ignore offset corrections while the animated header changes the list size.
+      if (!tracking.dragging || Date.now() < tracking.ignoreUntil) return;
+      if (y <= 4) {
+        animateControls(1);
+        return;
+      }
+      const direction = Math.sign(delta);
+      if (!direction) return;
+      if (direction !== tracking.direction) tracking.distance = 0;
+      tracking.direction = direction;
+      tracking.distance += Math.abs(delta);
+      if (tracking.distance >= 12) {
+        if (direction < 0) animateControls(1);
+        else if (y > 48) animateControls(0);
+      }
     },
-    [controlsProgress],
+    [animateControls],
   );
   const beginLogScroll = useCallback(({ nativeEvent }) => {
-    scrollTracking.current.y = Math.max(0, nativeEvent.contentOffset.y);
-    scrollTracking.current.dragging = true;
+    const tracking = scrollTracking.current;
+    tracking.y = Math.max(0, nativeEvent.contentOffset.y);
+    tracking.distance = 0;
+    tracking.direction = 0;
+    tracking.dragging = true;
+    // A new deliberate swipe can reverse an in-flight transition.
+    tracking.ignoreUntil = 0;
   }, []);
-  const endLogScroll = useCallback(() => {
-    scrollTracking.current.dragging = false;
-  }, []);
+  const endLogScroll = useCallback(
+    ({ nativeEvent } = {}) => {
+      const tracking = scrollTracking.current;
+      // Fast iOS flicks may provide their useful velocity only on drag-end.
+      const velocity = nativeEvent?.velocity?.y;
+      const y = Math.max(0, nativeEvent?.contentOffset?.y ?? tracking.y);
+      if (y <= 4 || velocity < -0.1) animateControls(1);
+      else if (velocity > 0.1 && y > 48) animateControls(0);
+      tracking.dragging = false;
+    },
+    [animateControls],
+  );
+  const endLogMomentum = useCallback(
+    ({ nativeEvent }) => {
+      if (nativeEvent.contentOffset.y <= 4) animateControls(1);
+    },
+    [animateControls],
+  );
   useEffect(() => {
-    setControlsHidden(false);
-    scrollTracking.current.progress = 1;
+    controlsProgress.stopAnimation();
     controlsProgress.setValue(1);
-    scrollTracking.current.dragging = false;
+    setControlsHidden(false);
+    Object.assign(scrollTracking.current, {
+      target: 1,
+      dragging: false,
+      ignoreUntil: 0,
+      distance: 0,
+    });
   }, [
     viewMode,
     search,
@@ -1141,6 +1198,7 @@ export function LogScreen({
     selectedDate,
     controlsProgress,
   ]);
+  useEffect(() => () => controlsProgress.stopAnimation(), [controlsProgress]);
 
   // Build filtered + sorted key list
   // Preserve row props when only expansion, a picker, or the lightbox changes.
@@ -1629,6 +1687,7 @@ export function LogScreen({
           onScroll={handleLogScroll}
           onScrollBeginDrag={beginLogScroll}
           onScrollEndDrag={endLogScroll}
+          onMomentumScrollEnd={endLogMomentum}
           scrollEventThrottle={16}
           data={keys}
           keyExtractor={listKey}
@@ -1798,6 +1857,7 @@ export function LogScreen({
           onScroll={handleLogScroll}
           onScrollBeginDrag={beginLogScroll}
           onScrollEndDrag={endLogScroll}
+          onMomentumScrollEnd={endLogMomentum}
           scrollEventThrottle={16}
           data={
             selectedDate
