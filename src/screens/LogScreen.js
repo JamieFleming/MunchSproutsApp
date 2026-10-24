@@ -1,3 +1,4 @@
+import { SlidingLogControls } from "../components/SlidingLogControls";
 import React, {
   useState,
   useEffect,
@@ -18,7 +19,6 @@ import {
   Alert,
   RefreshControl,
   Platform,
-  LayoutAnimation,
 } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { useTheme, useStyles } from "../ThemeContext";
@@ -1130,7 +1130,6 @@ export function LogScreen({
         return;
       tracking.ignoreUntil = Date.now() + 300;
       tracking.distance = 0;
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setControlsHidden(hidden);
     },
     [controlsHidden],
@@ -1361,17 +1360,12 @@ export function LogScreen({
 
   return (
     <View style={{ flex: 1 }}>
-      <View
-        style={
-          controlsHidden
-            ? { height: 0, overflow: "hidden", opacity: 0 }
-            : undefined
-        }
+      <SlidingLogControls
+        hidden={controlsHidden}
         accessibilityElementsHidden={controlsHidden}
         importantForAccessibility={
           controlsHidden ? "no-hide-descendants" : "auto"
         }
-        pointerEvents={controlsHidden ? "none" : "auto"}
       >
         <ActivityCalendar
           foodLog={foodLog}
@@ -1448,7 +1442,7 @@ export function LogScreen({
             </TouchableOpacity>
           ))}
         </View>
-      </View>
+      </SlidingLogControls>
 
       {/* Sort chips — food view only */}
       {viewMode === "food" && (
@@ -1614,20 +1608,24 @@ export function LogScreen({
         </TouchableOpacity>
       )}
 
-      {!controlsHidden && (
-        <>
-          <Text style={[s.smallLabel, { marginBottom: 10 }]}>
-            {viewMode === "date"
-              ? `${dateKeys.length} day${dateKeys.length !== 1 ? "s" : ""}`
-              : `${keys.length} food${keys.length !== 1 ? "s" : ""}`}
-          </Text>
+      <SlidingLogControls
+        hidden={controlsHidden}
+        accessibilityElementsHidden={controlsHidden}
+        importantForAccessibility={
+          controlsHidden ? "no-hide-descendants" : "auto"
+        }
+      >
+        <Text style={[s.smallLabel, { marginBottom: 10 }]}>
+          {viewMode === "date"
+            ? `${dateKeys.length} day${dateKeys.length !== 1 ? "s" : ""}`
+            : `${keys.length} food${keys.length !== 1 ? "s" : ""}`}
+        </Text>
 
-          <Text style={{ color: C.mutedText, fontSize: 12, marginBottom: 10 }}>
-            Swipe left on a food to repeat, star or delete.
-            {viewMode === "date" ? " Tap a date to fold it away." : ""}
-          </Text>
-        </>
-      )}
+        <Text style={{ color: C.mutedText, fontSize: 12, marginBottom: 10 }}>
+          Swipe left on a food to repeat, star or delete.
+          {viewMode === "date" ? " Tap a date to fold it away." : ""}
+        </Text>
+      </SlidingLogControls>
       {/* Food list */}
       {viewMode === "food" ? (
         <FlatList
