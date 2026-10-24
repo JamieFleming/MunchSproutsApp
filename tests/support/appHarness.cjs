@@ -21,6 +21,7 @@ module.exports = function appHarness(platform = 'ios', overrides = {}) {
     StyleSheet: { create: (v) => v, absoluteFillObject: {} },
     Dimensions: { get: () => ({ width: 390, height: 844 }) },
     Animated: { Value: class { constructor(v) { this.value = v; } }, View: 'Animated.View' },
+    LayoutAnimation: { configureNext: noop, Presets: { easeInEaseOut: {} } },
     PanResponder: { create: () => ({ panHandlers: {} }) },
     AppState: { currentState: 'active', addEventListener: () => ({ remove: noop }) },
     Alert: { alert: noop }, Keyboard: { dismiss: noop }, Linking: {},

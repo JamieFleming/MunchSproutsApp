@@ -1,4 +1,11 @@
-import React, { useState, useEffect, memo, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  memo,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import {
   View,
   Text,
@@ -11,6 +18,7 @@ import {
   Alert,
   RefreshControl,
   Platform,
+  LayoutAnimation,
 } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { useTheme, useStyles } from "../ThemeContext";
@@ -1090,6 +1098,56 @@ export function LogScreen({
     setAllergenFilter(initialAllergenFilter || "");
   }, [initialAllergenFilter]);
 
+  const [controlsHidden, setControlsHidden] = useState(false);
+  const scrollTracking = useRef({
+    y: 0,
+    distance: 0,
+    direction: 0,
+    dragging: false,
+    ignoreUntil: 0,
+  });
+  const handleLogScroll = useCallback(
+    ({ nativeEvent }) => {
+      const tracking = scrollTracking.current;
+      const y = Math.max(0, nativeEvent.contentOffset.y);
+      const delta = y - tracking.y;
+      tracking.y = y;
+      // React only to touch-driven scrolling, not list resizing or filter changes.
+      if (!tracking.dragging || Date.now() < tracking.ignoreUntil) return;
+      const direction = Math.sign(delta);
+      if (direction !== tracking.direction) tracking.distance = 0;
+      tracking.direction = direction;
+      tracking.distance += Math.abs(delta);
+      const hidden =
+        y <= 8
+          ? false
+          : direction > 0 && y > 48
+            ? true
+            : direction < 0
+              ? false
+              : controlsHidden;
+      if (hidden === controlsHidden || (y > 8 && tracking.distance < 24))
+        return;
+      tracking.ignoreUntil = Date.now() + 300;
+      tracking.distance = 0;
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setControlsHidden(hidden);
+    },
+    [controlsHidden],
+  );
+  const beginLogScroll = useCallback(({ nativeEvent }) => {
+    scrollTracking.current.y = Math.max(0, nativeEvent.contentOffset.y);
+    scrollTracking.current.distance = 0;
+    scrollTracking.current.dragging = true;
+  }, []);
+  const endLogScroll = useCallback(() => {
+    scrollTracking.current.dragging = false;
+  }, []);
+  useEffect(() => {
+    setControlsHidden(false);
+    scrollTracking.current.dragging = false;
+  }, [viewMode, search, reactionFilter, allergenFilter, selectedDate]);
+
   // Build filtered + sorted key list
   // Preserve row props when only expansion, a picker, or the lightbox changes.
   const groups = useMemo(() => groupByFood(foodLog), [foodLog]);
@@ -1303,80 +1361,93 @@ export function LogScreen({
 
   return (
     <View style={{ flex: 1 }}>
-      <ActivityCalendar
-        foodLog={foodLog}
-        bottleLog={bottleLog}
-        weightLog={weightLog}
-        selectedDate={selectedDate}
-        onSelect={selectCalendarDay}
-      />
-      {/* Search bar */}
       <View
-        style={[
-          s.input,
-          {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 8,
-            marginBottom: 12,
-            backgroundColor: C.white,
-          },
-        ]}
+        style={
+          controlsHidden
+            ? { height: 0, overflow: "hidden", opacity: 0 }
+            : undefined
+        }
+        accessibilityElementsHidden={controlsHidden}
+        importantForAccessibility={
+          controlsHidden ? "no-hide-descendants" : "auto"
+        }
+        pointerEvents={controlsHidden ? "none" : "auto"}
       >
-        <Icon name="search" size={16} color={C.mutedText} />
-        <TextInput
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search foods…"
-          style={{
-            flex: 1,
-            color: C.textCharcoal,
-            fontFamily: "NunitoSans_600SemiBold",
-            fontSize: 15,
-          }}
-          placeholderTextColor={C.mutedText}
+        <ActivityCalendar
+          foodLog={foodLog}
+          bottleLog={bottleLog}
+          weightLog={weightLog}
+          selectedDate={selectedDate}
+          onSelect={selectCalendarDay}
         />
-      </View>
-
-      {/* View mode toggle */}
-      <View
-        style={{
-          flexDirection: "row",
-          backgroundColor: C.bgPurple,
-          borderRadius: 12,
-          padding: 4,
-          marginBottom: 12,
-        }}
-      >
-        {[
-          { id: "date", label: "By Date" },
-          { id: "food", label: "By Food" },
-        ].map(({ id, label }) => (
-          <TouchableOpacity
-            key={id}
-            onPress={() => {
-              setViewMode(id);
-              if (id === "food") setSelectedDate(null);
-            }}
+        {/* Search bar */}
+        <View
+          style={[
+            s.input,
+            {
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 12,
+              backgroundColor: C.white,
+            },
+          ]}
+        >
+          <Icon name="search" size={16} color={C.mutedText} />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search foods…"
             style={{
               flex: 1,
-              paddingVertical: 8,
-              borderRadius: 9,
-              backgroundColor: viewMode === id ? C.white : "transparent",
-              alignItems: "center",
+              color: C.textCharcoal,
+              fontFamily: "NunitoSans_600SemiBold",
+              fontSize: 15,
             }}
-          >
-            <Text
+            placeholderTextColor={C.mutedText}
+          />
+        </View>
+
+        {/* View mode toggle */}
+        <View
+          style={{
+            flexDirection: "row",
+            backgroundColor: C.bgPurple,
+            borderRadius: 12,
+            padding: 4,
+            marginBottom: 12,
+          }}
+        >
+          {[
+            { id: "date", label: "By Date" },
+            { id: "food", label: "By Food" },
+          ].map(({ id, label }) => (
+            <TouchableOpacity
+              key={id}
+              onPress={() => {
+                setViewMode(id);
+                if (id === "food") setSelectedDate(null);
+              }}
               style={{
-                fontSize: 13,
-                fontFamily: "NunitoSans_700Bold",
-                color: viewMode === id ? C.primaryPinkDark : C.mutedText,
+                flex: 1,
+                paddingVertical: 8,
+                borderRadius: 9,
+                backgroundColor: viewMode === id ? C.white : "transparent",
+                alignItems: "center",
               }}
             >
-              {label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontFamily: "NunitoSans_700Bold",
+                  color: viewMode === id ? C.primaryPinkDark : C.mutedText,
+                }}
+              >
+                {label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {/* Sort chips — food view only */}
@@ -1543,20 +1614,27 @@ export function LogScreen({
         </TouchableOpacity>
       )}
 
-      <Text style={[s.smallLabel, { marginBottom: 10 }]}>
-        {viewMode === "date"
-          ? `${dateKeys.length} day${dateKeys.length !== 1 ? "s" : ""}`
-          : `${keys.length} food${keys.length !== 1 ? "s" : ""}`}
-      </Text>
+      {!controlsHidden && (
+        <>
+          <Text style={[s.smallLabel, { marginBottom: 10 }]}>
+            {viewMode === "date"
+              ? `${dateKeys.length} day${dateKeys.length !== 1 ? "s" : ""}`
+              : `${keys.length} food${keys.length !== 1 ? "s" : ""}`}
+          </Text>
 
-      <Text style={{ color: C.mutedText, fontSize: 12, marginBottom: 10 }}>
-        Swipe left on a food to repeat, star or delete.
-        {viewMode === "date" ? " Tap a date to fold it away." : ""}
-      </Text>
-
+          <Text style={{ color: C.mutedText, fontSize: 12, marginBottom: 10 }}>
+            Swipe left on a food to repeat, star or delete.
+            {viewMode === "date" ? " Tap a date to fold it away." : ""}
+          </Text>
+        </>
+      )}
       {/* Food list */}
       {viewMode === "food" ? (
         <FlatList
+          onScroll={handleLogScroll}
+          onScrollBeginDrag={beginLogScroll}
+          onScrollEndDrag={endLogScroll}
+          scrollEventThrottle={32}
           data={keys}
           keyExtractor={listKey}
           showsVerticalScrollIndicator={false}
@@ -1722,6 +1800,10 @@ export function LogScreen({
         />
       ) : (
         <FlatList
+          onScroll={handleLogScroll}
+          onScrollBeginDrag={beginLogScroll}
+          onScrollEndDrag={endLogScroll}
+          scrollEventThrottle={32}
           data={
             selectedDate
               ? dateKeys.filter((date) => date === selectedDate)

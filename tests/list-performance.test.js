@@ -26,6 +26,7 @@ function screenHarness(file, name, wholeTree = false) {
     }
     return slots[i].value;
   };
+  react.useRef = (initial) => react.useMemo(() => ({ current: initial }), []);
   react.useCallback = (fn, deps) => react.useMemo(() => fn, deps);
   const h = harness("ios", { react });
   const Screen = h.load(file)[name];
@@ -137,4 +138,48 @@ test("calendar date selection filters food history and All dates restores it", (
   calendar().props.onSelect(null);
   nodes = flat(render(props));
   assert.deepEqual(list().props.data, ["2026-10-21", "2026-10-20"]);
+});
+
+test("food log hides controls on downward drag, retains pills, and reveals on upward drag", () => {
+  const render = screenHarness("src/screens/LogScreen.js", "LogScreen", true);
+  const props = { foodLog: [{ id: "f1", name: "Banana", date: "2026-10-24" }] };
+  const flatten = (n) =>
+    Array.isArray(n)
+      ? n.flatMap(flatten)
+      : n && typeof n === "object"
+        ? [n, ...flatten(n.props?.children)]
+        : [];
+  const read = () => {
+    const nodes = flatten(render(props));
+    return {
+      list: nodes.find((n) => n.type === "FlatList").props,
+      header: nodes.find((n) => n.props.importantForAccessibility),
+      pills: nodes.filter((n) => n.type === "ScrollView" && n.props.horizontal),
+    };
+  };
+  const event = (y) => ({ nativeEvent: { contentOffset: { y } } });
+  const realNow = Date.now;
+  let now = 1000;
+  Date.now = () => now;
+  try {
+    let view = read();
+    view.list.onScroll(event(100)); // Programmatic scroll does not collapse.
+    assert.equal(read().header.props.accessibilityElementsHidden, false);
+    view.list.onScrollBeginDrag(event(0));
+    view.list.onScroll(event(10));
+    assert.equal(read().header.props.accessibilityElementsHidden, false);
+    view.list.onScroll(event(65));
+    view = read();
+    assert.equal(view.header.props.accessibilityElementsHidden, true);
+    assert.ok(view.pills.length > 0);
+    view.list.onScrollEndDrag();
+    view.list.onScroll(event(0)); // Resizing the list must not reopen controls.
+    assert.equal(read().header.props.accessibilityElementsHidden, true);
+    now += 400;
+    view.list.onScrollBeginDrag(event(100));
+    view.list.onScroll(event(65));
+    assert.equal(read().header.props.accessibilityElementsHidden, false);
+  } finally {
+    Date.now = realNow;
+  }
 });
