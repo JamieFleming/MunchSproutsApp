@@ -10,7 +10,7 @@ function scan(dir) {
       const map = JSON.parse(fs.readFileSync(file, "utf8"));
       count++;
       const unexpected = (map.sources || []).filter((source) =>
-        /node-forge|\/braces\//.test(source),
+        /node-forge|\/braces\/|\/zod\//.test(source),
       );
       if (unexpected.length)
         throw new Error(
@@ -25,5 +25,5 @@ if (!count)
     "Export with --source-maps before checking bundle dependencies.",
   );
 console.log(
-  `Checked ${count} source maps: no braces or node-forge in shipped JavaScript.`,
+  `Checked ${count} source maps: no braces, node-forge or zod in shipped JavaScript.`,
 );

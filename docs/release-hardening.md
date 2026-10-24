@@ -154,3 +154,30 @@ unannounced isolated change and promise old clients remain fully compatible.
 The historical audit remains as evidence of the original findings. This document
 records remediation and the remaining external release gates; it does not certify
 production deployment or guarantee all device/store behaviours.
+
+
+## CI advisory review — 24 October 2026
+
+The food-log commit's automated workflow failed. Its detailed GitHub job log
+requires authenticated access, so the exact first failing step was not readable.
+Local reproduction found both the root reviewed-audit gate and Functions audit
+failing against newly updated advisory data.
+
+- Updated the Functions lockfile from vulnerable body-parser 2.3.0 to the compatible
+  patched release selected by npm. The Functions audit now reports zero findings.
+  This lockfile change is not deployed to Firebase by pushing GitHub or publishing
+  an OTA; deploy Functions separately to update the running backend.
+- Zod 3.25.76 is pulled in by Expo CLI and eslint-plugin-react-hooks. Expo CLI
+  explicitly requires ^3.25.76. GHSA-mrhx-c7xc-m3w5 currently lists only 4.6.6 as
+  patched, so forcing a major override or npm's proposed Expo downgrade would be
+  an unverified toolchain change. Its oversized-input memory exhaustion risk remains
+  in developer tooling; keep dev servers private and only process trusted projects.
+- Added an exception for that advisory only for the exact reviewed transitive Zod
+  installation/version. It expires with the existing exceptions on 17 November 2026.
+  All other new advisories still fail CI. Added Zod to the exported source-map guard;
+  both existing production bundles were checked and contain no Zod sources.
+  This is a tooling risk acceptance, not a claim that the upstream flaw is fixed.
+- Updated checkout/setup-node/setup-java actions to supported Node 24-based versions
+  and pinned the runner to Ubuntu 24.04. The project's Node version remains 22.
+
+Advisory: https://github.com/advisories/GHSA-mrhx-c7xc-m3w5
