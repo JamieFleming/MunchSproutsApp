@@ -158,28 +158,28 @@ test("food log hides controls on downward drag, retains pills, and reveals on up
     };
   };
   const event = (y) => ({ nativeEvent: { contentOffset: { y } } });
-  const realNow = Date.now;
-  let now = 1000;
-  Date.now = () => now;
-  try {
-    let view = read();
-    view.list.onScroll(event(100)); // Programmatic scroll does not collapse.
-    assert.equal(read().header.props.accessibilityElementsHidden, false);
-    view.list.onScrollBeginDrag(event(0));
-    view.list.onScroll(event(10));
-    assert.equal(read().header.props.accessibilityElementsHidden, false);
-    view.list.onScroll(event(65));
-    view = read();
-    assert.equal(view.header.props.accessibilityElementsHidden, true);
-    assert.ok(view.pills.length > 0);
-    view.list.onScrollEndDrag();
-    view.list.onScroll(event(0)); // Resizing the list must not reopen controls.
-    assert.equal(read().header.props.accessibilityElementsHidden, true);
-    now += 400;
-    view.list.onScrollBeginDrag(event(100));
-    view.list.onScroll(event(65));
-    assert.equal(read().header.props.accessibilityElementsHidden, false);
-  } finally {
-    Date.now = realNow;
-  }
+  let view = read();
+  view.list.onScroll(event(100));
+  assert.equal(read().header.props.progress.value, 1);
+  view.list.onScrollBeginDrag(event(0));
+  view.list.onScroll(event(10));
+  let partial = read().header.props.progress.value;
+  assert.ok(partial < 1 && partial > 0.9);
+  view.list.onScroll(event(65));
+  assert.ok(read().header.props.progress.value > 0.8);
+  for (let y = 85; y <= 305; y += 20) view.list.onScroll(event(y));
+  view = read();
+  assert.equal(view.header.props.accessibilityElementsHidden, true);
+  assert.ok(view.pills.length > 0);
+  view.list.onScrollEndDrag();
+  view.list.onScroll(event(0));
+  assert.equal(read().header.props.progress.value, 0);
+  view.list.onScrollBeginDrag(event(300));
+  view.list.onScroll(event(280));
+  view = read();
+  assert.equal(view.header.props.accessibilityElementsHidden, false);
+  assert.ok(
+    view.header.props.progress.value > 0 &&
+      view.header.props.progress.value < 0.1,
+  );
 });

@@ -19,6 +19,7 @@ import {
   Alert,
   RefreshControl,
   Platform,
+  Animated,
 } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { useTheme, useStyles } from "../ThemeContext";
@@ -1099,44 +1100,29 @@ export function LogScreen({
   }, [initialAllergenFilter]);
 
   const [controlsHidden, setControlsHidden] = useState(false);
-  const scrollTracking = useRef({
-    y: 0,
-    distance: 0,
-    direction: 0,
-    dragging: false,
-    ignoreUntil: 0,
-  });
+  const controlsProgress = useRef(new Animated.Value(1)).current;
+  const scrollTracking = useRef({ y: 0, progress: 1, dragging: false });
   const handleLogScroll = useCallback(
     ({ nativeEvent }) => {
       const tracking = scrollTracking.current;
       const y = Math.max(0, nativeEvent.contentOffset.y);
       const delta = y - tracking.y;
       tracking.y = y;
-      // React only to touch-driven scrolling, not list resizing or filter changes.
-      if (!tracking.dragging || Date.now() < tracking.ignoreUntil) return;
-      const direction = Math.sign(delta);
-      if (direction !== tracking.direction) tracking.distance = 0;
-      tracking.direction = direction;
-      tracking.distance += Math.abs(delta);
-      const hidden =
-        y <= 8
-          ? false
-          : direction > 0 && y > 48
-            ? true
-            : direction < 0
-              ? false
-              : controlsHidden;
-      if (hidden === controlsHidden || (y > 8 && tracking.distance < 24))
-        return;
-      tracking.ignoreUntil = Date.now() + 300;
-      tracking.distance = 0;
-      setControlsHidden(hidden);
+      if (!tracking.dragging) return;
+      // Follow scroll distance instead of firing an all-or-nothing animation.
+      // Cap a single event so offset corrections cannot snap the entire header.
+      const step = Math.max(-24, Math.min(24, delta));
+      tracking.progress = Math.max(
+        0,
+        Math.min(1, tracking.progress - step / 220),
+      );
+      controlsProgress.setValue(tracking.progress);
+      setControlsHidden(tracking.progress <= 0.001);
     },
-    [controlsHidden],
+    [controlsProgress],
   );
   const beginLogScroll = useCallback(({ nativeEvent }) => {
     scrollTracking.current.y = Math.max(0, nativeEvent.contentOffset.y);
-    scrollTracking.current.distance = 0;
     scrollTracking.current.dragging = true;
   }, []);
   const endLogScroll = useCallback(() => {
@@ -1144,8 +1130,17 @@ export function LogScreen({
   }, []);
   useEffect(() => {
     setControlsHidden(false);
+    scrollTracking.current.progress = 1;
+    controlsProgress.setValue(1);
     scrollTracking.current.dragging = false;
-  }, [viewMode, search, reactionFilter, allergenFilter, selectedDate]);
+  }, [
+    viewMode,
+    search,
+    reactionFilter,
+    allergenFilter,
+    selectedDate,
+    controlsProgress,
+  ]);
 
   // Build filtered + sorted key list
   // Preserve row props when only expansion, a picker, or the lightbox changes.
@@ -1361,6 +1356,7 @@ export function LogScreen({
   return (
     <View style={{ flex: 1 }}>
       <SlidingLogControls
+        progress={controlsProgress}
         hidden={controlsHidden}
         accessibilityElementsHidden={controlsHidden}
         importantForAccessibility={
@@ -1609,6 +1605,7 @@ export function LogScreen({
       )}
 
       <SlidingLogControls
+        progress={controlsProgress}
         hidden={controlsHidden}
         accessibilityElementsHidden={controlsHidden}
         importantForAccessibility={
@@ -1632,7 +1629,7 @@ export function LogScreen({
           onScroll={handleLogScroll}
           onScrollBeginDrag={beginLogScroll}
           onScrollEndDrag={endLogScroll}
-          scrollEventThrottle={32}
+          scrollEventThrottle={16}
           data={keys}
           keyExtractor={listKey}
           showsVerticalScrollIndicator={false}
@@ -1801,7 +1798,7 @@ export function LogScreen({
           onScroll={handleLogScroll}
           onScrollBeginDrag={beginLogScroll}
           onScrollEndDrag={endLogScroll}
-          scrollEventThrottle={32}
+          scrollEventThrottle={16}
           data={
             selectedDate
               ? dateKeys.filter((date) => date === selectedDate)
